@@ -11,7 +11,6 @@ from torchvision import datasets, models, transforms
 from PIL import Image
 
 
-
 def get_label_from_filename(filepath):
     """Given the filepath of .h5 data, return the correspondent label
 
@@ -189,4 +188,5 @@ if __name__ == '__main__':
                               .sum())
 
         print(
-            f"Epoch: {epoch} | Duration: {(start_time - time.time()):.4f}s | val accuracy: {(accuracy/n_val_data):.4f}")
+            f"Epoch: {epoch} | Duration: {(start_time - time.time()):.4f}s | val accuracy: {(accuracy/n_val_data):.4f}%")
+    torch.save(cnn, './model.h5')
