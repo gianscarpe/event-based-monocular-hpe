@@ -8,6 +8,7 @@ import torch.nn as nn
 import torchvision
 import time
 from torchvision import datasets, models, transforms
+from PIL import Image
 
 
 
@@ -59,6 +60,7 @@ class DHP19Dataset(Dataset):
         img_name = self.x_paths[idx]
         x = np.load(img_name)
         x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
+        x = Image.fromarray(x, 'RGB')
         y = self.labels[idx]
 
         if self.transform:
