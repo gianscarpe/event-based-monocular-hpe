@@ -7,6 +7,7 @@ import numpy as np
 import torch.nn as nn
 import torchvision
 import time
+from torchvision import datasets, models, transforms
 
 def get_label_from_filename(filepath):
     """Given the filepath of .h5 data, return the correspondent label
@@ -54,6 +55,7 @@ class DHP19Dataset(Dataset):
 
         img_name = self.x_paths[idx]
         x = np.load(img_name)
+        x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
         y = self.labels[idx]
 
         if self.transform:
@@ -92,64 +94,80 @@ class CNN(nn.Module):
         output = self.out(x)
         return output
 
-
-LR = 0.001
-EPOCH = 10
-
-cnn = CNN()
-cnn.cuda()
-print(cnn)  # net architecture
-
-root_dir = '/home/gianscarpe/dev/dhp19/data/h5_dataset_7500_events/movements_per_frame'
-n_frames = len(os.listdir(root_dir))
-indexes = np.arange(n_frames)
-np.random.shuffle(indexes)
-
-train_index = indexes[:int(.8 * n_frames)]
-val_index = indexes[int(.8 * n_frames):]
-
-train_transform = torchvision.transforms.Compose([
-    torchvision.transforms.ToTensor(),
-    torchvision.transforms.Normalize((0.5,), (0.5,)) ])
-
-val_transform = torchvision.transforms.Compose([
-    torchvision.transforms.ToTensor() ])
-
-train_loader = DataLoader(DHP19Dataset(root_dir, train_index, transform=train_transform), batch_size=4, shuffle=True, num_workers=4)
-val_loader = DataLoader(DHP19Dataset(root_dir, val_index, transform=val_transform), batch_size=4, shuffle=True, num_workers=4)
-
-optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)   # optimize all cnn parameters
-loss_func = nn.CrossEntropyLoss()                       # the target label is not one-hotted
-n_train_data = len(train_loader)
-n_val_data = len(val_loader)
-
-STAMP_EVERY = 100
-# training and testing
-for epoch in range(EPOCH):
-
-    start_time = time.time()
-    accumulated_loss = 0
-    for step, (b_x, b_y) in enumerate(train_loader):   # gives batch data, normalize x when iterate train_loader
-
-        b_x = b_x.float()
-
-        output = cnn(b_x.cuda())               # cnn output
-        loss = loss_func(output, b_y.cuda())   # cross entropy loss
-        optimizer.zero_grad()           # clear gradients for this training step
-        loss.backward()                 # backpropagation, compute gradients
-        optimizer.step()                # apply gradients
-
-        accumulated_loss+=loss.cpu().data.numpy()
-        if (step % STAMP_EVERY == 0):
-            print(f"Epoch: {epoch} - [{step/n_train_data:.2f}%] | train loss: {accumulated_loss/(step+1):.4f}")
-
-
-    accuracy = 0
-    for step, (b_x, b_y) in enumerate(val_loader):
-        test_output = cnn(b_x)
-        pred_y = torch.argmax(test_output.cpu().data.numpy(), 1)
-
-        accuracy += float((pred_y == b_y.data.numpy()).astype(int)
-                          .sum())
+if __name__ == '__main__':
+    LR = 0.001
+    EPOCH = 10
+    NUM_CLASSES = 33
     
-    print(f"Epoch: {epoch} | Duration: {start_time - time.time():.4f}s | val accuracy: {accuracy/n_val_data:.4fp}")
+
+    
+    cnn = models.resnet18(pretrained=False)
+    set_parameter_requires_grad(model_ft, True)
+    num_ftrs = cnn.fc.in_features
+    cnn.fc = nn.Linear(num_ftrs, NUM_CLASSES)
+                                    
+    cnn.cuda()
+    print(cnn)  # net architecture
+
+ # /home/gianscarpe/dev/data/h5_dataset_7500_events/movements_per_frame
+    root_dir = '/home/gianscarpe/dev/data/h5_dataset_7500_events/movements_per_frame'
+    n_frames = len(os.listdir(root_dir))
+    indexes = np.arange(n_frames)
+    np.random.shuffle(indexes)
+
+    train_index = indexes[:int(.8 * n_frames)]
+    val_index = indexes[int(.8 * n_frames):]
+
+    train_transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5,), (0.5,)) ])
+
+    preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+    
+    val_transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor() ])
+
+    train_loader = DataLoader(DHP19Dataset(root_dir, train_index, transform=preprocess), batch_size=32, shuffle=True, num_workers=4)
+    val_loader = DataLoader(DHP19Dataset(root_dir, val_index, transform=preprocess), batch_size=32, shuffle=True, num_workers=4)
+
+    optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)   # optimize all cnn parameters
+    loss_func = nn.CrossEntropyLoss()                       # the target label is not one-hotted
+    n_train_data = len(train_loader)
+    n_val_data = len(val_loader)
+
+    STAMP_EVERY = 100
+    for epoch in range(EPOCH):
+
+        start_time = time.time()
+        accumulated_loss = 0
+        for step, (b_x, b_y) in enumerate(train_loader):   # gives batch data, normalize x when iterate train_loader
+
+            b_x = b_x.float()
+
+            output = cnn(b_x.cuda())               # cnn output
+            loss = loss_func(output, b_y.cuda())   # cross entropy loss
+            optimizer.zero_grad()           # clear gradients for this training step
+            loss.backward()                 # backpropagation, compute gradients
+            optimizer.step()                # appnly gradients
+
+            accumulated_loss+=loss.cpu().data.numpy()
+            if (step % STAMP_EVERY == 0):
+                print(f"Epoch: {epoch} - [{step/n_train_data*100:.2f}%] | train loss: {accumulated_loss/(step+1):.4f}")
+
+
+        accuracy = 0
+        for step, (b_x, b_y) in enumerate(val_loader):
+            b_x = b_x.float()
+            test_output = cnn(b_x.cuda())
+            
+            pred_y = np.argmax(test_output.cpu().data.numpy(), 1)
+            
+            accuracy += float((pred_y == b_y.data.numpy()).astype(int)
+                              .sum())
+            
+        print(f"Epoch: {epoch} | Duration: {(start_time - time.time()):.4f}s | val accuracy: {(accuracy/n_val_data):.4f}")
