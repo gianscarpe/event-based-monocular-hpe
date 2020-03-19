@@ -32,7 +32,7 @@ def get_label_from_filename(filepath):
 class DHP19Dataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, root_dir, indexes=None, transform=None):
+    def __init__(self, root_dir, indexes=None, transform=None, n_channels=1):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -47,6 +47,7 @@ class DHP19Dataset(Dataset):
         self.labels = [get_label_from_filename(
             x_path) for x_path in self.x_paths]
 
+        self.n_channels = n_channels
         self.transform = transform
 
     def __len__(self):
@@ -58,10 +59,16 @@ class DHP19Dataset(Dataset):
 
         img_name = self.x_paths[idx]
         x = np.load(img_name)
-        x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
-        x = Image.fromarray(x, 'RGB')
-        y = self.labels[idx]
+        
+        if self.n_channels == 3:
+            x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
+            x = Image.fromarray(x, 'RGB')
+        else:
+            x = Image.fromarray(x, 'L')
 
+        
+        y = self.labels[idx]
+        
         if self.transform:
             x = self.transform(x)
 
@@ -111,9 +118,13 @@ if __name__ == '__main__':
     LR = 0.001
     EPOCH = 10
     NUM_CLASSES = 33
+    N_CHANNELS = 1
 
+    
     cnn = models.resnet18(pretrained=False)
 
+    if N_CHANNELS == 1:
+        cnn.conv1 = torch.nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
     num_ftrs = cnn.fc.in_features
     cnn.fc = nn.Linear(num_ftrs, NUM_CLASSES)
 
@@ -126,19 +137,15 @@ if __name__ == '__main__':
     indexes = np.arange(n_frames)
     np.random.shuffle(indexes)
 
-    train_index = indexes[:int(.8 * n_frames)]
-    val_index = indexes[int(.8 * n_frames):]
-
-    train_transform = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.5,), (0.5,))])
+    data_index = indexes[:int(.8 * n_frames)]
+    train_index = indexes[:int(.8 * len(data_index))]
+    val_index = indexes[int(.8 * len(data_index)):]
+    test_index = indexes[int(.8 * n_frames):]
 
     preprocess = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
-                             0.229, 0.224, 0.225]),
+        transforms.ToTensor()
     ])
 
     val_transform = torchvision.transforms.Compose([
