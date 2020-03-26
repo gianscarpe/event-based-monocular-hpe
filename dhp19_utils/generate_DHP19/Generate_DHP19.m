@@ -11,9 +11,9 @@
 
 % Set the paths of code repository folder, data folder and output folder 
 % where to generate files of accumulated events.
-rootCodeFolder = '/home/gianscarpe/dev/dhp19/DHP19'; % root directory of the git repo.
+rootCodeFolder = '/home/gianscarpe/dev/event-camera/dhp19_utils/'; % root directory of the git repo.
 rootDataFolder = '/home/rslsync/Resilio Sync/DHP19'; % root directory of the data downloaded from resiliosync.
-outDatasetFolder = '/home/gianscarpe/dev/dhp19/data';
+outDatasetFolder = '/home/gianscarpe/dev/data/dataset';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

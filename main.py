@@ -1,199 +1,100 @@
 import os
-import glob
 import torch
-from torch.utils.data import Dataset, DataLoader
-from config import MOVEMENTS_PER_SESSION
+from torch import nn
 import numpy as np
-import torch.nn as nn
 import torchvision
 import time
-from torchvision import datasets, models, transforms
-from PIL import Image
+import argparse
+import json
+import pytorch_lightning as pl
 
+from dataset import get_data
+import models
 
-def get_label_from_filename(filepath):
-    """Given the filepath of .h5 data, return the correspondent label
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.enabled = True
 
-    E.g.
-    S13_session2_mov2_7500events.h5 -> Session 2, movement 2 -> label 10
-    """
-
-    label = 0
-    filename = os.path.basename(filepath)
-    session = int(filename[filename.find('session_') + len('session_')])
-    mov = int(filename[filename.find('mov_') + len('mov_')])
-
-    for i in range(1, session):
-        label += MOVEMENTS_PER_SESSION[i]
-
-    return label + mov - 1
-
-
-class DHP19Dataset(Dataset):
-    """Face Landmarks dataset."""
-
-    def __init__(self, root_dir, indexes=None, transform=None, n_channels=1):
-        """
-        Args:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sampletot += n_frames.
-        """
-
-        self.x_paths = sorted(glob.glob(os.path.join(root_dir, "*.npy")))
-        self.x_indexes = indexes if indexes is not None else np.arange(
-            len(self.x_paths))
-        self.labels = [get_label_from_filename(
-            x_path) for x_path in self.x_paths]
-
-        self.n_channels = n_channels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.x_indexes)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        img_name = self.x_paths[idx]
-        x = np.load(img_name)
-        
-        if self.n_channels == 3:
-            x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
-            x = Image.fromarray(x, 'RGB')
-        else:
-            x = Image.fromarray(x, 'L')
-
-        
-        y = self.labels[idx]
-        
-        if self.transform:
-            x = self.transform(x)
-
-        return x, y
-
-
-class CNN(nn.Module):
-    def __init__(self, input_shape=(260, 346), n_classes=33):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Sequential(         # input shape (1, 250, 346)
-            nn.Conv2d(
-                in_channels=1,              # input depth
-                out_channels=16,            # n_filters
-                kernel_size=5,              # filter size
-                stride=1,                   # filter movement/step
-                # if want same width and length of this image after onv2d, padding=(kernel_size-1)/2 if stride=
-                padding=2,
-            ),                              # output shape (16, 28, 28)
-            nn.ReLU(),                      # activation
-            # choose max value in 2x2 area, output shape (16, 14, 14)
-            nn.MaxPool2d(kernel_size=2),
-        )
-        self.conv2 = nn.Sequential(         # input shape (16, 130, 173)
-            nn.Conv2d(16, 32, 5, 1, 2),     # output shape (32, 65, 86)
-            nn.ReLU(),                      # activation
-            nn.MaxPool2d(2),                # output shape (32, 65, 86)
-        )
-        # fully connected layer, output 10 classes
-        self.out = nn.Linear(32 * 65 * 86, n_classes)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
-        x = x.view(x.size(0), -1)
-        output = self.out(x)
-        return output
-
-
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-
-
-if __name__ == '__main__':
-    LR = 0.001
-    EPOCH = 10
-    NUM_CLASSES = 33
-    N_CHANNELS = 1
-
-    
-    cnn = models.resnet18(pretrained=False)
-
-    if N_CHANNELS == 1:
-        cnn.conv1 = torch.nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-    num_ftrs = cnn.fc.in_features
-    cnn.fc = nn.Linear(num_ftrs, NUM_CLASSES)
-
-    cnn.cuda()
-    print(cnn)  # net architecture
-
- # /home/gianscarpe/dev/data/h5_dataset_7500_events/movements_per_frame
-    root_dir = '/home/gianscarpe/dev/data/h5_dataset_7500_events/movements_per_frame'
-    n_frames = len(os.listdir(root_dir))
-    indexes = np.arange(n_frames)
-    np.random.shuffle(indexes)
-
-    data_index = indexes[:int(.8 * n_frames)]
-    train_index = indexes[:int(.8 * len(data_index))]
-    val_index = indexes[int(.8 * len(data_index)):]
-    test_index = indexes[int(.8 * n_frames):]
-
-    preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor()
-    ])
-
-    val_transform = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor()])
-
-    train_loader = DataLoader(DHP19Dataset(
-        root_dir, train_index, transform=preprocess), batch_size=32, shuffle=True, num_workers=4)
-    val_loader = DataLoader(DHP19Dataset(
-        root_dir, val_index, transform=preprocess), batch_size=32, shuffle=True, num_workers=4)
-
+def train_val_model(train_loader, val_loader, cnn, train_config):
     # optimize all cnn parameters
-    optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)
+    optimizer = getattr(torch.optim,
+                        train_config['optimizer']['type'])(params=cnn.parameters(),
+                                                           **train_config['optimizer']['params'])
     # the target label is not one-hotted
-    loss_func = nn.CrossEntropyLoss()
-    n_train_data = len(train_loader)
-    n_val_data = len(val_loader)
+    loss_func = getattr(nn, train_config['loss'])()
 
-    STAMP_EVERY = 100
-    for epoch in range(EPOCH):
-
+    print("--- Start training ---")
+    STAMP_EVERY = int(len(train_loader) * .1)
+    for epoch in range(train_config['epochs']):
         start_time = time.time()
         accumulated_loss = 0
+        mean_loss = 0
+        cnn.train()
         # gives batch data, normalize x when iterate train_loader
-        for step, (b_x, b_y) in enumerate(train_loader):
-
+        for step, (b_x, b_y) in enumerate(train_loader):        
             b_x = b_x.float()
-
-            output = cnn(b_x.cuda())               # cnn output
-            loss = loss_func(output, b_y.cuda())   # cross entropy loss
             optimizer.zero_grad()           # clear gradients for this training step
+            output = cnn(b_x.to(device))               # cnn output
+            loss = loss_func(output, b_y.to(device))   # cross entropy loss
+            
             loss.backward()                 # backpropagation, compute gradients
             optimizer.step()                # appnly gradients
-
-            accumulated_loss += loss.cpu().data.numpy()
-            if (step % STAMP_EVERY == 0):
+            accumulated_loss += loss.item()
+            mean_loss = accumulated_loss / (step+1)
+            if (step % STAMP_EVERY == STAMP_EVERY-1):
                 print(
-                    f"Epoch: {epoch} - [{step/n_train_data*100:.2f}%] | train loss: {accumulated_loss/(step+1):.4f}")
-
-        accuracy = 0
-        for step, (b_x, b_y) in enumerate(val_loader):
-            b_x = b_x.float()
-            test_output = cnn(b_x.cuda())
-
-            pred_y = np.argmax(test_output.cpu().data.numpy(), 1)
-
-            accuracy += float((pred_y == b_y.data.numpy()).astype(int)
-                              .sum())
-
-        print(
-            f"Epoch: {epoch} | Duration: {(start_time - time.time()):.4f}s | val accuracy: {(accuracy/n_val_data):.4f}%")
+                    f"Epoch: {epoch+1} - [{step/len(train_loader)*100:.2f}%] | train loss: {mean_loss:.4f}")
+                
+        print(f"Epoch: {epoch+1} | Evaluating")
+        correct_predictions = 0
+        with torch.no_grad():
+            for step, (b_x, b_y) in enumerate(val_loader):
+                b_x = b_x.float()
+                output = cnn(b_x.to(device))
+                _, pred_y = torch.max(output.data, 1)
+                correct_predictions += (pred_y == b_y.to(device)).sum().item()
+                
+        print(f"Epoch: {epoch} | Duration: {(time.time() - start_time):.4f}s | val accuracy: [{correct_predictions}/{n_val_data}] | {correct_predictions/n_val_data * 100:.4f}%")
+                
+                
     torch.save(cnn, './model.h5')
+        
+
+if __name__ == '__main__':
+    # TRAIN ARGUMENTS -- refer to config.json for train and data configuration
+    parser = argparse.ArgumentParser(description='Train a model')
+    parser.add_argument('--config-path', type=str, help='Path to confg json')
+    parser.add_argument('--preload', type=bool, default=False)
+    parser.add_argument('--multi-gpu', type=bool, default=False)
+    parser.add_argument('--num-workers', type=int, default=6)
+    parser.add_argument('--device', type=str, default='cuda:0')
+        
+    args = parser.parse_args()
+    config_path = args.config_path
+    with open(config_path) as json_file:
+        config = json.load(json_file)
+
+    data_config = config['data']
+    train_config = config['train']
+    
+    MULTI_GPU = args.multi_gpu
+    NUM_WORKERS = args.num_workers
+    DEV_TYPE = args.device
+    PRELOAD = args.preload
+    device = torch.device(DEV_TYPE)
+
+    # Get MODEL
+
+    cnn = getattr(models, train_config['model'])(data_config['n_channels'], data_config['n_classes'])
+    print(cnn)  # net architecture
+
+    if torch.cuda.device_count() > 1 and MULTI_GPU:
+        print("MULTI GPU!")
+        cnn = nn.DataParallel(cnn, device_ids = [0, 1])
+        
+    cnn = cnn.to(device)
+
+    # Get DATA
+    train_loader, val_loader, test_loader = get_data(data_config)
+
+    # TRAIN and EVAL
+    train_val_model(train_loader, val_loader, cnn, train_config)

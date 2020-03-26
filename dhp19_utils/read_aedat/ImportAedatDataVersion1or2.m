@@ -316,7 +316,7 @@ elseif strfind(info.source, 'avis')
 		% No need to create address field, since there is only one type of special event
     end
 	
-    polarityLogical = polarityLogical(1:25817045);
+    
 	% Polarity (DVS) events
 	if (~isfield(info, 'dataTypes') || any(cellfun(cellFind('polarity'), info.dataTypes))) && any(polarityLogical)
 		output.data.polarity.cam = uint16(bitshift(bitand(allAddr(polarityLogical), cameraMask), -cameraShiftBits));

@@ -8,6 +8,13 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
             do_subsampling, reshapex, reshapey, ...
             saveHDF5, convert_labels)
     
+    voxel_filenameh5 = strcat(fileName,'_voxel.h5');
+    if exist(voxel_filenameh5, 'file') == 2
+      return
+    end
+      
+
+    save_count_frames = false;
     startTime = uint32(startTime);
     stopTime  = uint32(stopTime);
     
@@ -22,12 +29,11 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
                         xmin_mask2, xmax_mask2, ymin_mask2, ymax_mask2);
 
     % Initialization
-    B = 8;    
+    B = 4;    
     nbFrame_initialization = round(length(timeStamp)/eventsPerFullFrame);
     img = zeros(sx*nbcam, sy);
     voxel = zeros(sx*nbcam, sy, B);
     pose = zeros(13, 3);
-    
     
     
     IMovie = NaN(nbcam, reshapex, reshapey, nbFrame_initialization);
@@ -46,8 +52,10 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
     %lastFrameTime = startTime;
     %lastTimeStampLastFrame = startTime; % initialization
     
-    t0 = timeStamp(0);
-    dt = timeStamp(length(timeStamp)) - t0;
+    init_slice = 1;
+    
+    t0 = timeStamp(init_slice);
+    dt = double(timeStamp(init_slice+eventsPerFullFrame) - t0);
     
     for idx = 1:length(timeStamp)
 
@@ -60,14 +68,20 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
         % Constant event count accumulation.
         counter = counter + 1;
         img(coordx,coordy, 1) = img(coordx,coordy, 1) + 1;
+        t = double(B -1 ) / dt * double(ti - t0) + 1;
         for tn=1:B
-            t = (B-1) / dt * (ti - t0);
-            voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) + pi * max(0, 1 - abs(tn - t));
+            
+            voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) +  uint8(pi) * uint8(max(0, 1 - abs(tn - t)));
         end
         
 
         if (counter >= countPerFrame)
             nbFrame = nbFrame + 1;
+            init_slice = idx+1;
+            final_slice = min(init_slice+eventsPerFullFrame, length(timeStamp));
+            t0 = timeStamp(init_slice);
+            dt = double(timeStamp(final_slice) - t0);
+    
             % k is the time duration (in ms) of the recording up until the
             % current finished accumulated frame.
             k = floor((timeStamp(idx) - startTime)*0.0001)+1;
@@ -100,6 +114,11 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
               I3s = subsample(I3,sx,sy,reshapex,reshapey, 'center');
               I4s = subsample(I4,sx,sy,reshapex,reshapey, 'center');
               
+              v1 = subsample(v1,sx,sy,reshapex,reshapey, 'center');
+              % different crop location as data is shifted to right side.
+              v2 = subsample(v2,sx,sy,reshapex,reshapey, 'begin'); 
+              v3 = subsample(v3,sx,sy,reshapex,reshapey, 'center');
+              v4 = subsample(v4,sx,sy,reshapex,reshapey, 'center');
             else
               I1s = I1;
               I2s = I2;
@@ -113,10 +132,10 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
             I3n = uint8(normalizeImage3Sigma(I3s));
             I4n = uint8(normalizeImage3Sigma(I4s));     
             
-            V1n = uint8(normalizeImage3Sigma(v1));
-            V2n = uint8(normalizeImage3Sigma(v2));
-            V3n = uint8(normalizeImage3Sigma(v3));
-            V4n = uint8(normalizeImage3Sigma(v4));     
+            V1n = uint8(v1);
+            V2n = uint8(v2);
+            V3n = uint8(v3);
+            V4n = uint8(v4);     
           
            
 
@@ -161,25 +180,31 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
     
     disp(strcat('Number of frame: ',num2str(nbFrame)));
     fprintf(fileID, '%s \t frames: %d\n', fileName, nbFrame ); 
-    
-    if saveHDF5 == 1        
-        DVSfilenameh5 = strcat(fileName,'.h5');
-        IMovie = IMovie(:,:,:,1:nbFrame);
+        if saveHDF5 == 1        
+            DVSfilenameh5 = strcat(fileName,'.h5');
+
+            IMovie = IMovie(:,:,:,1:nbFrame);
         
-        if convert_labels == true
-            Labelsfilenameh5 = strcat(fileName,'_label.h5');
-            poseMovie = poseMovie(:,:,1:nbFrame);
-        end
-        
-        if exist(DVSfilenameh5, 'file') == 2
-            return
-        else
-            h5create(DVSfilenameh5,'/DVS',[nbcam reshapex reshapey nbFrame]);
-            h5write(DVSfilenameh5, '/DVS', uint8(IMovie)); 
             if convert_labels == true
-                h5create(Labelsfilenameh5,'/XYZ',[13 3 nbFrame])
-                h5write(Labelsfilenameh5,'/XYZ',poseMovie)
+                Labelsfilenameh5 = strcat(fileName,'_label.h5');
+                poseMovie = poseMovie(:,:,1:nbFrame);
             end
+
+            if save_count_frames == true
+                if exist(DVSfilenameh5, 'file') == 2
+                    return
+                else
+                    h5create(DVSfilenameh5,'/DVS',[nbcam reshapex reshapey nbFrame]);
+                    h5write(DVSfilenameh5, '/DVS', uint8(IMovie)); 
+                    if convert_labels == truenb
+                        h5create(Labelsfilenameh5,'/XYZ',[13 3 nbFrame])
+                        h5write(Labelsfilenameh5,'/XYZ',poseMovie)
+                    end
+                end
+            end
+
+            h5create(voxel_filenameh5,'/DVS',[nbcam reshapex reshapey B nbFrame]);
+            h5write(voxel_filenameh5, '/DVS', uint8(VoxelMovie(:,:,:,:,1:nbFrame))); 
+            
         end
-    end
 end
