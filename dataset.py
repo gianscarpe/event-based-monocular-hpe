@@ -30,7 +30,7 @@ def get_label_from_filename(filepath):
 class DHP19Dataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, root_dir, file_paths, indexes=None, transform=None, n_channels=1, preload=False):
+    def __init__(self, file_paths, indexes=None, transform=None, n_channels=1, preload=False):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -51,7 +51,7 @@ class DHP19Dataset(Dataset):
         
         if (preload):
             print("Start loading")
-            self.images = np.zeros((len(self.x_indexes), 224, 224, N_CHANNELS))
+            self.images = np.zeros((len(self.x_indexes), 224, 224, n_channels))
             for i, idx in enumerate(self.x_indexes):
                 path = self.x_paths[idx]
                 x = DHP19Dataset._load_npy_and_resize(path)
@@ -96,6 +96,38 @@ class DHP19Dataset(Dataset):
         return x, y
 
 
+def get_loader(file_paths, index, preprocess, preload, n_channels):
+    batch_size = data_config['batch_size']
+    n_channels = data_config['n_channels']
+
+    data_dir = os.path.join(root_dir,'movements_per_frame')
+    preload_dir = os.path.join(root_dir, 'preload')
+
+    loader = DataLoader(DHP19Dataset(file_paths, train_index,
+                                     transform=preprocess,preload=preload, n_channels=n_channels),
+                        batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    
+    return loader
+
+
+def get_dataset(file_paths, index,  preload, n_channels):
+    preprocess = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.016, 0.025, 0.015,0.013), (0.188, 0.253, 0.186, 0.173))
+    ])
+
+    dataset = DHP19Dataset(file_paths, index, transform=preprocess,preload=preload, n_channels=n_channels)
+    return dataset
+
+def get_dataloader(dataset, batch_size, num_workers):
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    return loader
+
+def get_dataloader_from_row(file_paths, index,  preload, n_channels, batch_size, num_workers):
+    loader = DataLoader(get_dataset(file_paths, index,  preload, n_channels), batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    return loader
+
+
 def get_data(data_config, num_workers=12, preload=False):
     root_dir = data_config['root_dir']
     batch_size = data_config['batch_size']
@@ -110,20 +142,10 @@ def get_data(data_config, num_workers=12, preload=False):
     else:
         from utils.generate_indexes import get_npy_indexes_and_map
         file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir)
-
-    preprocess = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.016, 0.025, 0.015,0.013), (0.188, 0.253, 0.186, 0.173))
-    ])
     
-    train_loader = DataLoader(DHP19Dataset(
-        data_dir, file_paths, train_index, transform=preprocess,preload=preload, n_channels=n_channels), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-
-    val_loader = DataLoader(DHP19Dataset(
-        data_dir, file_paths,val_index, transform=preprocess, preload=preload,n_channels=n_channels), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-    test_loader = DataLoader(DHP19Dataset(
-        data_dir, file_paths,test_index, transform=preprocess, preload=preload,n_channels=n_channels), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = get_dataloader(file_paths, train_index, preload, n_channels, batch_size, num_workers)
+    val_loader = get_dataloader(file_paths, val_index, preload, n_channels, batch_size, num_workers)
+    test_loader = get_dataloader(file_paths, test_index, preload, n_channels, batch_size, num_workers)
 
     return train_loader, val_loader, test_loader
 

@@ -8,19 +8,103 @@ import argparse
 import json
 import pytorch_lightning as pl
 
-from dataset import get_data
+from dataset import get_dataset, get_dataloader
 import models
 
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 
+class Model(pl.LightningModule):
+    def __init__(self, config, preload=False, num_workers=6):
+        super(Model, self).__init__()
+        self.num_workers = num_workers
+        self.preload = preload
+
+        self.train_config = config['train']
+        self.data_config = config['data']
+        self.loss_func = getattr(nn, config['train']['loss'])()
+
+        self.cnn = getattr(models,
+                           self.train_config['model'])(self.data_config['n_channels'],
+                                                       self.data_config['n_classes'])
+
+    def forward(self, x):
+        x = self.cnn(x)
+        return x
+    
+    def prepare_data(self):
+        root_dir = self.data_config['root_dir']
+        batch_size = self.data_config['batch_size']
+        n_channels = self.data_config['n_channels']
+
+        data_dir = os.path.join(root_dir,'movements_per_frame')
+        preload_dir = os.path.join(root_dir, 'preload')
+
+        if os.path.exists(preload_dir):
+            from utils.generate_indexes import load_npy_indexes_and_map
+            file_paths, train_index, val_index, test_index = load_npy_indexes_and_map(data_dir)
+        else:
+            from utils.generate_indexes import get_npy_indexes_and_map
+            file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir)
+
+        self.train_dataset = get_dataset(file_paths, train_index, self.preload, n_channels)
+        self.val_dataset = get_dataset(file_paths, val_index, self.preload, n_channels)
+        self.test_dataset = get_dataset(file_paths, test_index, self.preload, n_channels)
+
+    def train_dataloader(self):
+        train_loader = get_dataloader(self.train_dataset,
+                                      self.data_config['batch_size'], self.num_workers)
+        return train_loader
+
+    def val_dataloader(self):
+        val_loader = get_dataloader(self.val_dataset,
+                                      self.data_config['batch_size'], self.num_workers)
+        return val_loader
+        
+
+    def configure_optimizers(self):
+        optimizer = getattr(torch.optim,
+                    self.train_config['optimizer']['type'])(params=self.parameters(),
+                                                            **self.train_config['optimizer']['params'])
+        return optimizer
+
+    def training_step(self, batch, batch_idx):
+        b_x, b_y = batch
+        b_x = b_x.float()
+
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        logs = {"loss":loss}
+        return {"loss":loss, "log":logs}
+
+    def validation_step(self, batch, batch_idx): 
+        b_x, b_y = batch
+        b_x = b_x.float()
+
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+        _, pred_y = torch.max(output.data, 1)
+        correct_predictions = (pred_y == b_y.to(device)).sum().item()
+        num_predictions = pred_y.size()
+
+        return {"val_loss":loss, "correct_predictions":correct_predictions, "n_predictions":num_predictions}
+
+    def validation_epoch_end(self, outputs):
+
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        acc = torch.Tensor([x['correct_predictions'] for x in outputs]).sum() / torch.Tensor([x['n_predictions'] for x in outputs]).sum() *100
+        
+        tensorboard_logs = {'val_loss': avg_loss, "val_acc":acc}
+        return {'avg_val_loss': avg_loss, 'val_acc':acc,'log': tensorboard_logs}
+
+       
+            
+                
 def train_val_model(train_loader, val_loader, cnn, train_config):
     # optimize all cnn parameters
-    optimizer = getattr(torch.optim,
-                        train_config['optimizer']['type'])(params=cnn.parameters(),
-                                                           **train_config['optimizer']['params'])
     # the target label is not one-hotted
-    loss_func = getattr(nn, train_config['loss'])()
+
 
     print("--- Start training ---")
     STAMP_EVERY = int(len(train_loader) * .1)
@@ -63,7 +147,7 @@ if __name__ == '__main__':
     # TRAIN ARGUMENTS -- refer to config.json for train and data configuration
     parser = argparse.ArgumentParser(description='Train a model')
     parser.add_argument('--config-path', type=str, help='Path to confg json')
-    parser.add_argument('--preload', type=bool, default=False)
+    parser.add_argument('--preload', default=False, action='store_true')
     parser.add_argument('--multi-gpu', type=bool, default=False)
     parser.add_argument('--num-workers', type=int, default=6)
     parser.add_argument('--device', type=str, default='cuda:0')
@@ -83,18 +167,23 @@ if __name__ == '__main__':
     device = torch.device(DEV_TYPE)
 
     # Get MODEL
-
-    cnn = getattr(models, train_config['model'])(data_config['n_channels'], data_config['n_classes'])
-    print(cnn)  # net architecture
+    
+    
+    #print(cnn)  # net architecture
 
     if torch.cuda.device_count() > 1 and MULTI_GPU:
         print("MULTI GPU!")
         cnn = nn.DataParallel(cnn, device_ids = [0, 1])
         
-    cnn = cnn.to(device)
+    #cnn = cnn.to(device)
 
     # Get DATA
-    train_loader, val_loader, test_loader = get_data(data_config)
+    #train_loader, val_loader, test_loader = get_data(data_config)
 
     # TRAIN and EVAL
-    train_val_model(train_loader, val_loader, cnn, train_config)
+    #train_val_model(train_loader, val_loader, cnn, train_config)
+
+    model = Model(config, preload=PRELOAD)
+
+    trainer = pl.Trainer(gpus=1)
+    trainer.fit(model)
