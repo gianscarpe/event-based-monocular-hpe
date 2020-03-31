@@ -74,7 +74,6 @@ class DHP19Dataset(Dataset):
 
     def _load_npy_and_resize(path):
         x = np.load(path).astype("float32")
-        x = cv2.resize(x, (224, 224))
         return x
 
     def __getitem__(self, idx):
@@ -110,12 +109,26 @@ def get_loader(file_paths, index, preprocess, preload, n_channels):
     return loader
 
 
-def get_dataset(file_paths, index,  preload, n_channels):
-    preprocess = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.016, 0.025, 0.015,0.013), (0.188, 0.253, 0.186, 0.173))
-    ])
+def get_preprocess(n_channels):
+    if n_channels == 4:
+        preprocess = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.016, 0.025, 0.015,0.013), (0.188, 0.253, 0.186, 0.173))
+        ])
+    elif n_channels == 1:
+        preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.ToTensor(),
+        ])
+    else:
+        preprocess = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+    return preprocess
 
+    
+def get_dataset(file_paths, index,  preload, n_channels):
+    preprocess = get_preprocess(n_channels)
     dataset = DHP19Dataset(file_paths, index, transform=preprocess,preload=preload, n_channels=n_channels)
     return dataset
 
@@ -146,6 +159,7 @@ def get_data(data_config, num_workers=12, preload=False):
     train_loader = get_dataloader(file_paths, train_index, preload, n_channels, batch_size, num_workers)
     val_loader = get_dataloader(file_paths, val_index, preload, n_channels, batch_size, num_workers)
     test_loader = get_dataloader(file_paths, test_index, preload, n_channels, batch_size, num_workers)
+
 
     return train_loader, val_loader, test_loader
 

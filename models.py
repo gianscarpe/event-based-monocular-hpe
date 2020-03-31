@@ -3,6 +3,16 @@ import torchvision
 from torchvision import models
 import torch.nn as nn
 
+def mobilenetv2(n_channels, num_classes, pretrained=False):
+    cnn = models.mobilenet_v2(pretrained)
+    if n_channels != 3:        
+        cnn.features[0][0] = torch.nn.Conv2d(n_channels, 32, kernel_size=(3, 3),
+                                          stride=(2, 2), padding=(1, 1), bias=False)
+
+    num_ftrs = cnn.classifier[-1].in_features
+    cnn.classifier[-1] = nn.Linear(num_ftrs, num_classes, bias=True)
+    return cnn
+
 def vgg19(n_channels, num_classes, pretrained=False):
     cnn = models.vgg19(pretrained)
     
@@ -40,5 +50,6 @@ def resnet18(n_channels, num_classes, pretrained=False):
     cnn.fc = nn.Linear(num_ftrs, num_classes)
 
     return cnn
+
 
     
