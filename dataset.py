@@ -5,7 +5,7 @@ import glob
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-from config import MOVEMENTS_PER_SESSION
+from utils.config import MOVEMENTS_PER_SESSION
 import numpy as np
 import torch
 
@@ -49,21 +49,10 @@ class DHP19Dataset(Dataset):
         self.transform = transform
         self.images = None
         
-        if (preload):
-            print("Start loading")
-            self.images = np.zeros((len(self.x_indexes), 224, 224, n_channels))
-            for i, idx in enumerate(self.x_indexes):
-                path = self.x_paths[idx]
-                x = DHP19Dataset._load_npy_and_resize(path)
-                self.images[i] = x
-            print("Finish loading")
-
-        
     def __len__(self):
         return len(self.x_indexes)
 
-    def _get_x(self, idx):
-        
+    def _get_x(self, idx):        
         if self.images is not None:
             x = self.images[idx]
         else:
@@ -73,20 +62,15 @@ class DHP19Dataset(Dataset):
         return x
 
     def _load_npy_and_resize(path):
-        x = np.load(path).astype("float32")
-        return x
+        x = np.load(path) / 255.
+
+        return x.astype('float32')
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
         x = self._get_x(idx)
-        if self.n_channels == 3:
-            x = np.repeat(x[:, :,  np.newaxis], 3, axis=-1)
-            x = Image.fromarray(x, 'RGB')
-        elif self.n_channels == 1:
-            x = Image.fromarray(x, 'L')
-        
         y = self.labels[idx]
         
         if self.transform:
@@ -117,7 +101,9 @@ def get_preprocess(n_channels):
         ])
     elif n_channels == 1:
         preprocess = transforms.Compose([
+            transforms.ToPILImage(),
             transforms.Resize(256),
+            transforms.CenterCrop(256),
             transforms.ToTensor(),
         ])
     else:
@@ -129,7 +115,7 @@ def get_preprocess(n_channels):
     
 def get_dataset(file_paths, index,  preload, n_channels):
     preprocess = get_preprocess(n_channels)
-    dataset = DHP19Dataset(file_paths, index, transform=preprocess,preload=preload, n_channels=n_channels)
+    dataset = DHP19Dataset(file_paths, index, transform=preprocess, preload=preload, n_channels=n_channels)
     return dataset
 
 def get_dataloader(dataset, batch_size, num_workers):

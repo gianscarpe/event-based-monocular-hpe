@@ -1,7 +1,0 @@
-adium-theme-ubuntu==0.3.4
-unity-lens-photos==1.0
-torch
-matplotlib
-python-opencv
-jupyter
-numpy

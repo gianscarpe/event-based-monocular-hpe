@@ -8,7 +8,7 @@ import argparse
 import json
 import pytorch_lightning as pl
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-
+from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from dataset import get_dataset, get_dataloader
 import models
@@ -69,7 +69,7 @@ class Model(pl.LightningModule):
         optimizer = getattr(torch.optim,
                     self.train_config['optimizer']['type'])(params=self.parameters(),
                                                             **self.train_config['optimizer']['params'])
-        return [optimizer], [ReduceLROnPlateau(optimizer)]
+        return optimizer
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
@@ -81,30 +81,28 @@ class Model(pl.LightningModule):
         logs = {"loss":loss}
         return {"loss":loss, "log":logs}
 
+
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
         b_x = b_x.float()
-
+        breakpoint()
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
         _, pred_y = torch.max(output.data, 1)
-        correct_predictions = (pred_y == b_y).sum().item()
-        num_predictions = pred_y.size()
 
-        return {"val_loss":loss, "correct_predictions":correct_predictions, "n_predictions":num_predictions}
+        correct_predictions = (pred_y == b_y).sum().item()
+
+        return {"batch_val_loss":loss, "correct_predictions":correct_predictions}
 
     def validation_epoch_end(self, outputs):
 
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
         
-        acc = torch.Tensor([x['correct_predictions'] for x in outputs]).sum() / torch.Tensor([x['n_predictions'] for x in outputs]).sum() *100
+        acc = sum([x['correct_predictions'] for x in outputs]) / len(self.val_dataset) * 100
         
         tensorboard_logs = {'val_loss': avg_loss, "val_acc":acc}
-        return {'avg_val_loss': avg_loss, 'val_acc':acc,'log': tensorboard_logs}
+        return {'val_loss': avg_loss, 'val_acc':acc,'log': tensorboard_logs}
 
-       
-            
-                
 
 if __name__ == '__main__':
     # TRAIN ARGUMENTS -- refer to config.json for train and data configuration
@@ -120,7 +118,14 @@ if __name__ == '__main__':
     exp_path = "/home/gianscarpe/dev/exps"
     exp_name = os.path.basename(args.config_path).split(".")[0]
     logger = TensorBoardLogger(exp_path, name=exp_name)
-
+    early_stop_callback = EarlyStopping(
+        monitor='val_loss',
+        min_delta=0.001,
+        patience=10,
+        verbose=False,
+        mode='min'
+    )
+    
     model = Model(hparams=args)
-    trainer = pl.Trainer(gpus=1, benchmark=True, early_stop_callback=True, logger=logger, profiler=True)
+    trainer = pl.Trainer(gpus=1, benchmark=True, early_stop_callback=early_stop_callback, logger=logger, profiler=True)
     trainer.fit(model)

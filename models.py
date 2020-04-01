@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torchvision import models
 import torch.nn as nn
+import torch.nn.functional as F
 
 def mobilenetv2(n_channels, num_classes, pretrained=False):
     cnn = models.mobilenet_v2(pretrained)
@@ -51,5 +52,59 @@ def resnet18(n_channels, num_classes, pretrained=False):
 
     return cnn
 
+def inceptionv3(n_channels, num_classes, pretrained=False):
 
+    cnn = torchvision.models.inception_v3(pretrained)
     
+    if n_channels != 3:
+        cnn.Conv2d_1a_3x3.conv = torch.nn.Conv2d(n_channels, 32, kernel_size=(3, 3),
+                                          stride=(2, 2), bias=False)
+
+    num_ftrs = cnn.fc.in_features
+    cnn.fc = nn.Linear(num_ftrs, num_classes)
+    return cnn
+  
+    
+def ownmodel1(n_channels, num_classes, pretrained=False):
+    class Model(nn.Module):
+        def __init__(self):
+            super(Model, self).__init__()
+            self.cnn1 = nn.Conv2d(in_channels=n_channels, out_channels=32,
+                                  kernel_size=(3, 3), padding=1)
+            self.cnn2 = nn.Conv2d(in_channels=32, out_channels=64,
+                                  kernel_size=(3, 3), padding=1)
+            self.cnn3 = nn.Conv2d(in_channels=64, out_channels=128,
+                                  kernel_size=(3,3), padding=1)
+            self.cnn4 = nn.Conv2d(in_channels=128, out_channels=256,
+                                  kernel_size=(3,3), padding=1)
+
+            self.max_pool2d = nn.MaxPool2d((2, 2))
+
+
+            # 3 max pooling -> 224/16 = 14 * 256 * 256
+            self.fc1 = nn.Linear(65536, 128, bias=True)
+            self.fc2 = nn.Linear(128, num_classes, bias=True)
+
+        def forward(self, x):
+            x = F.relu(self.cnn1(x))
+            x = self.max_pool2d(x)
+
+            x = F.relu(self.cnn2(x))
+            x = self.max_pool2d(x)
+
+            x = F.relu(self.cnn3(x))
+            x = self.max_pool2d(x)
+
+            x = F.relu(self.cnn4(x))
+            x = self.max_pool2d(x)
+
+            x = x.view(-1, 65536)
+
+            x = F.relu(self.fc1(x))
+            out = self.fc2(x)
+            return out
+    cnn = Model()
+    return cnn
+
+            
+                                  

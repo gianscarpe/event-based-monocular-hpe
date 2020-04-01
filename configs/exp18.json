@@ -1,0 +1,19 @@
+{
+    "data":{
+	"root_dir":"/home/gianscarpe/dev/data/dhp19/time_count_dataset",
+	"batch_size":64,
+	"n_channels":1,
+	"n_classes":33
+    },
+    "train":{
+	"optimizer":{
+	    "type":"Adam",
+	    "params":{
+		"lr":0.0003		
+	    }
+	},
+	"epochs":100,
+	"loss": "CrossEntropyLoss",
+	"model": "inceptionv3"
+    }
+}
