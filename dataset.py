@@ -13,9 +13,9 @@ def get_label_from_filename(filepath):
     """Given the filepath of .h5 data, return the correspondent label
 
     E.g.
-    S1_session_2_mov_1_frame_249.npy
+n    S1_session_2_mov_1_frame_249.npy
     """
-
+    
     label = 0
     filename = os.path.basename(filepath)
     session = int(filename[filename.find('session_') + len('session_')])
@@ -53,18 +53,14 @@ class DHP19Dataset(Dataset):
         return len(self.x_indexes)
 
     def _get_x(self, idx):        
-        if self.images is not None:
-            x = self.images[idx]
-        else:
-            img_name = self.x_paths[self.x_indexes[idx]]
-            x = DHP19Dataset._load_npy_and_resize(img_name)
-                                        
+        img_name = self.x_paths[self.x_indexes[idx]]
+        x = DHP19Dataset._load_npy_and_resize(img_name)                                
         return x
 
     def _load_npy_and_resize(path):
         x = np.load(path) / 255.
-
-        return x.astype('float32')
+        x = np.expand_dims(x, -1)
+        return x
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -74,7 +70,9 @@ class DHP19Dataset(Dataset):
         y = self.labels[idx]
         
         if self.transform:
-            x = self.transform(x)
+            augmented = self.transform(image=x)
+            x = augmented['image']
+
 
         return x, y
 
@@ -92,29 +90,8 @@ def get_loader(file_paths, index, preprocess, preload, n_channels):
     
     return loader
 
-
-def get_preprocess(n_channels):
-    if n_channels == 4:
-        preprocess = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.016, 0.025, 0.015,0.013), (0.188, 0.253, 0.186, 0.173))
-        ])
-    elif n_channels == 1:
-        preprocess = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(256),
-            transforms.CenterCrop(256),
-            transforms.ToTensor(),
-        ])
-    else:
-        preprocess = transforms.Compose([
-            transforms.ToTensor(),
-        ])
-    return preprocess
-
     
-def get_dataset(file_paths, index,  preload, n_channels):
-    preprocess = get_preprocess(n_channels)
+def get_dataset(file_paths, index,  preload, n_channels, preprocess):
     dataset = DHP19Dataset(file_paths, index, transform=preprocess, preload=preload, n_channels=n_channels)
     return dataset
 
@@ -141,7 +118,7 @@ def get_data(data_config, num_workers=12, preload=False):
     else:
         from utils.generate_indexes import get_npy_indexes_and_map
         file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir)
-    
+        
     train_loader = get_dataloader(file_paths, train_index, preload, n_channels, batch_size, num_workers)
     val_loader = get_dataloader(file_paths, val_index, preload, n_channels, batch_size, num_workers)
     test_loader = get_dataloader(file_paths, test_index, preload, n_channels, batch_size, num_workers)
