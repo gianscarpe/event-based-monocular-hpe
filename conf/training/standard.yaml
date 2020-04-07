@@ -1,0 +1,5 @@
+training:
+  epochs: 100
+  early_stopping: 10
+  batch_size: 32
+  num_workers: 6

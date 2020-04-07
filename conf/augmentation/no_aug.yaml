@@ -1,0 +1,13 @@
+augmentation_train:
+  type: no_aug
+  apply:
+    - class: albumentations.pytorch.ToTensor
+
+augmentation_test:
+  type: no_aug
+  apply:
+    - class: albumentations.pytorch.ToTensor
+
+      
+          
+

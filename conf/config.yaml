@@ -1,0 +1,15 @@
+defaults:
+  - optimizer: adam
+  - dataset: timecount
+  - loss: crossentropy
+  - augmentation: center_crop
+  - training: standard
+
+
+model: resnet34
+root_dir: /home/gianscarpe/dev
+
+hydra:
+  run:
+    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d_%H}/${model}_${optimizer.type}_${augmentation_train.type}
+

@@ -6,14 +6,18 @@ import pickle
 
 PRELOAD_DIR = "preload"
 
-def save_npy_indexes_and_map(path, split_at):
+def save_npy_indexes_and_map(path, split_at, balanced=True):
     print("Creating split ...")
     file_paths = sorted(glob.glob(os.path.join(path, "*.npy")))
     out_dir = os.path.join(path, PRELOAD_DIR)
 
     os.makedirs(out_dir, exist_ok=True)
-    
-    indexes = np.load(os.path.join(out_dir, "balanced_indexes.npy"))
+
+    if balanced:
+        indexes = np.load(os.path.join(out_dir, "balanced_indexes.npy"))
+    else:
+        indexes = np.arange(len(file_paths))
+
     np.random.shuffle(indexes)
 
     n_files = len(indexes)
