@@ -1,12 +1,11 @@
 import torch
 from torch import nn
 import numpy as np
-import torchvision
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from dataset import get_dataset, get_dataloader
 import models
-from torch.utils.tensorboard import SummaryWriter
 import albumentations
+import torchvision
 
 from omegaconf import DictConfig, ListConfig
 import torch.nn.functional as F
@@ -14,6 +13,8 @@ import hydra
 import pytorch_lightning as pl
 import collections
 import os
+
+from sklearn.metrics import precision_score, recall_score, accuracy_score
 
 def flatten(d):
     out = {}
@@ -23,11 +24,23 @@ def flatten(d):
         if isinstance(val, list) or isinstance(val, ListConfig):
             for subdict in val:
                 deeper = flatten(subdict).items()
-                out.update({key + '_' + key2: val2 for key2, val2 in deeper})
+                out.update({key + '__' + key2: val2 for key2, val2 in deeper})
         else:
             out[key] = val
     return out
-        
+
+def unflatten(dictionary):
+    resultDict = dict()
+    for key, value in dictionary.items():
+        parts = key.split("__")
+        d = resultDict
+        for part in parts[:-1]:
+            if part not in d:
+                d[part] = dict()
+            d = d[part]
+        d[parts[-1]] = value
+    return resultDict
+
 def get_augmentation(augmentation_specifics):
     augmentations = []
     for augmentation_class in augmentation_specifics.apply:
@@ -38,29 +51,31 @@ def get_augmentation(augmentation_specifics):
 
         
 class Model(pl.LightningModule):
-    def __init__(self, cfg):
+    def __init__(self, hparams):
         super(Model, self).__init__()
-        self.hparams = flatten(cfg)
-        breakpoint()        
-        self.train_config = cfg.training
-        self.data_config = cfg.dataset
-        self.optimizer_config = cfg.optimizer
+        print(hparams)
+        if hparams.loading:
+            hparams = unflatten(hparams)
+        self.hparams = flatten(hparams)
+        self.train_config = hparams.training
+        self.data_config = hparams.dataset
+        self.optimizer_config = hparams.optimizer
         
-        self.augmentation_train = get_augmentation(cfg.augmentation_train)
-        self.augmentation_test = get_augmentation(cfg.augmentation_test)
+        self.augmentation_train = get_augmentation(hparams.augmentation_train)
+        self.augmentation_test = get_augmentation(hparams.augmentation_test)
         
         self.num_workers = self.train_config.num_workers
 
-        self.loss_func = hydra.utils.instantiate(cfg.loss)
+        self.loss_func = hydra.utils.instantiate(hparams.loss)
 
-        self.model = getattr(models, cfg.model)(self.data_config['n_channels'],
+        self.model = getattr(models, hparams.model)(self.data_config['n_channels'],
                                                 self.data_config['n_classes'])
-
+        
+    
     def forward(self, x):
         x = self.model(x)
         return x
 
-        
     def prepare_data(self):
         data_dir = self.data_config['path']
         batch_size = self.train_config['batch_size']
@@ -74,7 +89,6 @@ class Model(pl.LightningModule):
         else:
             from utils.generate_indexes import save_npy_indexes_and_map
             file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir, split_at=0.8, balanced=self.data_config.balanced)
-
         
         self.train_dataset = get_dataset(file_paths, train_index, False, n_channels, preprocess=self.augmentation_train)
         self.val_dataset = get_dataset(file_paths, val_index, False, n_channels, preprocess=self.augmentation_test)
@@ -105,7 +119,6 @@ class Model(pl.LightningModule):
         grid = torchvision.utils.make_grid(sample_imgs)
         self.logger.experiment.add_image('Batch images', grid, 0)
 
-        
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
 
@@ -117,17 +130,23 @@ class Model(pl.LightningModule):
         b_x, b_y = batch
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
+
         _, pred_y = torch.max(output.data, 1)
         correct_predictions = (pred_y == b_y).sum().item()
 
-        
-        return {"batch_val_loss":loss, "correct_predictions":correct_predictions}
+        return {"batch_val_loss":loss, "y_pred":pred_y, "y_true":b_y}
 
     def validation_epoch_end(self, outputs):
-
-        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
-        acc = sum([x['correct_predictions'] for x in outputs]) / len(self.val_dataset) * 100
         
-        logs = {'val_loss': avg_loss, "val_acc":acc, 'step': self.current_epoch}
+        y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
+        y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
+
+        
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+        acc = accuracy_score(y_true, y_pred)
+        recall = recall_score(y_true, y_pred, average='weighted')
+        precision = precision_score(y_true, y_pred, average='weighted')
+        
+        logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision, 'val_recall':recall, 'step': self.current_epoch}
         
         return {'val_loss': avg_loss, 'val_acc':acc,'log': logs, 'progress_bar': logs}

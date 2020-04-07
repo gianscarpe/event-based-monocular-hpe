@@ -95,12 +95,16 @@ def ownmodel1(n_channels, num_classes, pretrained=False):
             super(Model, self).__init__()
             self.cnn1 = nn.Conv2d(in_channels=n_channels, out_channels=32,
                                   kernel_size=(3, 3), padding=1)
+            self.bn1 = nn.BatchNorm2d()
             self.cnn2 = nn.Conv2d(in_channels=32, out_channels=64,
                                   kernel_size=(3, 3), padding=1)
+            self.bn2 = nn.BatchNorm2d()
             self.cnn3 = nn.Conv2d(in_channels=64, out_channels=128,
                                   kernel_size=(3,3), padding=1)
+            self.bn3 = nn.BatchNorm2d()
             self.cnn4 = nn.Conv2d(in_channels=128, out_channels=256,
                                   kernel_size=(3,3), padding=1)
+            
 
             self.max_pool2d = nn.MaxPool2d((2, 2))
 

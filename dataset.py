@@ -53,7 +53,7 @@ class DHP19Dataset(Dataset):
         return len(self.x_indexes)
 
     def _get_x(self, idx):        
-        img_name = self.x_paths[self.x_indexes[idx]]
+        img_name = self.x_paths[idx]
         x = DHP19Dataset._load_npy_and_resize(img_name)                                
         return x
 
@@ -63,6 +63,7 @@ class DHP19Dataset(Dataset):
         return x
 
     def __getitem__(self, idx):
+        idx = self.x_indexes[idx]
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -92,7 +93,7 @@ def get_loader(file_paths, index, preprocess, preload, n_channels):
 
     
 def get_dataset(file_paths, index,  preload, n_channels, preprocess):
-    dataset = DHP19Dataset(file_paths, index, transform=preprocess, preload=preload, n_channels=n_channels)
+    dataset = DHP19Dataset(file_paths, indexes=index, transform=preprocess, preload=preload, n_channels=n_channels)
     return dataset
 
 def get_dataloader(dataset, batch_size, num_workers):

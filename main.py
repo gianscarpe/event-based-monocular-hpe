@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from callbacks import AvgLossCallback
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.profiler import Profiler
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -16,8 +16,10 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
     exp_path = os.getcwd()
-
-    logger = TensorBoardLogger(exp_path)
+    log_path, cur_dir = os.path.split(exp_path)
+    logger = TensorBoardLogger(os.path.join(log_path, "tb_logs"),
+                               version=cur_dir)
+    debug = cfg.debug
     early_stop_callback = EarlyStopping(
         monitor='val_loss',
         min_delta=0.01,
@@ -30,13 +32,16 @@ def main(cfg: DictConfig) -> None:
     os.makedirs(checkpoint_dir, exist_ok=True)
     ckpt_cb = ModelCheckpoint(filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}"))
     
-    profiler = Profiler()
+    profiler = pl.profiler.SimpleProfiler()
     model = Model(cfg)
+    
 
     trainer = pl.Trainer(gpus=1, benchmark=True, max_epochs=cfg.training.epochs,
-                         early_stop_callback=early_stop_callback, checkpoint_callback=ckpt_cb,
-                         track_grad_norm=2, weights_summary='full', logger=logger, profiler=profiler,
-                         callbacks=[AvgLossCallback()])
+                         early_stop_callback=early_stop_callback,
+                         fast_dev_run=debug,
+                         checkpoint_callback=ckpt_cb, track_grad_norm=2,     
+                         weights_summary='top', logger=logger,
+                         profiler=profiler, callbacks=[AvgLossCallback()])
     trainer.fit(model)
 
     

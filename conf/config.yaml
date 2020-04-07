@@ -5,11 +5,16 @@ defaults:
   - augmentation: center_crop
   - training: standard
 
-
+loading: false
+debug: false
 model: resnet34
 root_dir: /home/gianscarpe/dev
 
 hydra:
+  sweep:
+    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d}
+    subdir: exp_${hydra.job.num}_${now:%H-%M-%S}
   run:
-    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d_%H}/${model}
+    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d}/exp_${now:%H-%M-%S}
+      
 
