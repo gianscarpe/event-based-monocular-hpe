@@ -34,7 +34,9 @@ def main(cfg: DictConfig) -> None:
     model = Model(cfg)
 
     trainer = pl.Trainer(gpus=1, benchmark=True, max_epochs=cfg.training.epochs,
-                         track_grad_norm=2, weights_summary='full', logger=logger, profiler=profiler, callbacks=[AvgLossCallback()])
+                         early_stop_callback=early_stop_callback, checkpoint_callback=ckpt_cb,
+                         track_grad_norm=2, weights_summary='full', logger=logger, profiler=profiler,
+                         callbacks=[AvgLossCallback()])
     trainer.fit(model)
 
     

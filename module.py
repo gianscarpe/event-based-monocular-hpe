@@ -8,22 +8,25 @@ import models
 from torch.utils.tensorboard import SummaryWriter
 import albumentations
 
+from omegaconf import DictConfig, ListConfig
 import torch.nn.functional as F
 import hydra
 import pytorch_lightning as pl
 import collections
 import os
 
-
-def flatten(d, parent_key='', sep='_'):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
+def flatten(d):
+    out = {}
+    for key, val in d.items():
+        if isinstance(val, dict) or isinstance(val, DictConfig):
+            val = [val]
+        if isinstance(val, list) or isinstance(val, ListConfig):
+            for subdict in val:
+                deeper = flatten(subdict).items()
+                out.update({key + '_' + key2: val2 for key2, val2 in deeper})
         else:
-            items.append((new_key, v))
-            return dict(items)
+            out[key] = val
+    return out
         
 def get_augmentation(augmentation_specifics):
     augmentations = []
@@ -38,7 +41,7 @@ class Model(pl.LightningModule):
     def __init__(self, cfg):
         super(Model, self).__init__()
         self.hparams = flatten(cfg)
-        
+        breakpoint()        
         self.train_config = cfg.training
         self.data_config = cfg.dataset
         self.optimizer_config = cfg.optimizer
@@ -50,9 +53,8 @@ class Model(pl.LightningModule):
 
         self.loss_func = hydra.utils.instantiate(cfg.loss)
 
-        self.model = getattr(models,
-                             cfg.model)(self.data_config['n_channels'],
-                                        self.data_config['n_classes'])
+        self.model = getattr(models, cfg.model)(self.data_config['n_channels'],
+                                                self.data_config['n_classes'])
 
     def forward(self, x):
         x = self.model(x)
