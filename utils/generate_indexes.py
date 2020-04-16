@@ -52,7 +52,6 @@ def load_npy_indexes_and_map(path):
     print(f"LOADED INDEXES! train: {len(train_indexes)} \t val: " +
           f"{len(val_indexes)} \t test: {len(test_indexes)}")
     return file_paths, train_indexes, val_indexes, test_indexes
-    
 
 
 if __name__ == "__main__":

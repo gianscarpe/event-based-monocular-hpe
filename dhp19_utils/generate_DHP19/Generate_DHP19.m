@@ -67,7 +67,7 @@ DVSrecFolder = fullfile(rootDataFolder,'DVS_movies/');
 viconFolder = fullfile(rootDataFolder,'Vicon_data/');
 
 % output directory where to save files after events accumulation.
-out_folder_append = ['h5_dataset_',num2str(eventsPerFrame),'_events'];
+out_folder_append = ['npy_dataset_',num2str(eventsPerFrame),'_events'];
 
 addpath(fullfile(rootCodeFolder, 'read_aedat/'));
 addpath(fullfile(rootCodeFolder, 'generate_DHP19/'));
@@ -101,6 +101,7 @@ numSessions = 5;
 
 fileIdx = 0;
 
+display('Start');
 for subj = 1:numSubjects 
     subj_string = sprintf('S%d',subj);
     sessionsPath = fullfile(DVSrecFolder, subj_string);
@@ -120,7 +121,7 @@ for subj = 1:numSubjects
         for mov = 1:numMovements
             fileIdx = fileIdx+1;
             
-            movString = sprintf('mov%d',mov);
+movString = sprintf('mov%d',mov);
 
             aedatPath = fullfile(movementsPath, strcat(movString, '.aedat'));
             
@@ -137,7 +138,8 @@ for subj = 1:numSubjects
             % name of .h5 output file
             outDVSfile = strcat(subj_string,'_',sessString,'_',movString,'_',num2str(eventsPerFrame),'events');
             
-            out_file = fullfile(outputFolder, outDVSfile);            
+out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
+					  subj, sess, mov, eventsPerFrame));            
             
             
             % extract and accumulate if the output file is not already 
@@ -284,8 +286,8 @@ for subj = 1:numSubjects
                 
                 disp(strcat('Processing file: ',outDVSfile));
                 disp(strcat('Tot num of events in all cameras: ', num2str(eventsPerFrame*nbcam)));
-                
-                ExtractEventsToFramesAndMeanLabels( ...
+                %ExtractEventsToFramesAndMeanLabels( ...
+                ExtractEventsToVoxelAndMeanLabels( ...
                         fileID, ...
                         aedat, ...
                         events, ...

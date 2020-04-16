@@ -54,12 +54,17 @@ class DHP19Dataset(Dataset):
 
     def _get_x(self, idx):        
         img_name = self.x_paths[idx]
-        x = DHP19Dataset._load_npy_and_resize(img_name)                                
+        x = DHP19Dataset._load(img_name)                                
         return x
 
-    def _load_npy_and_resize(path):
-        x = np.load(path) / 255.
-        x = np.expand_dims(x, -1)
+    def _load(path):
+        ext = os.path.splitext(path)[1]
+        if ext == '.mat':
+            x = np.swapaxes(scipy.io.loadmat(path)['V3n'], 0, 1)
+        elif ext == '.npy' :
+            x = np.load(path) / 255.
+            if len(x.shape) == 2:
+                x = np.expand_dims(x, -1)
         return x
 
     def __getitem__(self, idx):

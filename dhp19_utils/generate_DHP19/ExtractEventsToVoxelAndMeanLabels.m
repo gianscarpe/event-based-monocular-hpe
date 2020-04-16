@@ -1,4 +1,4 @@
-function [] = ExtractEventsToFramesAndMeanLabels(...
+function [] = ExtractEventsToVoxelAndMeanLabels(...
             fileID, ... % log file
             aedat, events, eventsPerFullFrame, ...
             startTime, stopTime, fileName, ...
@@ -64,14 +64,12 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
         pi = pol(idx);
         ti = timeStamp(idx);
 
-        
         % Constant event count accumulation.
         counter = counter + 1;
         img(coordx,coordy, 1) = img(coordx,coordy, 1) + 1;
         t = double(B -1 ) / dt * double(ti - t0) + 1;
-        for tn=1:B
-            
-            voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) +  uint8(pi) * uint8(max(0, 1 - abs(tn - t)));
+        for tn=1:B            
+            voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) +  uint8(pi) * max(0, 1 - abs(tn - t));
         end
         
 
@@ -135,37 +133,20 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
             V1n = uint8(v1);
             V2n = uint8(v2);
             V3n = uint8(v3);
-            V4n = uint8(v4);     
-          
-           
+            V4n = uint8(v4);
 
-            %       
-            IMovie(1,:,:,nbFrame) = I1n;
-            IMovie(2,:,:,nbFrame) = I2n;
-            IMovie(3,:,:,nbFrame) = I3n;
-            IMovie(4,:,:,nbFrame) = I4n;
+
+
+DVSfilename = strcat(fileName, '_', string(nbFrame), '.mat');
+save(DVSfilename, 'V3n')
+
+
+
             
             VoxelMovie(1,:,:,:,nbFrame) = V1n;
             VoxelMovie(2,:,:,:,nbFrame) = V2n;
             VoxelMovie(3,:,:,:,nbFrame) = V3n;
-            VoxelMovie(4,:,:,:,nbFrame) = V4n;
-            
-            %
-            pose(1,:) = nanmean(XYZPOS.XYZPOS.head(last_k:k,:),1);
-            pose(2,:) = nanmean(XYZPOS.XYZPOS.shoulderR(last_k:k,:),1);
-            pose(3,:) = nanmean(XYZPOS.XYZPOS.shoulderL(last_k:k,:),1);
-            pose(4,:) = nanmean(XYZPOS.XYZPOS.elbowR(last_k:k,:),1);
-            pose(5,:) = nanmean(XYZPOS.XYZPOS.elbowL(last_k:k,:),1);
-            pose(6,:) = nanmean(XYZPOS.XYZPOS.hipR(last_k:k,:),1);
-            pose(7,:) = nanmean(XYZPOS.XYZPOS.hipL(last_k:k,:),1);
-            pose(8,:) = nanmean(XYZPOS.XYZPOS.handR(last_k:k,:),1);
-            pose(9,:) = nanmean(XYZPOS.XYZPOS.handL(last_k:k,:),1);
-            pose(10,:) = nanmean(XYZPOS.XYZPOS.kneeR(last_k:k,:),1);
-            pose(11,:) = nanmean(XYZPOS.XYZPOS.kneeL(last_k:k,:),1);
-            pose(12,:) = nanmean(XYZPOS.XYZPOS.footR(last_k:k,:),1);
-            pose(13,:) = nanmean(XYZPOS.XYZPOS.footL(last_k:k,:),1);
-            
-            poseMovie(:,:,nbFrame) = pose;
+            VoxelMovie(4,:,:,:,nbFrame) = V4n;            
             
             last_k = k;
             %dt = timeStamp(idx) - lastTimeStampLastFrame;
@@ -180,31 +161,5 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
     
     disp(strcat('Number of frame: ',num2str(nbFrame)));
     fprintf(fileID, '%s \t frames: %d\n', fileName, nbFrame ); 
-        if saveHDF5 == 1        
-            DVSfilenameh5 = strcat(fileName,'.h5');
 
-            IMovie = IMovie(:,:,:,1:nbFrame);
-        
-            if convert_labels == true
-                Labelsfilenameh5 = strcat(fileName,'_label.h5');
-                poseMovie = poseMovie(:,:,1:nbFrame);
-            end
-
-            if save_count_frames == true
-                if exist(DVSfilenameh5, 'file') == 2
-                    return
-                else
-                    h5create(DVSfilenameh5,'/DVS',[nbcam reshapex reshapey nbFrame]);
-                    h5write(DVSfilenameh5, '/DVS', uint8(IMovie)); 
-                    if convert_labels == truenb
-                        h5create(Labelsfilenameh5,'/XYZ',[13 3 nbFrame])
-                        h5write(Labelsfilenameh5,'/XYZ',poseMovie)
-                    end
-                end
-            end
-
-            h5create(voxel_filenameh5,'/DVS',[nbcam reshapex reshapey B nbFrame]);
-            h5write(voxel_filenameh5, '/DVS', uint8(VoxelMovie(:,:,:,:,1:nbFrame))); 
-            
-        end
 end

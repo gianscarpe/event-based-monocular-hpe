@@ -1,20 +1,16 @@
 defaults:
   - optimizer: adam
+  - lr_scheduler: step_lr
   - dataset: timecount
   - loss: crossentropy
   - augmentation: center_crop
   - training: standard
+  - hydra: standard
 
-loading: false
 debug: false
-model: resnet34
-root_dir: /home/gianscarpe/dev
 
-hydra:
-  sweep:
-    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d}
-    subdir: exp_${hydra.job.num}_${now:%H-%M-%S}
-  run:
-    dir: ${root_dir}/exps/${dataset.name}/exp${now:%m-%d}/exp_${now:%H-%M-%S}
-      
+model: resnet34
+exp_dir: exps_${model}
+exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}_${now:%m-%d-%H-%M}
+root_dir: /home/gianscarpe/dev
 

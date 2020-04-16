@@ -39,27 +39,27 @@ def unflatten(dictionary):
                 d[part] = dict()
             d = d[part]
         d[parts[-1]] = value
-    return resultDict
+    return DictConfig(resultDict)
 
 def get_augmentation(augmentation_specifics):
     augmentations = []
-    for augmentation_class in augmentation_specifics.apply:
-        aug = hydra.utils.instantiate(augmentation_class)
+
+    for _, aug_spec in augmentation_specifics.apply.items():
+        aug = hydra.utils.instantiate(aug_spec)
         augmentations.append(aug)
 
     return albumentations.Compose(augmentations)
-
         
 class Model(pl.LightningModule):
     def __init__(self, hparams):
         super(Model, self).__init__()
-        print(hparams)
-        if hparams.loading:
-            hparams = unflatten(hparams)
+        hparams = unflatten(hparams)
         self.hparams = flatten(hparams)
+        
         self.train_config = hparams.training
         self.data_config = hparams.dataset
         self.optimizer_config = hparams.optimizer
+        self.scheduler_config = None
         
         self.augmentation_train = get_augmentation(hparams.augmentation_train)
         self.augmentation_test = get_augmentation(hparams.augmentation_test)
@@ -71,7 +71,11 @@ class Model(pl.LightningModule):
         self.model = getattr(models, hparams.model)(self.data_config['n_channels'],
                                                 self.data_config['n_classes'])
         
-    
+    def set_optional_params(self, hparams):
+        if hparams.training.use_lr_scheduler:
+            self.scheduler_config = hparams.lr_scheduler
+        
+        
     def forward(self, x):
         x = self.model(x)
         return x
@@ -83,7 +87,7 @@ class Model(pl.LightningModule):
 
         preload_dir = os.path.join(data_dir, 'preload')
 
-        if os.path.exists(preload_dir):
+        if os.path.exists(os.path.join(preload_dir, 'train_indexes.npy')):
             from utils.generate_indexes import load_npy_indexes_and_map
             file_paths, train_index, val_index, test_index = load_npy_indexes_and_map(data_dir)
         else:
@@ -104,20 +108,30 @@ class Model(pl.LightningModule):
         val_loader = get_dataloader(self.val_dataset,
                                     self.train_config['batch_size'], self.num_workers)
         return val_loader
+
+    def test_dataloader(self):
+        test_loader = get_dataloader(self.test_dataset,
+                                    self.train_config['batch_size'], self.num_workers)
+        return test_loader
+
     
 
     def configure_optimizers(self):
         optimizer = getattr(torch.optim,
                             self.optimizer_config['type'])(params=self.parameters(),
                                                                     **self.optimizer_config['params'])
+        scheduler = None
+        if self.scheduler_config:
+            scheduler = getattr(torch.optim.lr_scheduler,
+                                self.scheduler_config['type'])(optimizer,
+                                                               **self.scheduler_config['params'])
+            return [optimizer], [scheduler]
 
         return optimizer
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
         sample_imgs = b_x[:6]
-        grid = torchvision.utils.make_grid(sample_imgs)
-        self.logger.experiment.add_image('Batch images', grid, 0)
 
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
@@ -125,6 +139,15 @@ class Model(pl.LightningModule):
         logs = {"loss":loss}
         return {"loss":loss, "log":logs}
 
+    
+    def training_epoch_end(self, outputs):
+        
+        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
+
+        logs = {'avg_train_loss': avg_loss,  'step': self.current_epoch}
+        
+        return {'train_loss': avg_loss, 'log': logs, 'progress_bar':    logs}
+     
 
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
@@ -136,6 +159,7 @@ class Model(pl.LightningModule):
 
         return {"batch_val_loss":loss, "y_pred":pred_y, "y_true":b_y}
 
+    
     def validation_epoch_end(self, outputs):
         
         y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
@@ -149,4 +173,31 @@ class Model(pl.LightningModule):
         
         logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision, 'val_recall':recall, 'step': self.current_epoch}
         
-        return {'val_loss': avg_loss, 'val_acc':acc,'log': logs, 'progress_bar': logs}
+        return {'val_loss': avg_loss, 'val_acc':acc,'log': logs, 'progress_bar':    logs}
+   
+    
+    def test_step(self, batch, batch_idx): 
+        b_x, b_y = batch
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        _, pred_y = torch.max(output.data, 1)
+        correct_predictions = (pred_y == b_y).sum().item()
+
+        return {"batch_test_loss":loss, "y_pred":pred_y, "y_true":b_y}
+
+    
+    def test_epoch_end(self, outputs):
+        
+        y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
+        y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
+
+        
+        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
+        acc = accuracy_score(y_true, y_pred)
+        recall = recall_score(y_true, y_pred, average='weighted')
+        precision = precision_score(y_true, y_pred, average='weighted')
+        
+        logs = {'test_loss': avg_loss, "test_acc":acc, 'test_precision':precision, 'test_recall':recall, 'step': self.current_epoch}
+        
+        return {**logs, 'log': logs, 'progress_bar':    logs}
