@@ -52,6 +52,7 @@ def main(cfg: DictConfig) -> None:
         
     trainer = pl.Trainer(**trainer_configuration)
     trainer.fit(model)
+    trainer.test(model)
 
     
 

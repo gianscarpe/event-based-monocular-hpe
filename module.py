@@ -22,9 +22,17 @@ def flatten(d):
         if isinstance(val, dict) or isinstance(val, DictConfig):
             val = [val]
         if isinstance(val, list) or isinstance(val, ListConfig):
+            count_element = 0
             for subdict in val:
-                deeper = flatten(subdict).items()
-                out.update({key + '__' + key2: val2 for key2, val2 in deeper})
+                if isinstance(subdict, dict) or isinstance(subdict, DictConfig):
+                    deeper = flatten(subdict).items()
+                    out.update({key + '__' + key2: val2 for key2, val2 in
+                                deeper})
+                else:
+                    out.update({key + '__list__' + str(count_element): subdict})
+                    count_element+=1
+                        
+    
         else:
             out[key] = val
     return out
@@ -33,16 +41,35 @@ def unflatten(dictionary):
     resultDict = dict()
     for key, value in dictionary.items():
         parts = key.split("__")
-        d = resultDict
-        for part in parts[:-1]:
+        d = resultDict     
+        i = 0
+        while (i < len(parts)-1):
+            part = parts[i]
+            is_list = False
+            if part == "list":
+                part = parts[i-1]
+                if not isinstance(previous[part], list):
+                    previous[part] = list()
+                d = previous[part]
+                break
+                                
             if part not in d:
                 d[part] = dict()
+                    
+            previous = d
             d = d[part]
-        d[parts[-1]] = value
+            i+=1
+
+        if isinstance(d, list):
+            d.append(value)
+        else:
+            d[parts[-1]] = value
     return DictConfig(resultDict)
+
 
 def get_augmentation(augmentation_specifics):
     augmentations = []
+
 
     for _, aug_spec in augmentation_specifics.apply.items():
         aug = hydra.utils.instantiate(aug_spec)
@@ -53,8 +80,10 @@ def get_augmentation(augmentation_specifics):
 class Model(pl.LightningModule):
     def __init__(self, hparams):
         super(Model, self).__init__()
+        print(hparams)
         hparams = unflatten(hparams)
         self.hparams = flatten(hparams)
+        
         
         self.train_config = hparams.training
         self.data_config = hparams.dataset

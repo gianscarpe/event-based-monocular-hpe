@@ -1,16 +1,24 @@
-import glob
 import numpy as np
 import argparse
 import os
 import pickle
+import re
+
 
 PRELOAD_DIR = "preload"
 
+def get_file_paths(path, extensions):
+    extension_regex = "|".join(extensions)
+    print(extension_regex)
+    res = [os.path.join(path, f) for f in os.listdir(path) if
+           re.search(r'({})$'.format(extension_regex),f)]
+    return sorted(res)
+    
 def save_npy_indexes_and_map(path, split_at, balanced=True):
     print("Creating split ...")
-    file_paths = sorted(glob.glob(os.path.join(path, "*.npy")))
-    out_dir = os.path.join(path, PRELOAD_DIR)
 
+    file_paths = get_file_paths(path, extensions=['.npy','.mat'])
+    out_dir = os.path.join(path, PRELOAD_DIR)
     os.makedirs(out_dir, exist_ok=True)
 
     if balanced:

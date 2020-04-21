@@ -4,7 +4,7 @@ import os
 import glob
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-
+import scipy.io
 from utils.config import MOVEMENTS_PER_SESSION
 import numpy as np
 import torch
