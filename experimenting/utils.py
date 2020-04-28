@@ -3,6 +3,7 @@ import os
 import hydra
 from omegaconf import DictConfig, ListConfig
 import albumentations
+from .dataset.config import MOVEMENTS_PER_SESSION
 
 def get_file_paths(path, extensions):
     extension_regex = "|".join(extensions)

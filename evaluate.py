@@ -16,6 +16,8 @@ def main(cfg: DictConfig) -> None:
     print("Loading from ... ", load_path)
     if (os.path.exists(load_path)):
         model = Model.load_from_checkpoint(load_path)
+        trainer = pl.Trainer(gpus=1, benchmark=True, weights_summary='top')
+        trainer.fit(model)
         print("Model loaded")
 
     else:

@@ -18,7 +18,7 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 class Model(pl.LightningModule):
     def __init__(self, hparams):
         super(Model, self).__init__()
-        print(hparams)
+        
         hparams = unflatten(hparams)
         self.hparams = flatten(hparams)
         
@@ -69,6 +69,7 @@ class Model(pl.LightningModule):
                                          n_channels, preprocess=self.augmentation_train)
         self.val_dataset = get_dataset(file_paths, val_index, False, n_channels,
                                        preprocess=self.augmentation_test)
+        
         self.test_dataset = get_dataset(file_paths, test_index, False,
                                         n_channels, preprocess=self.augmentation_test)
 
