@@ -137,7 +137,6 @@ dependencies:
   - testpath=0.4.4=py_0
   - tk=8.6.8=hbc83047_0
   - toolz=0.10.0=py_0
-  - torch=1.5.0
   - tornado=6.0.4=py37h7b6447c_1
   - traitlets=4.3.3=py37_0
   - wcwidth=0.1.9=py_0
@@ -175,7 +174,6 @@ dependencies:
     - rsa==4.0
     - tensorboard==2.2.0
     - tensorboard-plugin-wit==1.6.0.post2
-    - torchvision==0.5.0
     - tqdm==4.43.0
     - urllib3==1.25.8
     - werkzeug==1.0.0
