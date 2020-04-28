@@ -1,0 +1,9 @@
+defaults:
+  - representation: voxel
+  - vid2e: standard
+
+show_debug_images: 10
+input_dir: /home/gianscarpe/
+output_dir: /home/gianscarpe/dev/event-camera/data
+batch_size: 1
+    

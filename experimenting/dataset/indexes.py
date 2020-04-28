@@ -4,15 +4,9 @@ import os
 import pickle
 import re
 
+from ..utils import get_file_paths
 
 PRELOAD_DIR = "preload"
-
-def get_file_paths(path, extensions):
-    extension_regex = "|".join(extensions)
-    print(extension_regex)
-    res = [os.path.join(path, f) for f in os.listdir(path) if
-           re.search(r'({})$'.format(extension_regex),f)]
-    return sorted(res)
     
 def save_npy_indexes_and_map(path, split_at, balanced=True):
     print("Creating split ...")

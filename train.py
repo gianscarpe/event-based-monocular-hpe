@@ -1,18 +1,17 @@
 import os
 import hydra
 from omegaconf import DictConfig
-from module import Model
+from experimenting import Model
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from callbacks import AvgLossCallback
 from pytorch_lightning.loggers import TensorBoardLogger
 
-
 import logging
+
 logging.basicConfig(level=logging.INFO)
 
-@hydra.main(config_path='conf/config.yaml')
+@hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
 

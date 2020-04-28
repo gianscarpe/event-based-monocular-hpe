@@ -1,0 +1,9 @@
+vid2e:
+  class: experimenting.generator.SimulatorWrapper
+  params:
+    Cp: 0.1
+    Cn: 0.1
+    refractory_period: 1e-4
+    log_eps: 1e-3
+    use_log: true
+

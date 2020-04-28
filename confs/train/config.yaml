@@ -7,10 +7,10 @@ defaults:
   - training: standard
   - hydra: standard
 
-debug: false
+debug: true
 
 model: resnet34
 exp_dir: exps_${model}
 exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}_${now:%m-%d-%H-%M}
-root_dir: /home/gianscarpe/dev
+root_dir: /home/gianscarpe/dev/event-camera/data
 

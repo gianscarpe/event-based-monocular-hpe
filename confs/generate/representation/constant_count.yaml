@@ -1,0 +1,9 @@
+representation:
+  class: experimenting.generator.ConstantRepresentation
+  params:
+    W: 346
+    H: 260
+    C: 1
+    num_events: 7500 
+  
+  

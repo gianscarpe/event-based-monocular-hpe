@@ -2,80 +2,18 @@ import torch
 from torch import nn
 import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from dataset import get_dataset, get_dataloader
-import models
-import albumentations
+from ..dataset  import get_dataset, get_dataloader, save_npy_indexes_and_map, load_npy_indexes_and_map
+from .cnns import get_cnn
 import torchvision
 
-from omegaconf import DictConfig, ListConfig
 import torch.nn.functional as F
 import hydra
 import pytorch_lightning as pl
 import collections
 import os
-
+from ..utils import flatten, unflatten, get_augmentation
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 
-def flatten(d):
-    out = {}
-    for key, val in d.items():
-        if isinstance(val, dict) or isinstance(val, DictConfig):
-            val = [val]
-        if isinstance(val, list) or isinstance(val, ListConfig):
-            count_element = 0
-            for subdict in val:
-                if isinstance(subdict, dict) or isinstance(subdict, DictConfig):
-                    deeper = flatten(subdict).items()
-                    out.update({key + '__' + key2: val2 for key2, val2 in
-                                deeper})
-                else:
-                    out.update({key + '__list__' + str(count_element): subdict})
-                    count_element+=1
-                        
-    
-        else:
-            out[key] = val
-    return out
-
-def unflatten(dictionary):
-    resultDict = dict()
-    for key, value in dictionary.items():
-        parts = key.split("__")
-        d = resultDict     
-        i = 0
-        while (i < len(parts)-1):
-            part = parts[i]
-            is_list = False
-            if part == "list":
-                part = parts[i-1]
-                if not isinstance(previous[part], list):
-                    previous[part] = list()
-                d = previous[part]
-                break
-                                
-            if part not in d:
-                d[part] = dict()
-                    
-            previous = d
-            d = d[part]
-            i+=1
-
-        if isinstance(d, list):
-            d.append(value)
-        else:
-            d[parts[-1]] = value
-    return DictConfig(resultDict)
-
-
-def get_augmentation(augmentation_specifics):
-    augmentations = []
-
-
-    for _, aug_spec in augmentation_specifics.apply.items():
-        aug = hydra.utils.instantiate(aug_spec)
-        augmentations.append(aug)
-
-    return albumentations.Compose(augmentations)
         
 class Model(pl.LightningModule):
     def __init__(self, hparams):
@@ -97,8 +35,10 @@ class Model(pl.LightningModule):
 
         self.loss_func = hydra.utils.instantiate(hparams.loss)
 
-        self.model = getattr(models, hparams.model)(self.data_config['n_channels'],
-                                                self.data_config['n_classes'])
+        params = {'n_channels': self.data_config['n_channels'],
+                  'n_classes': self.data_config['n_classes']}
+        print(params)
+        self.model = get_cnn(hparams.model, params)
         
     def set_optional_params(self, hparams):
         if hparams.training.use_lr_scheduler:
@@ -117,30 +57,38 @@ class Model(pl.LightningModule):
         preload_dir = os.path.join(data_dir, 'preload')
 
         if os.path.exists(os.path.join(preload_dir, 'train_indexes.npy')):
-            from utils.generate_indexes import load_npy_indexes_and_map
+
             file_paths, train_index, val_index, test_index = load_npy_indexes_and_map(data_dir)
         else:
-            from utils.generate_indexes import save_npy_indexes_and_map
-            file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir, split_at=0.8, balanced=self.data_config.balanced)
+
+            file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir,
+                                                                                     split_at=.8,
+                                                                                      balanced=self.data_config.balanced)
         
-        self.train_dataset = get_dataset(file_paths, train_index, False, n_channels, preprocess=self.augmentation_train)
-        self.val_dataset = get_dataset(file_paths, val_index, False, n_channels, preprocess=self.augmentation_test)
-        self.test_dataset = get_dataset(file_paths, test_index, False, n_channels, preprocess=self.augmentation_test)
+        self.train_dataset = get_dataset(file_paths, train_index, False,
+                                         n_channels, preprocess=self.augmentation_train)
+        self.val_dataset = get_dataset(file_paths, val_index, False, n_channels,
+                                       preprocess=self.augmentation_test)
+        self.test_dataset = get_dataset(file_paths, test_index, False,
+                                        n_channels, preprocess=self.augmentation_test)
 
     def train_dataloader(self):
-
         train_loader = get_dataloader(self.train_dataset,
                                       self.train_config['batch_size'], self.num_workers)
         return train_loader
 
     def val_dataloader(self):
         val_loader = get_dataloader(self.val_dataset,
-                                    self.train_config['batch_size'], self.num_workers)
+                                    self.train_config['batch_size'],
+                                    self.num_workers, shuffle=False)
+        
         return val_loader
 
     def test_dataloader(self):
         test_loader = get_dataloader(self.test_dataset,
-                                    self.train_config['batch_size'], self.num_workers)
+                                    self.train_config['batch_size'],
+                                    self.num_workers, shuffle=False)
+                                    
         return test_loader
 
     
@@ -148,7 +96,7 @@ class Model(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = getattr(torch.optim,
                             self.optimizer_config['type'])(params=self.parameters(),
-                                                                    **self.optimizer_config['params'])
+                                                           **self.optimizer_config['params'])
         scheduler = None
         if self.scheduler_config:
             scheduler = getattr(torch.optim.lr_scheduler,
@@ -190,17 +138,16 @@ class Model(pl.LightningModule):
 
     
     def validation_epoch_end(self, outputs):
-        
         y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
         y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
 
-        
         avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
         acc = accuracy_score(y_true, y_pred)
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
         
-        logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision, 'val_recall':recall, 'step': self.current_epoch}
+        logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision,
+                'val_recall':recall, 'step': self.current_epoch}
         
         return {'val_loss': avg_loss, 'val_acc':acc,'log': logs, 'progress_bar':    logs}
    
@@ -217,16 +164,16 @@ class Model(pl.LightningModule):
 
     
     def test_epoch_end(self, outputs):
-        
         y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
         y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
 
-        
         avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
         acc = accuracy_score(y_true, y_pred)
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
         
-        logs = {'test_loss': avg_loss, "test_acc":acc, 'test_precision':precision, 'test_recall':recall, 'step': self.current_epoch}
+        logs = {'test_loss': avg_loss, "test_acc":acc,
+                'test_precision':precision, 'test_recall':recall, 'step':
+                self.current_epoch}
         
         return {**logs, 'log': logs, 'progress_bar':    logs}

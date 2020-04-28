@@ -5,27 +5,10 @@ import glob
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import scipy.io
-from utils.config import MOVEMENTS_PER_SESSION
+from .config import MOVEMENTS_PER_SESSION
 import numpy as np
 import torch
-
-def get_label_from_filename(filepath):
-    """Given the filepath of .h5 data, return the correspondent label
-
-    E.g.
-n    S1_session_2_mov_1_frame_249.npy
-    """
-    
-    label = 0
-    filename = os.path.basename(filepath)
-    session = int(filename[filename.find('session_') + len('session_')])
-    mov = int(filename[filename.find('mov_') + len('mov_')])
-
-    for i in range(1, session):
-        label += MOVEMENTS_PER_SESSION[i]
-
-    return label + mov - 1
-
+from ..utils import get_label_from_filename
 
 class DHP19Dataset(Dataset):
     """Face Landmarks dataset."""
@@ -79,7 +62,6 @@ class DHP19Dataset(Dataset):
             augmented = self.transform(image=x)
             x = augmented['image']
 
-
         return x, y
 
 
@@ -91,22 +73,27 @@ def get_loader(file_paths, index, preprocess, preload, n_channels):
     preload_dir = os.path.join(root_dir, 'preload')
 
     loader = DataLoader(DHP19Dataset(file_paths, train_index,
-                                     transform=preprocess,preload=preload, n_channels=n_channels),
-                        batch_size=batch_size, shuffle=True, num_workers=num_workers)
+                                     transform=preprocess,preload=preload,
+                                     n_channels=n_channels),
+                        batch_size=batch_size, shuffle=True,
+                        num_workers=num_workers)
     
     return loader
 
     
 def get_dataset(file_paths, index,  preload, n_channels, preprocess):
-    dataset = DHP19Dataset(file_paths, indexes=index, transform=preprocess, preload=preload, n_channels=n_channels)
+    dataset = DHP19Dataset(file_paths, indexes=index, transform=preprocess,
+                           preload=preload, n_channels=n_channels)
     return dataset
 
-def get_dataloader(dataset, batch_size, num_workers):
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+def get_dataloader(dataset, batch_size, num_workers, shuffle=True):
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
+                        num_workers=num_workers)
     return loader
 
 def get_dataloader_from_row(file_paths, index,  preload, n_channels, batch_size, num_workers):
-    loader = DataLoader(get_dataset(file_paths, index,  preload, n_channels), batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    loader = DataLoader(get_dataset(file_paths, index, preload, n_channels),
+                        batch_size=batch_size, shuffle=True, num_workers=num_workers)
     return loader
 
 
@@ -125,10 +112,12 @@ def get_data(data_config, num_workers=12, preload=False):
         from utils.generate_indexes import get_npy_indexes_and_map
         file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir)
         
-    train_loader = get_dataloader(file_paths, train_index, preload, n_channels, batch_size, num_workers)
-    val_loader = get_dataloader(file_paths, val_index, preload, n_channels, batch_size, num_workers)
-    test_loader = get_dataloader(file_paths, test_index, preload, n_channels, batch_size, num_workers)
-
+    train_loader = get_dataloader(file_paths, train_index, preload, n_channels,
+                                  batch_size, num_workers)
+    val_loader = get_dataloader(file_paths, val_index, preload, n_channels,
+                                batch_size, num_workers)
+    test_loader = get_dataloader(file_paths, test_index, preload, n_channels,
+                                 batch_size, num_workers)
 
     return train_loader, val_loader, test_loader
 
