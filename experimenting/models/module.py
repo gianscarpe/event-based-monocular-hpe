@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from ..dataset  import get_dataset, get_dataloader, save_npy_indexes_and_map, load_npy_indexes_and_map
+from ..dataset  import get_data
 from .cnns import get_cnn
 import torchvision
 
@@ -52,46 +52,22 @@ class Model(pl.LightningModule):
     def prepare_data(self):
         data_dir = self.data_config['path']
         batch_size = self.train_config['batch_size']
-        n_channels = self.data_config['n_channels']
-
-        preload_dir = os.path.join(data_dir, 'preload')
-
-        if os.path.exists(os.path.join(preload_dir, 'train_indexes.npy')):
-
-            file_paths, train_index, val_index, test_index = load_npy_indexes_and_map(data_dir)
-        else:
-
-            file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir,
-                                                                                     split_at=.8,
-                                                                                      balanced=self.data_config.balanced)
         
-        self.train_dataset = get_dataset(file_paths, train_index, False,
-                                         n_channels, preprocess=self.augmentation_train)
-        self.val_dataset = get_dataset(file_paths, val_index, False, n_channels,
-                                       preprocess=self.augmentation_test)
-        
-        self.test_dataset = get_dataset(file_paths, test_index, False,
-                                        n_channels, preprocess=self.augmentation_test)
+        self.train_loader, self.val_loader, self.test_loader = get_data(data_dir,
+                                                                        self.augmentation_train,
+                                                                        self.augmentation_test,
+                                                                        batch_size,
+                                                                        augment_label=False,
+                                                                        num_workers=self.num_workers)
 
     def train_dataloader(self):
-        train_loader = get_dataloader(self.train_dataset,
-                                      self.train_config['batch_size'], self.num_workers)
-        return train_loader
+        return self.train_loader
 
     def val_dataloader(self):
-        val_loader = get_dataloader(self.val_dataset,
-                                    self.train_config['batch_size'],
-                                    self.num_workers, shuffle=False)
-        
-        return val_loader
+        return self.val_loader
 
     def test_dataloader(self):
-        test_loader = get_dataloader(self.test_dataset,
-                                    self.train_config['batch_size'],
-                                    self.num_workers, shuffle=False)
-                                    
-        return test_loader
-
+        return self.test_loader
     
 
     def configure_optimizers(self):

@@ -90,3 +90,6 @@ n    S1_session_2_mov_1_frame_249.npy
         label += MOVEMENTS_PER_SESSION[i]
 
     return label + mov - 1
+
+def get_preload_dir(data_dir):
+    return os.path.join(data_dir, 'preload')

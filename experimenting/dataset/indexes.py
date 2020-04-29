@@ -3,16 +3,13 @@ import argparse
 import os
 import pickle
 import re
+from ..utils import get_file_paths, get_preload_dir
 
-from ..utils import get_file_paths
-
-PRELOAD_DIR = "preload"
-    
 def save_npy_indexes_and_map(path, split_at, balanced=True):
     print("Creating split ...")
 
     file_paths = get_file_paths(path, extensions=['.npy','.mat'])
-    out_dir = os.path.join(path, PRELOAD_DIR)
+    out_dir = get_preload_dir(path)
     os.makedirs(out_dir, exist_ok=True)
 
     if balanced:
@@ -33,27 +30,41 @@ def save_npy_indexes_and_map(path, split_at, balanced=True):
     train_indexes = data_indexes[:train_split]
     val_indexes = data_indexes[train_split:]
 
+    labels = [get_label_from_filename(x) for x in file_paths]    
+
+                                                 
     with open(os.path.join(out_dir, "file_paths.pkl"), "wb") as f:
         pickle.dump(file_paths, f)
 
     np.save(os.path.join(out_dir, "train_indexes.npy"), train_indexes)
     np.save(os.path.join(out_dir, "val_indexes.npy"), val_indexes)
     np.save(os.path.join(out_dir, "test_indexes.npy"), test_indexes)
+    np.save(os.path.join(out_dir, "labels.npy"), labels)
 
-    return file_paths, train_indexes, val_indexes, test_indexes
+    return file_paths, train_indexes, val_indexes, test_indexes, labels
     
 def load_npy_indexes_and_map(path):
-    path = os.path.join(path, PRELOAD_DIR)
                         
     train_indexes = np.load(os.path.join(path, "train_indexes.npy"))
     val_indexes = np.load(os.path.join(path, "val_indexes.npy"))
     test_indexes = np.load(os.path.join(path, "test_indexes.npy"))
+    labels = np.load(os.path.join(path, "labels.npy"))
+    
     with open(os.path.join(path, "file_paths.pkl"), "rb") as f:
         file_paths = pickle.load(f)
 
     print(f"LOADED INDEXES! train: {len(train_indexes)} \t val: " +
           f"{len(val_indexes)} \t test: {len(test_indexes)}")
-    return file_paths, train_indexes, val_indexes, test_indexes
+    return file_paths, train_indexes, val_indexes, test_indexes, labels
+
+
+def get_dataset_params(data_dir):
+    preload_dir = get_preload_dir(data_dir)
+
+    if os.path.exists(preload_dir):
+        return load_npy_indexes_and_map(preload_dir)
+    else:
+        return save_npy_indexes_and_map(data_dir)
 
 
 if __name__ == "__main__":

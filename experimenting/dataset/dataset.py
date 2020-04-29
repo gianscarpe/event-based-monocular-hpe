@@ -1,11 +1,9 @@
-from PIL import Image
 import cv2
 import os
 import glob
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms
 import scipy.io
-from .config import MOVEMENTS_PER_SESSION
 import numpy as np
 import torch
 from ..utils import get_label_from_filename
@@ -13,7 +11,7 @@ from ..utils import get_label_from_filename
 class DHP19Dataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, file_paths, indexes=None, transform=None, n_channels=1, preload=False):
+    def __init__(self, file_paths, labels=None, indexes=None, transform=None, augment_label=False):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -25,12 +23,12 @@ class DHP19Dataset(Dataset):
         self.x_paths = file_paths
         self.x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
-        self.labels = [get_label_from_filename(
-            x_path) for x_path in self.x_paths]
+        self.labels = labels if labels is not None else [get_label_from_filename( x_path)
+                                             for x_path in self.x_paths]
 
-        self.n_channels = n_channels
         self.transform = transform
-        self.images = None
+        self.augment_label = augment_label
+
         
     def __len__(self):
         return len(self.x_indexes)
@@ -40,6 +38,7 @@ class DHP19Dataset(Dataset):
         x = DHP19Dataset._load(img_name)                                
         return x
 
+    
     def _load(path):
         ext = os.path.splitext(path)[1]
         if ext == '.mat':
@@ -59,67 +58,15 @@ class DHP19Dataset(Dataset):
         y = self.labels[idx]
         
         if self.transform:
-            augmented = self.transform(image=x)
+            if self.augment_label:
+                augmented = self.transform(image=x, mask=y)
+                y = augmented['mask']
+            else:
+                augmented = self.transform(image=x)
             x = augmented['image']
 
         return x, y
 
-
-def get_loader(file_paths, index, preprocess, preload, n_channels):
-    batch_size = data_config['batch_size']
-    n_channels = data_config['n_channels']
-
-    data_dir = os.path.join(root_dir,'movements_per_frame')
-    preload_dir = os.path.join(root_dir, 'preload')
-
-    loader = DataLoader(DHP19Dataset(file_paths, train_index,
-                                     transform=preprocess,preload=preload,
-                                     n_channels=n_channels),
-                        batch_size=batch_size, shuffle=True,
-                        num_workers=num_workers)
-    
-    return loader
-
-    
-def get_dataset(file_paths, index,  preload, n_channels, preprocess):
-    dataset = DHP19Dataset(file_paths, indexes=index, transform=preprocess,
-                           preload=preload, n_channels=n_channels)
-    return dataset
-
-def get_dataloader(dataset, batch_size, num_workers, shuffle=True):
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
-                        num_workers=num_workers)
-    return loader
-
-def get_dataloader_from_row(file_paths, index,  preload, n_channels, batch_size, num_workers):
-    loader = DataLoader(get_dataset(file_paths, index, preload, n_channels),
-                        batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    return loader
-
-
-def get_data(data_config, num_workers=12, preload=False):
-    root_dir = data_config['root_dir']
-    batch_size = data_config['batch_size']
-    n_channels = data_config['n_channels']
-
-    data_dir = os.path.join(root_dir,'movements_per_frame')
-    preload_dir = os.path.join(root_dir, 'preload')
-
-    if os.path.exists(preload_dir):
-        from utils.generate_indexes import load_npy_indexes_and_map
-        file_paths, train_index, val_index, test_index = load_npy_indexes_and_map(data_dir)
-    else:
-        from utils.generate_indexes import get_npy_indexes_and_map
-        file_paths, train_index, val_index, test_index = save_npy_indexes_and_map(data_dir)
-        
-    train_loader = get_dataloader(file_paths, train_index, preload, n_channels,
-                                  batch_size, num_workers)
-    val_loader = get_dataloader(file_paths, val_index, preload, n_channels,
-                                batch_size, num_workers)
-    test_loader = get_dataloader(file_paths, test_index, preload, n_channels,
-                                 batch_size, num_workers)
-
-    return train_loader, val_loader, test_loader
 
 
     
