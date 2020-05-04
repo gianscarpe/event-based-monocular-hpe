@@ -1,0 +1,5 @@
+optimizer:
+  type: Adam
+  params:
+    lr: 0.0003
+    

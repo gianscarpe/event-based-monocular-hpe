@@ -1,7 +1,7 @@
 import os
 import hydra
 from omegaconf import DictConfig
-from experimenting import Classifier as Model
+from experimenting import PoseEstimator as Model
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -11,7 +11,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-@hydra.main(config_path='./confs/train/config.yaml')
+@hydra.main(config_path='./confs/reconstruction/config.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
 
@@ -36,11 +36,11 @@ def main(cfg: DictConfig) -> None:
     profiler = pl.profiler.SimpleProfiler()
     trainer_configuration = {
         'gpus':1, 'benchmark':True, 'max_epochs':cfg.training.epochs,
-      'early_stop_callback':early_stop_callback,
-      'fast_dev_run':debug,
-      'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
-      'weights_summary': 'top', 'logger':logger,
-      'profiler':profiler}
+        'early_stop_callback':early_stop_callback,
+        'fast_dev_run':debug,
+        'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
+        'weights_summary': 'top', 'logger':logger,
+        'profiler':profiler}
     print(cfg)
     model = Model(cfg)
     

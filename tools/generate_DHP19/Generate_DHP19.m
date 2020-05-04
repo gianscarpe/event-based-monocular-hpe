@@ -11,7 +11,7 @@
 
 % Set the paths of code repository folder, data folder and output folder 
 % where to generate files of accumulated events.
-rootCodeFolder = '/home/gianscarpe/dev/event-camera/dhp19_utils/'; % root directory of the git repo.
+rootCodeFolder = '/home/gianscarpe/dev/event-camera/tools'; % root directory of the git repo.
 rootDataFolder = '/home/rslsync/Resilio Sync/DHP19'; % root directory of the data downloaded from resiliosync.
 outDatasetFolder = '/home/gianscarpe/dev/data/dataset';
 
@@ -102,11 +102,11 @@ numSessions = 5;
 fileIdx = 0;
 
 display('Start');
-for subj = 1:numSubjects 
+for subj = 8: 8%numSubjects 
     subj_string = sprintf('S%d',subj);
     sessionsPath = fullfile(DVSrecFolder, subj_string);
     
-    for sess = 1:numSessions
+    for sess = 5:numSessions
         sessString = sprintf('session%d',sess);
 
         movementsPath = fullfile(sessionsPath, sessString);
@@ -118,7 +118,7 @@ for subj = 1:numSubjects
         elseif sess == 5, numMovements = 7;
         end
         
-        for mov = 1:numMovements
+        for mov = 2:2%1:numMovements
             fileIdx = fileIdx+1;
             
 movString = sprintf('mov%d',mov);
@@ -287,7 +287,8 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                 disp(strcat('Processing file: ',outDVSfile));
                 disp(strcat('Tot num of events in all cameras: ', num2str(eventsPerFrame*nbcam)));
                 %ExtractEventsToFramesAndMeanLabels( ...
-                ExtractEventsToVoxelAndMeanLabels( ...
+                %ExtractEventsToVoxelAndMeanLabels( ...
+		ExtractLabels( ...
                         fileID, ...
                         aedat, ...
                         events, ...

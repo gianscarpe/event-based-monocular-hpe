@@ -1,0 +1,16 @@
+defaults:
+  - optimizer: adam
+  - lr_scheduler: step_lr
+  - dataset: timecount
+  - loss: diceloss
+  - augmentation: center_crop
+  - training: standard
+  - hydra: standard
+
+debug: true
+
+model: resnet34
+exp_dir: exps_${model}
+exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}_${now:%m-%d-%H-%M}
+root_dir: /home/gianscarpe/dev/event-camera/data
+

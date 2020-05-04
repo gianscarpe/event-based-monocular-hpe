@@ -4,6 +4,8 @@ import hydra
 from omegaconf import DictConfig, ListConfig
 import albumentations
 from .dataset.config import MOVEMENTS_PER_SESSION
+import numpy as np
+import cv2
 
 def get_file_paths(path, extensions):
     extension_regex = "|".join(extensions)
@@ -93,3 +95,36 @@ n    S1_session_2_mov_1_frame_249.npy
 
 def get_preload_dir(data_dir):
     return os.path.join(data_dir, 'preload')
+
+
+def decay_heatmap(heatmap, sigma2=4):
+    heatmap = cv2.GaussianBlur(heatmap,(0,0),sigma2)
+    heatmap /= np.max(heatmap) # keep the max to 1
+    return heatmap
+
+def get_heatmap(vicon_xyz, p_mat, width, heigth):
+    num_joints = vicon_xyz.shape[-1]
+    vicon_xyz_homog = np.concatenate([vicon_xyz, np.ones([1, num_joints])], axis=0)
+    coord_pix_homog = np.matmul(p_mat, vicon_xyz_homog)
+    coord_pix_homog_norm = coord_pix_homog / coord_pix_homog[-1]
+    
+    u = coord_pix_homog_norm[0]
+    v = heigth - coord_pix_homog_norm[1] # flip v coordinate to match the image direction
+
+    # mask is used to make sure that pixel positions are in frame range.
+    mask = np.ones(u.shape).astype(np.float32)
+    mask[np.isnan(u)] = 0; mask[np.isnan(v)] = 0
+    mask[u>width] = 0; mask[u<=0] = 0; mask[v>heigth] = 0; mask[v<=0] = 0
+
+    # pixel coordinates
+    u = u.astype(np.int32)
+    v = v.astype(np.int32)
+    
+    # initialize, fill and smooth the heatmaps
+    label_heatmaps = np.zeros((heigth, width))
+    for fmidx, zipd in enumerate(zip(v, u, mask)):
+       if zipd[2]==1: # write joint position only when projection within frame boundaries
+            label_heatmaps[zipd[0], zipd[1]] = fmidx+1
+            #label_heatmaps[:,:,fmidx] = decay_heatmap(label_heatmaps[:,:,fmidx])
+
+    return label_heatmaps

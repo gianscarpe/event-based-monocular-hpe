@@ -1,0 +1,34 @@
+diff a/experimenting/dataset/__init__.py b/experimenting/dataset/__init__.py	(rejected hunks)
+@@ -1,24 +1,32 @@
+ from .dataset import *
+ from .indexes import get_dataset_params
+ from torch.utils.data import DataLoader
+ import os
+ from enum import Enum
+ from ..utils import flatten, unflatten, get_augmentation
+ 
+ class DatasetType(Enum):
+     CLASSIFICATION_DATASET = 'DHP19Dataset'
+     RECONSTUCTION_DATASET = 'DHP3DDataset'
+ 
++    
++def get_dataset(params, dataset_type):
++    switch = { DatasetType.CLASSIFICATION_DATASET : _get_classification_dataset}
++    return switch[dataset_type](params)
++
++def _get_classification_dataset(params):
++    dataset = DHP19Dataset(**params, augment_label=False)
+     return dataset
+ 
++
+ def get_dataloader_from_dataset(dataset, batch_size, num_workers, shuffle=True):
+     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
+                         num_workers=num_workers)
+     return loader
+ 
+ 
+ def get_dataloader(dataset_params, dataset_type, batch_size, num_workers):
+     loader = get_dataloader_from_dataset(dataset=get_dataset(dataset_params, dataset_type),
+                                          batch_size=batch_size,
+                                          shuffle=shuffle,
+                                          num_workers=num_workers)

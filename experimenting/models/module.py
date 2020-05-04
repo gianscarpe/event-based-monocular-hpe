@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from ..dataset  import get_data
+from ..dataset  import get_data, DatasetType
 from .cnns import get_cnn
 import torchvision
 
@@ -11,64 +11,47 @@ import hydra
 import pytorch_lightning as pl
 import collections
 import os
-from ..utils import flatten, unflatten, get_augmentation
 from sklearn.metrics import precision_score, recall_score, accuracy_score
+import segmentation_models_pytorch as smp
 
-        
-class Model(pl.LightningModule):
+__all__ = ['Classifier', 'PoseEstimator']
+
+class BaseModule(pl.LightningModule):
     def __init__(self, hparams):
-        super(Model, self).__init__()
+        """
+        Initialize Classifier model
+        """
         
-        hparams = unflatten(hparams)
-        self.hparams = flatten(hparams)
+        super(BaseModule, self).__init__()
         
-        
-        self.train_config = hparams.training
-        self.data_config = hparams.dataset
+        self.hparams = hparams
+
         self.optimizer_config = hparams.optimizer
         self.scheduler_config = None
-        
-        self.augmentation_train = get_augmentation(hparams.augmentation_train)
-        self.augmentation_test = get_augmentation(hparams.augmentation_test)
-        
-        self.num_workers = self.train_config.num_workers
 
         self.loss_func = hydra.utils.instantiate(hparams.loss)
 
-        params = {'n_channels': self.data_config['n_channels'],
-                  'n_classes': self.data_config['n_classes']}
-        print(params)
-        self.model = get_cnn(hparams.model, params)
-        
+        self.set_params(hparams)
+        self.set_optional_params(hparams)
+
+    def set_params(self, hparams):
+        pass
+
     def set_optional_params(self, hparams):
         if hparams.training.use_lr_scheduler:
             self.scheduler_config = hparams.lr_scheduler
-        
-        
+
+    def prepare_data(self):
+        self.train_loader, self.val_loader, self.test_loader = get_data(
+            self.hparams, dataset_type=self.dataset_type)
+
     def forward(self, x):
         x = self.model(x)
         return x
 
-    def prepare_data(self):
-        data_dir = self.data_config['path']
-        batch_size = self.train_config['batch_size']
-        
-        self.train_loader, self.val_loader, self.test_loader = get_data(data_dir,
-                                                                        self.augmentation_train,
-                                                                        self.augmentation_test,
-                                                                        batch_size,
-                                                                        augment_label=False,
-                                                                        num_workers=self.num_workers)
-
     def train_dataloader(self):
         return self.train_loader
 
-    def val_dataloader(self):
-        return self.val_loader
-
-    def test_dataloader(self):
-        return self.test_loader
-    
 
     def configure_optimizers(self):
         optimizer = getattr(torch.optim,
@@ -85,23 +68,42 @@ class Model(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
-        sample_imgs = b_x[:6]
-
+        
         output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        loss = self.loss_func(output, torch.squeeze(b_y))   # cross entropy loss
 
         logs = {"loss":loss}
         return {"loss":loss, "log":logs}
 
     
     def training_epoch_end(self, outputs):
-        
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-
         logs = {'avg_train_loss': avg_loss,  'step': self.current_epoch}
-        
+
         return {'train_loss': avg_loss, 'log': logs, 'progress_bar':    logs}
      
+
+class Classifier(BaseModule):
+
+    def __init__(self, hparams):
+        """
+        Initialize Classifier model
+        """
+        
+        super(Classifier, self).__init__(hparams)
+        self.dataset_type = DatasetType.CLASSIFICATION_DATASET
+    
+
+    def set_params(self, hparams):
+        params = {'n_channels': hparams.dataset['n_channels'],
+                  'n_classes': hparams.dataset['n_classes']}
+        self.model = get_cnn(hparams.model, params)
+
+    def val_dataloader(self):
+        return self.val_loader
+
+    def test_dataloader(self):
+        return self.test_loader
 
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
@@ -126,7 +128,8 @@ class Model(pl.LightningModule):
         logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision,
                 'val_recall':recall, 'step': self.current_epoch}
         
-        return {'val_loss': avg_loss, 'val_acc':acc,'log': logs, 'progress_bar':    logs}
+        return {'val_loss': avg_loss, 'val_acc':acc,'log': logs,
+                'progress_bar': logs}
    
     
     def test_step(self, batch, batch_idx): 
@@ -153,4 +156,21 @@ class Model(pl.LightningModule):
                 'test_precision':precision, 'test_recall':recall, 'step':
                 self.current_epoch}
         
-        return {**logs, 'log': logs, 'progress_bar':    logs}
+        return {**logs, 'log': logs, 'progress_bar': logs}
+
+
+class PoseEstimator(BaseModule):
+
+    def __init__(self, hparams):
+        super(PoseEstimator, self).__init__(hparams)
+        self.dataset_type = DatasetType.RECONSTUCTION_DATASET
+
+    def set_params(self, hparams):
+        self.n_channels = hparams.dataset.n_channels
+        self.n_joints = hparams.dataset.kwargs.n_joints
+        self.model : smp.Unet = smp.Unet(hparams.model,
+                              classes=self.n_joints,activation=None)
+        
+        self.model.encoder.conv1 = nn.Conv2d(self.n_channels, 64, kernel_size=(7, 7),
+                                     stride=(2, 2), padding=(3, 3), bias=False)
+        self.model.segmentation_head[-1] = nn.Softmax(dim=1)

@@ -16,8 +16,7 @@
 It's provided a toolset for generating `.npy` event frames from `DHP19`
 dataset. The supported representation are: `spatiotemporal voxelgrid` and
 `constant count`. Adapt `rootCodeFolder`, `rootDataFolder` and
-`outDatasetFolder` to your setup. More at
-[https://sites.google.com/view/dhp19/home][DHP19 official page].
+`outDatasetFolder` to your setup. More at [dhp19](https://sites.google.com/view/dhp19/home).
 
 ```
 matlab -r "run('./tools/generate_DHP19/Generate_DHP19.m')"
