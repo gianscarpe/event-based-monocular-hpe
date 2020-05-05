@@ -52,6 +52,13 @@ class BaseModule(pl.LightningModule):
     def train_dataloader(self):
         return self.train_loader
 
+    
+    def val_dataloader(self):
+        return self.val_loader
+
+    def test_dataloader(self):
+        return self.test_loader
+
 
     def configure_optimizers(self):
         optimizer = getattr(torch.optim,
@@ -70,7 +77,7 @@ class BaseModule(pl.LightningModule):
         b_x, b_y = batch
         
         output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, torch.squeeze(b_y))   # cross entropy loss
+        loss = self.loss_func(output, b_y)   # cross entropy loss
 
         logs = {"loss":loss}
         return {"loss":loss, "log":logs}
@@ -80,7 +87,15 @@ class BaseModule(pl.LightningModule):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         logs = {'avg_train_loss': avg_loss,  'step': self.current_epoch}
 
-        return {'train_loss': avg_loss, 'log': logs, 'progress_bar':    logs}
+        return {'train_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+
+    def _get_aggregated_results(self, outputs, prefix):
+        results = {}
+        for metric_key in self.metrics.keys():
+            results[prefix + metric_key] = torch.stack([x[metric_key] for x in outputs]).mean()
+        
+        return results
+
      
 
 class Classifier(BaseModule):
@@ -97,14 +112,9 @@ class Classifier(BaseModule):
     def set_params(self, hparams):
         params = {'n_channels': hparams.dataset['n_channels'],
                   'n_classes': hparams.dataset['n_classes']}
-        self.model = get_cnn(hparams.model, params)
+        self.model = get_cnn(hparams.training.model, params)
 
-    def val_dataloader(self):
-        return self.val_loader
-
-    def test_dataloader(self):
-        return self.test_loader
-
+        
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
         output = self.forward(b_x)               # cnn output
@@ -167,10 +177,47 @@ class PoseEstimator(BaseModule):
 
     def set_params(self, hparams):
         self.n_channels = hparams.dataset.n_channels
-        self.n_joints = hparams.dataset.kwargs.n_joints
-        self.model : smp.Unet = smp.Unet(hparams.model,
+        self.n_joints = hparams.dataset.n_joints
+        self.model : smp.Unet = smp.Unet(hparams.training.model,
                               classes=self.n_joints,activation=None)
         
         self.model.encoder.conv1 = nn.Conv2d(self.n_channels, 64, kernel_size=(7, 7),
                                      stride=(2, 2), padding=(3, 3), bias=False)
         self.model.segmentation_head[-1] = nn.Softmax(dim=1)
+
+        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5)}
+
+    def validation_step(self, batch, batch_idx): 
+        b_x, b_y = batch
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        results = {metric_name:metric_function(b_y, output) for metric_name,
+                   metric_function in self.metrics.items()}
+
+        return {"batch_val_loss":loss, **results}
+
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'val_mean')
+        logs = {'val_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+
+    def test_step(self, batch, batch_idx): 
+        b_x, b_y = batch
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+        results = {metric_name:metric_function(b_y, output) for metric_name, 
+                   metric_function in self.metrics.items()}
+
+        return {"batch_test_loss":loss, **results}
+
+    def test_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'test_mean')
+
+        logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
+        
+        return {**logs, 'log': logs, 'progress_bar': logs}
+

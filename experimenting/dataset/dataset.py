@@ -59,7 +59,7 @@ class DHP19BaseDataset(Dataset):
             if self.augment_label:
                 augmented = self.transform(image=x, mask=y)
                 y = augmented['mask']
-                y = y.transpose(0, -1) 
+                y = torch.squeeze(y.transpose(0, -1))
             else:
                 augmented = self.transform(image=x)
             x = augmented['image']

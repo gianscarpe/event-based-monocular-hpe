@@ -4,13 +4,8 @@ defaults:
   - dataset: timecount
   - loss: crossentropy
   - augmentation: center_crop
-  - training: standard
+  - training: classification
   - hydra: standard
 
-debug: true
-
-model: resnet34
-exp_dir: exps_${model}
-exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}_${now:%m-%d-%H-%M}
-root_dir: /home/gianscarpe/dev/event-camera/data
-
+debug: false
+root_dir: /home/gianscarpe/dev

@@ -59,12 +59,14 @@ def _get_classification_datasets(hparams):
 def _get_reconstruction_datasets(hparams):
     preprocess_train = get_augmentation(hparams.augmentation_train)
     preprocess_val = get_augmentation(hparams.augmentation_test)
-    
+    n_joints = hparams.dataset.n_joints
     params = get_dataset_params(hparams.dataset.path)
     file_paths, train_index, val_index, test_index, _ = params
+    
 
     train_params = {'file_paths': file_paths, 'indexes':train_index,
-                    'transform':preprocess_train, 'labels_dir':hparams.dataset.labels_dir}
+                    'transform':preprocess_train,
+                    'labels_dir':hparams.dataset.labels_dir, 'n_joints':n_joints}
 
     val_params = {'file_paths': file_paths, 'indexes':val_index,
                   'transform':preprocess_val, 'labels_dir':hparams.dataset.labels_dir}

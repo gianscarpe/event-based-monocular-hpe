@@ -1,7 +1,7 @@
 import os
 import hydra
 from omegaconf import DictConfig
-from experimenting import Classifier as Model
+import experimenting
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -42,7 +42,8 @@ def main(cfg: DictConfig) -> None:
       'weights_summary': 'top', 'logger':logger,
       'profiler':profiler}
     print(cfg)
-    model = Model(cfg)
+    
+    model = getattr(experimenting, cfg.training.module)(cfg)
     
     if cfg.training.load_training:
         print('Loading training')

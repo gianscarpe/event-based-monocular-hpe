@@ -1,3 +1,7 @@
+exp_dir: exps_${training.module}/exps_${training.model}
+exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}_${now:%m-%d-%H-%M}
+
+
 hydra:
   job:
     config:
