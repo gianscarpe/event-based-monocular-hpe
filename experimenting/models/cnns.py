@@ -3,46 +3,57 @@ import torchvision
 from torchvision import models
 import torch.nn as nn
 import torch.nn.functional as F
+import segmentation_models_pytorch as smp
 
-def mobilenetv2(n_channels, n_classes, pretrained=False):
+            
+def get_cnn(model_name, params):
+    switcher = {
+        'resnet18': _get_resnet18,
+        'resnet34': _get_resnet34,
+        'unet_resnet34' : _get_unet_resnet34
+    }
+    return switcher[model_name](**params)
+
+
+def _get_mobilenetv2(n_channels, n_classes, pretrained=False):
     cnn = models.mobilenet_v2(pretrained)
     if n_channels != 3:        
         cnn.features[0][0] = torch.nn.Conv2d(n_channels, 32, kernel_size=(3, 3),
-                                          stride=(2, 2), padding=(1, 1), bias=False)
+                                             stride=(2, 2), padding=(1, 1), bias=False)
 
     num_ftrs = cnn.classifier[-1].in_features
     cnn.classifier[-1] = nn.Linear(num_ftrs, n_classes, bias=True)
     return cnn
 
-def vgg19(n_channels, n_classes, pretrained=False):
+def _get_vgg19(n_channels, n_classes, pretrained=False):
     cnn = models.vgg19(pretrained)
     
     if n_channels != 3:
         l = torch.nn.Conv2d(n_channels, 64, kernel_size=(3, 3),
-                                    stride=(1, 1), padding=(1, 1), bias=False)
+                            stride=(1, 1), padding=(1, 1), bias=False)
         nn.init.xavier_normal_(l.weight)
         
         cnn.features[0] = l
-    num_ftrs = cnn.classifier[-1].in_features
-    cnn.classifier[-1] = nn.Linear(num_ftrs, n_classes)
+        num_ftrs = cnn.classifier[-1].in_features
+        cnn.classifier[-1] = nn.Linear(num_ftrs, n_classes)
 
     return cnn
 
 
-def resnet50(n_channels, n_classes, pretrained=False):
+def _get_resnet50(n_channels, n_classes, pretrained=False):
 
     cnn = models.resnet50(pretrained)
 
     if n_channels != 3:
         cnn.conv1 = torch.nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
-                                          stride=(2, 2), padding=(3, 3), bias=False)
+                                    stride=(2, 2), padding=(3, 3), bias=False)
 
     num_ftrs = cnn.fc.in_features
     cnn.fc = nn.Linear(num_ftrs, n_classes)
 
     return cnn
 
-def resnet34(n_channels, n_classes, pretrained=False):
+def _get_resnet34(n_channels, n_classes, pretrained=False):
 
     cnn = models.resnet34(pretrained)
 
@@ -58,80 +69,43 @@ def resnet34(n_channels, n_classes, pretrained=False):
     return cnn
 
 
-def resnet18(n_channels, n_classes, pretrained=False):
+def _get_resnet18(n_channels, n_classes, pretrained=False):
 
     cnn = models.resnet18(pretrained)
 
     if n_channels != 3:
         l = torch.nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
-                                          stride=(2, 2), padding=(3, 3), bias=False)
+                            stride=(2, 2), padding=(3, 3), bias=False)
         nn.init.kaiming_normal_(l.weight, mode='fan_in')
         
         cnn.conv1 = l
-    num_ftrs = cnn.fc.in_features
-    cnn.fc = nn.Linear(num_ftrs, n_classes)
-    nn.init.kaiming_normal_(cnn.fc.weight, mode='fan_in')
+        num_ftrs = cnn.fc.in_features
+        cnn.fc = nn.Linear(num_ftrs, n_classes)
+        nn.init.kaiming_normal_(cnn.fc.weight, mode='fan_in')
 
     return cnn
 
-def inceptionv3(n_channels, n_classes, pretrained=False):
+def _get_inceptionv3(n_channels, n_classes, pretrained=False):
 
     cnn = torchvision.models.inception_v3(pretrained)
     
     if n_channels != 3:
         cnn.Conv2d_1a_3x3.conv = torch.nn.Conv2d(n_channels, 32, kernel_size=(3, 3),
-                                          stride=(2, 2), bias=False)
+                                                 stride=(2, 2), bias=False)
 
     num_ftrs = cnn.fc.in_features
     cnn.fc = nn.Linear(num_ftrs, n_classes)
     return cnn
-  
+
+def _get_unet_resnet34(n_channels, n_classes, pretrained=False):
+    encoder_weights = 'imagenet' if pretrained else None
+    model : smp.Unet = smp.Unet('resnet34', encoder_weights=encoder_weights,
+                                classes=n_classes,activation=None)
     
-def ownmodel1(n_channels, n_classes, pretrained=False):
-    class Model(nn.Module):
-        def __init__(self):
-            super(Model, self).__init__()
-            self.cnn1 = nn.Conv2d(in_channels=n_channels, out_channels=32,
-                                  kernel_size=(3, 3), padding=1)
-            self.bn1 = nn.BatchNorm2d()
-            self.cnn2 = nn.Conv2d(in_channels=32, out_channels=64,
-                                  kernel_size=(3, 3), padding=1)
-            self.bn2 = nn.BatchNorm2d()
-            self.cnn3 = nn.Conv2d(in_channels=64, out_channels=128,
-                                  kernel_size=(3,3), padding=1)
-            self.bn3 = nn.BatchNorm2d()
-            self.cnn4 = nn.Conv2d(in_channels=128, out_channels=256,
-                                  kernel_size=(3,3), padding=1)
-            
-
-            self.max_pool2d = nn.MaxPool2d((2, 2))
+    model.encoder.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
+                                    stride=(2, 2), padding=(3, 3), bias=False)
 
 
-            # 3 max pooling -> 224/16 = 14 * 256 * 256
-            self.fc_in = 56 **2 * 64
-            self.fc1 = nn.Linear(self.fc_in, 128, bias=True)
-            self.fc2 = nn.Linear(128, n_classes, bias=True)
-
-        def forward(self, x):
-            x = F.relu(self.cnn1(x))
-            x = self.max_pool2d(x)
-            x = F.relu(self.cnn2(x))
-            x = self.max_pool2d(x)
-            
-            x = x.view(-1, self.fc_in)
-
-            x = self.fc1(x)
-            out = self.fc2(x)
-            return out
-    cnn = Model()
-    return cnn
-
-            
-def get_cnn(model_name, params):
-    switcher = {
-        'resnet18': resnet18,
-        'resnet34': resnet34
-    }
-    return switcher[model_name](**params)
-
+    return model
         
+

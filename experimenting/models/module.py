@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from ..dataset  import get_data, DatasetType
 from .cnns import get_cnn
 import torchvision
-
+from .metrics import MPJPE
 import torch.nn.functional as F
 import hydra
 import pytorch_lightning as pl
@@ -17,12 +17,13 @@ import segmentation_models_pytorch as smp
 __all__ = ['Classifier', 'PoseEstimator']
 
 class BaseModule(pl.LightningModule):
-    def __init__(self, hparams):
+    def __init__(self, hparams, dataset_type):
         """
         Initialize Classifier model
         """
         
         super(BaseModule, self).__init__()
+        self.dataset_type = dataset_type
         
         self.hparams = hparams
 
@@ -105,8 +106,7 @@ class Classifier(BaseModule):
         Initialize Classifier model
         """
         
-        super(Classifier, self).__init__(hparams)
-        self.dataset_type = DatasetType.CLASSIFICATION_DATASET
+        super(Classifier, self).__init__(hparams, DatasetType.CLASSIFICATION_DATASET)
     
 
     def set_params(self, hparams):
@@ -172,20 +172,24 @@ class Classifier(BaseModule):
 class PoseEstimator(BaseModule):
 
     def __init__(self, hparams):
-        super(PoseEstimator, self).__init__(hparams)
-        self.dataset_type = DatasetType.RECONSTUCTION_DATASET
+        super(PoseEstimator, self).__init__(hparams, DatasetType.RECONSTUCTION_DATASET)
+
 
     def set_params(self, hparams):
         self.n_channels = hparams.dataset.n_channels
         self.n_joints = hparams.dataset.n_joints
-        self.model : smp.Unet = smp.Unet(hparams.training.model,
-                              classes=self.n_joints,activation=None)
-        
-        self.model.encoder.conv1 = nn.Conv2d(self.n_channels, 64, kernel_size=(7, 7),
-                                     stride=(2, 2), padding=(3, 3), bias=False)
-        self.model.segmentation_head[-1] = nn.Softmax(dim=1)
+        params = {'n_channels': hparams.dataset['n_channels'],
+                  'n_classes': hparams.dataset['n_joints']}
 
-        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5)}
+        self.model = get_cnn(hparams.training.model, params)
+
+        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5), "MPJPE":MPJPE()}
+
+    def forward(self, x):
+        breakpoint()
+        x = self.model(x)
+        
+        return x
 
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch

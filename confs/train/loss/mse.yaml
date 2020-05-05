@@ -1,0 +1,4 @@
+loss:
+  class: torch.nn.MSELoss
+  params:
+    reduction: mean

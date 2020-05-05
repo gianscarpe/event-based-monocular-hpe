@@ -6,5 +6,5 @@ training:
   use_lr_scheduler: false
   load_training: false
   module: PoseEstimator
-  model: resnet34
+  model: unet_resnet34
   load_path:
