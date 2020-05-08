@@ -1,3 +1,5 @@
-from .models import *
+from .models.module import *
+from .models.losses import *
+
 
 

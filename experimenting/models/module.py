@@ -186,7 +186,6 @@ class PoseEstimator(BaseModule):
         self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5), "MPJPE":MPJPE()}
 
     def forward(self, x):
-        breakpoint()
         x = self.model(x)
         
         return x

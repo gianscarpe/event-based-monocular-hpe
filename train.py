@@ -21,13 +21,6 @@ def main(cfg: DictConfig) -> None:
                                version=cur_dir)
     
     debug = cfg.debug
-    early_stop_callback = EarlyStopping(
-        monitor='val_loss',
-        min_delta=0.01,
-        patience=cfg.training.early_stopping,
-        verbose=False,
-        mode='min'
-    )
     
     checkpoint_dir = os.path.join(exp_path,"checkpoints")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -36,11 +29,21 @@ def main(cfg: DictConfig) -> None:
     profiler = pl.profiler.SimpleProfiler()
     trainer_configuration = {
         'gpus':1, 'benchmark':True, 'max_epochs':cfg.training.epochs,
-      'early_stop_callback':early_stop_callback,
-      'fast_dev_run':debug,
-      'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
-      'weights_summary': 'top', 'logger':logger,
-      'profiler':profiler}
+        'fast_dev_run':debug,
+        'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
+        'weights_summary': 'top', 'logger':logger,
+        'profiler':profiler}
+
+    if cfg.training.early_stopping > 0:
+        early_stop_callback = EarlyStopping(
+            monitor='val_loss',
+            min_delta=0.01,
+            patience=cfg.training.early_stopping,
+            verbose=False,
+            mode='min'
+        )
+        trainer_configuration['early_stop_callback'] = early_stop_callback
+
     print(cfg)
     
     model = getattr(experimenting, cfg.training.module)(cfg)
