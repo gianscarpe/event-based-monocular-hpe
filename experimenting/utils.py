@@ -6,6 +6,7 @@ import albumentations
 from .dataset.config import MOVEMENTS_PER_SESSION
 import numpy as np
 import cv2
+import torch
 
 def get_file_paths(path, extensions):
     extension_regex = "|".join(extensions)
@@ -119,12 +120,31 @@ def get_heatmap(vicon_xyz, p_mat, width, heigth):
     # pixel coordinates
     u = u.astype(np.int32)
     v = v.astype(np.int32)
-    
-    # initialize, fill and smooth the heatmaps
-    label_heatmaps = np.zeros((heigth, width))
-    for fmidx, zipd in enumerate(zip(v, u, mask)):
-       if zipd[2]==1: # write joint position only when projection within frame boundaries
-            label_heatmaps[zipd[0], zipd[1]] = fmidx+1
-            #label_heatmaps[:,:,fmidx] = decay_heatmap(label_heatmaps[:,:,fmidx])
 
-    return label_heatmaps
+
+    # initialize, fill and smooth the heatmaps
+    label_heatmaps = np.zeros((heigth, width, num_joints))
+    for fmidx, zipd in enumerate(zip(v, u, mask)):
+        if zipd[2]==1: # write joint position only when projection within frame boundaries
+            label_heatmaps[zipd[0], zipd[1], fmidx] = 1
+            label_heatmaps[:,:,fmidx] = decay_heatmap(label_heatmaps[:,:,fmidx])
+
+    return vicon_xyz, np.stack((v,u), axis=-1), mask, label_heatmaps
+
+
+def get_heatmap_max(y_pr):
+    batch_size = y_pr.shape[0]
+    n_joints = y_pr.shape[1]
+    confidence = torch.zeros((batch_size, n_joints))
+
+    p_coords_max = torch.zeros((batch_size, n_joints, 2), dtype=torch.uint8)
+    for b in range(batch_size):
+        for j in range(n_joints):
+            pred_joint = y_pr[b, j]
+            max_value = torch.max(pred_joint)
+            p_coords_max[b, j] = (pred_joint == max_value).nonzero()[0]
+            # Confidence of the joint
+            print(max_value)
+            confidence[b, j] = max_value
+            
+    return p_coords_max, confidence

@@ -74,15 +74,6 @@ class BaseModule(pl.LightningModule):
 
         return optimizer
 
-    def training_step(self, batch, batch_idx):
-        b_x, b_y = batch
-        
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
-
-        logs = {"loss":loss}
-        return {"loss":loss, "log":logs}
-
     
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
@@ -114,9 +105,20 @@ class Classifier(BaseModule):
                   'n_classes': hparams.dataset['n_classes']}
         self.model = get_cnn(hparams.training.model, params)
 
+
+    def training_step(self, batch, batch_idx):
+        b_x, b_y = batch
         
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        logs = {"loss":loss}
+        return {"loss":loss, "log":logs}
+
+
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
+        
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
 
@@ -187,15 +189,24 @@ class PoseEstimator(BaseModule):
 
     def forward(self, x):
         x = self.model(x)
-        
         return x
 
+    def training_step(self, batch, batch_idx):
+        b_x, b_y = batch
+        
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        logs = {"loss":loss}
+        return {"loss":loss, "log":logs}
+
+    
     def validation_step(self, batch, batch_idx): 
         b_x, b_y = batch
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
-
-        results = {metric_name:metric_function(b_y, output) for metric_name,
+        
+        results = {metric_name:metric_function(output, b_y) for metric_name,
                    metric_function in self.metrics.items()}
 
         return {"batch_val_loss":loss, **results}
@@ -210,8 +221,9 @@ class PoseEstimator(BaseModule):
     def test_step(self, batch, batch_idx): 
         b_x, b_y = batch
         output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
-        results = {metric_name:metric_function(b_y, output) for metric_name, 
+        loss = self.loss_func(output, b_y)  
+        
+        results = {metric_name:metric_function(output, b_y) for metric_name, 
                    metric_function in self.metrics.items()}
 
         return {"batch_test_loss":loss, **results}

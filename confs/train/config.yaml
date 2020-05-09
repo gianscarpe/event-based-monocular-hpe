@@ -1,10 +1,10 @@
 defaults:
   - optimizer: adam
   - lr_scheduler: step_lr
-  - dataset: timecount
-  - loss: crossentropy
-  - augmentation: center_crop
-  - training: classification
+  - dataset: timecount_pose
+  - loss: heatmap
+  - augmentation: no_aug
+  - training: reconstruction
   - hydra: standard
 
 debug: false

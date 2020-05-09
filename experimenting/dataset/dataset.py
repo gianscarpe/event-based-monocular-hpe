@@ -107,7 +107,7 @@ class DHP3DDataset(DHP19BaseDataset):
         def _retrieve_2hm_files(labels_dir, file_paths):
             labels_hm = [join(labels_dir, basename(x).split('.')[0] + '_2dhm.npy') for x in file_paths]
             return labels_hm
-
+        
         def _get_y(self, idx):
             joints_file = self.labels[idx]
             joints = np.load(joints_file)
@@ -120,5 +120,21 @@ class DHP3DDataset(DHP19BaseDataset):
                     y[:, :, joint_id-1] = decay_heatmap(heatmap)
                 
             return y
+        
+        def __getitem__(self, idx):
+            idx = self.x_indexes[idx]
+            if torch.is_tensor(idx):
+                idx = idx.tolist()
+
+            x = self._get_x(idx)
+            y = self._get_y(idx)
+
+            if self.transform:
+                augmented = self.transform(image=x, mask=y)
+                y = augmented['mask']
+                y = torch.squeeze(y.transpose(0, -1))
+                x = augmented['image']
+
+            return x, y
 
             

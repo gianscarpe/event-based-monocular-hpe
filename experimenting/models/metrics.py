@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch import nn
+from ..utils import get_heatmap_max
 
 class BaseMetric(nn.Module):
     pass
@@ -12,24 +13,22 @@ class MPJPE(BaseMetric):
         super().__init__(**kwargs)
         self.confidence = confidence
         
-    def forward(self, y_pr, y_gt):
-        confidence = torch.zeros(y_gt.shape[0]) # confidence is not used in this
-        batch_size = y_gt.shape[0]
-        n_joints = y_gt.shape[1]
+    def forward(self, y_pr, y_gt, mask=None):
+        """
 
+        y_pr = heatmap obtained with CNN
+        y_gt = 2d points of joints, in order
+        """
         gt_mask = y_gt.view(y_gt.size()[0], -1, n_joints).sum(1) > 0
+        gt_coords, _ = get_heatmap_max(y_gt)
+        gt_coords = gt_coords.type(torch.float)
 
-        p_coords_max = torch.zeros_like(y_gt)
-        for b in range(batch_size):
-            for j in range(n_joints):
-                p_coords_max[b][j] = y_pr[b][j] == torch.max(y_pr[b][j])
-                # Confidence of the joint
-                #confidence[j_idx] = np.max(y_pr)
+        p_coords_max, confidence = get_heatmap_max(y_pr)
         
         # where mask is 0, set gt back to NaN
 
-        y_gt[gt_mask==0] = float('nan')
-        dist_2d = torch.norm((y_gt - p_coords_max), dim=-1)
+        gt_coords[gt_mask==0] = float('nan')
+        dist_2d = torch.norm((gt_coords - p_coords_max), dim=-1)
 
         mpjpe = nanmean(dist_2d)
         return mpjpe

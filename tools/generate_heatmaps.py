@@ -6,6 +6,7 @@ import glob
 import h5py
 sys.path.insert(0, "../")
 from experimenting.utils import get_heatmap
+from tqdm import tqdm
 
 if __name__ == '__main__':
     homedir = '/home/gianscarpe/dev/data/dhp19'
@@ -13,7 +14,7 @@ if __name__ == '__main__':
     input_dir = join(homedir, 'labels')
     events_dir = join(homedir, dataset, '346x260')
     p_mat_dir = join(homedir, 'P_matrices/')
-    out_dir = join(homedir, dataset, 'labels')
+    out_dir = join('/data/dhp19', 'newlabels')
     width = 346
     height = 260
     
@@ -29,20 +30,20 @@ if __name__ == '__main__':
     n_files = len(x_paths)
     print(f"N of files: {n_files}")
 
-    for x_path in x_paths:
+
+    for x_path in tqdm(x_paths):
             filename = os.path.basename(x_path)
             sub = filename[filename.find('S') + 1 : filename.find('S') + 4].split('_')[0]
             session = int(filename[filename.find('session') + len('session')])
             mov = int(filename[filename.find('mov') + len('mov')])
 
-
-            if sub != '8' or session != 5  or  mov !=2:
+            if (sub == "10" or sub == "11" or sub == "12" or sub == "13"):
                 continue
-            
             frame_path = os.path.join(out_dir,
                                       "S{}_session_{}_mov_{}_frame_".format(sub,
                                                                             session, mov) + "{}_cam_{}_2dhm.npy")
             x_h5 = h5py.File(x_path, 'r')
+            
 
             frames = x_h5['XYZ']
             for cam in range(4):
@@ -51,8 +52,11 @@ if __name__ == '__main__':
                         result = get_heatmap(label, p_mats[cam], width,
                                                    height)
                         out_filename = frame_path.format(ind, cam)
-                        print(out_filename)
+
+
+
                         out_path = os.path.join(out_dir, out_filename)
+
                         np.save(out_path, result)
 
 

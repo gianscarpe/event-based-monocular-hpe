@@ -1,2 +1,2 @@
 loss:
-  class: experimenting.losses.HeatmapLoss
+  class: experimenting.models.losses.HeatmapLoss

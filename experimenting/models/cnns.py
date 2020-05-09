@@ -104,8 +104,8 @@ def _get_unet_resnet34(n_channels, n_classes, pretrained=False):
     
     model.encoder.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
                                     stride=(2, 2), padding=(3, 3), bias=False)
-
-
+    model.segmentation_head[-1] = nn.ReLU()
+    
     return model
         
 

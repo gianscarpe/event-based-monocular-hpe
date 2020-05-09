@@ -1,8 +1,7 @@
 dataset:
   name: timecount
   path: /home/gianscarpe/dev/data/dhp19/time_count_dataset/movements_per_frame
-  labels_dir: /home/gianscarpe/dev/data/dhp19/time_count_dataset/labels
+  labels_dir: /home/gianscarpe/dev/data/dhp19/time_count_dataset/movements_per_frame
   n_channels: 1
   n_classes: 33
   balanced: true
-  n_joints: 13

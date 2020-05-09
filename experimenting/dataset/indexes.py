@@ -3,13 +3,13 @@ import argparse
 import os
 import pickle
 import re
-from ..utils import get_file_paths, get_preload_dir
+from ..utils import get_file_paths, get_preload_dir, get_label_from_filename
 
-def save_npy_indexes_and_map(path, split_at, balanced=True):
+def save_npy_indexes_and_map(data_dir, labels_dir, split_at=0.8, balanced=False):
     print("Creating split ...")
 
-    file_paths = get_file_paths(path, extensions=['.npy','.mat'])
-    out_dir = get_preload_dir(path)
+    file_paths = get_file_paths(data_dir, extensions=['.npy','.mat'])
+    out_dir = get_preload_dir(labels_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     if balanced:
@@ -58,13 +58,13 @@ def load_npy_indexes_and_map(path):
     return file_paths, train_indexes, val_indexes, test_indexes, labels
 
 
-def get_dataset_params(data_dir):
-    preload_dir = get_preload_dir(data_dir)
+def get_dataset_params(hparams_dataset):
+    preload_dir = get_preload_dir(hparams_dataset.labels_dir)
 
     if os.path.exists(preload_dir):
         return load_npy_indexes_and_map(preload_dir)
     else:
-        return save_npy_indexes_and_map(data_dir)
+        return save_npy_indexes_and_map(hparams_dataset.path, hparams_dataset.labels_dir)
 
 
 if __name__ == "__main__":
