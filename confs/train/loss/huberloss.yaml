@@ -1,4 +1,4 @@
 loss:
-  class: torch.nn.MSELoss
+  class: torch.nn.SmoothL1Loss
   params:
     reduction: sum

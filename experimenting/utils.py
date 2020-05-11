@@ -144,7 +144,6 @@ def get_heatmap_max(y_pr):
             max_value = torch.max(pred_joint)
             p_coords_max[b, j] = (pred_joint == max_value).nonzero()[0]
             # Confidence of the joint
-            print(max_value)
             confidence[b, j] = max_value
             
     return p_coords_max, confidence

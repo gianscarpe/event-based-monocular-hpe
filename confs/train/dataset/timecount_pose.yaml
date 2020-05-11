@@ -1,6 +1,6 @@
 dataset:
   name: timecount_pose
   path: /data/dhp19/time_count_dataset/movements_per_frame
-  labels_dir: /data/dhp19/time_count_dataset/labels_pose
+  labels_dir: /data/dhp19/time_count_dataset/labels
   n_channels: 1
   n_joints: 13

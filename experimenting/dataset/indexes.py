@@ -5,10 +5,14 @@ import pickle
 import re
 from ..utils import get_file_paths, get_preload_dir, get_label_from_filename
 
-def save_npy_indexes_and_map(data_dir, labels_dir, split_at=0.8, balanced=False):
+def save_npy_indexes_and_map(data_dir, labels_dir, split_at=0.8, balanced=False,
+                             cams=None):
     print("Creating split ...")
+    if cams is None:
+        cams = ["cam_2", "cam_3"]
 
     file_paths = get_file_paths(data_dir, extensions=['.npy','.mat'])
+    file_paths = [x for x in file_paths if sum([cam in x for cam in cams]) > 0]
     out_dir = get_preload_dir(labels_dir)
     os.makedirs(out_dir, exist_ok=True)
 

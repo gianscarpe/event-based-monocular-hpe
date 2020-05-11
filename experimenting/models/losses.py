@@ -20,6 +20,7 @@ class HeatmapLoss(nn.Module):
         return self.reduction(l) ## l of dim bsize
 
 def _get_reduction(reduction_type):
-    switch = {'mean': torch.mean}
+    switch = {'mean': torch.mean, 'sum': torch.sum}
+    
     return switch[reduction_type]
                   

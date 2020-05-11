@@ -1,2 +1,3 @@
 loss:
   class: experimenting.models.losses.HeatmapLoss
+  reduction: mean

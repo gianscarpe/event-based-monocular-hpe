@@ -9,9 +9,10 @@ class BaseMetric(nn.Module):
 
 class MPJPE(BaseMetric):
 
-    def __init__(self, confidence=0, **kwargs):
+    def __init__(self, confidence=0, n_joints=13, **kwargs):
         super().__init__(**kwargs)
         self.confidence = confidence
+        self.n_joints = n_joints
         
     def forward(self, y_pr, y_gt, mask=None):
         """
@@ -19,7 +20,7 @@ class MPJPE(BaseMetric):
         y_pr = heatmap obtained with CNN
         y_gt = 2d points of joints, in order
         """
-        gt_mask = y_gt.view(y_gt.size()[0], -1, n_joints).sum(1) > 0
+        gt_mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) > 0
         gt_coords, _ = get_heatmap_max(y_gt)
         gt_coords = gt_coords.type(torch.float)
 

@@ -10,7 +10,8 @@ def get_cnn(model_name, params):
     switcher = {
         'resnet18': _get_resnet18,
         'resnet34': _get_resnet34,
-        'unet_resnet34' : _get_unet_resnet34
+        'unet_resnet18' : lambda **args: _get_unet_resnet('resnet18', **args),
+        'unet_resnet34' : lambda **args: _get_unet_resnet('resnet34', **args)
     }
     return switcher[model_name](**params)
 
@@ -97,9 +98,12 @@ def _get_inceptionv3(n_channels, n_classes, pretrained=False):
     cnn.fc = nn.Linear(num_ftrs, n_classes)
     return cnn
 
-def _get_unet_resnet34(n_channels, n_classes, pretrained=False):
+
+def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_depth=3):
     encoder_weights = 'imagenet' if pretrained else None
-    model : smp.Unet = smp.Unet('resnet34', encoder_weights=encoder_weights,
+    model : smp.Unet = smp.Unet(resnet, encoder_weights=encoder_weights,
+                                encoder_depth=encoder_depth,
+                                decoder_channels=(64, 32, 16),
                                 classes=n_classes,activation=None)
     
     model.encoder.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
@@ -107,5 +111,5 @@ def _get_unet_resnet34(n_channels, n_classes, pretrained=False):
     model.segmentation_head[-1] = nn.ReLU()
     
     return model
-        
+
 
