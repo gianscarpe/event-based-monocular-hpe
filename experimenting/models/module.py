@@ -16,6 +16,7 @@ import segmentation_models_pytorch as smp
 from ..utils import flatten, unflatten
 from .dsnt import average_loss
 
+
 __all__ = ['Classifier', 'PoseEstimator']
 
 class BaseModule(pl.LightningModule):

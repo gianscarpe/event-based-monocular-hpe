@@ -3,6 +3,7 @@ import torch.nn as nn
 from operator import mul
 from .metrics import MPJPE
 from functools import reduce
+from .dsnt import average_loss
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss']
 
@@ -27,22 +28,29 @@ class PixelWiseLoss(nn.Module):
     """
     from https://github.com/anibali/margipose/blob/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py#L202
     """
-    def __init__(self, reduction='mean'):
+    def __init__(self, reduction='mask_mean'):
+        """
+        Args:
+         reduction (String, optional): only "mask" methods allowed
+         
+        """
         super(PixelWiseLoss, self).__init__()
-        self.sigma = 1.0
         self.divergence = _js
         self.mpjpe = MPJPE()
-
+        self.reduction = _get_reduction(reduction)
     
     def forward(self, pred, gt):
+        """
+        Args:
+        
+        """
         ndims = 2
         n_joints = pred.shape[1]
         loss = self.divergence(pred, gt, ndims)
         loss += self.mpjpe(pred, gt)
+
         mask = gt.view(gt.size()[0], -1, n_joints).sum(1) >0
-        loss = loss * mask
-        denom = mask.sum()
-        return loss.sum() / denom        
+        return self.reduction(loss, mask)
         
 
 def _kl(p, q, ndims):
@@ -57,7 +65,7 @@ def _js(p, q, ndims):
     return 0.5 * _kl(p, m, ndims) + 0.5 * _kl(q, m, ndims)
 
 def _get_reduction(reduction_type):
-    switch = {'mean': torch.mean, 'sum': torch.sum}
+    switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
     
     return switch[reduction_type]
 

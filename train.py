@@ -29,7 +29,7 @@ def main(cfg: DictConfig) -> None:
 
     profiler = pl.profiler.SimpleProfiler()
     trainer_configuration = {
-        'gpus':[0], 'benchmark':True, 'max_epochs':cfg.training.epochs,
+        'gpus':[1], 'benchmark':True, 'max_epochs':cfg.training.epochs,
         'fast_dev_run':debug,
         'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
         'weights_summary': 'top', 'logger':logger,
@@ -45,13 +45,12 @@ def main(cfg: DictConfig) -> None:
         )
         trainer_configuration['early_stop_callback'] = early_stop_callback
 
-    print(cfg)
-    
     model = getattr(experimenting, cfg.training.module)(cfg)
     
     if cfg.training.load_training:
         print('Loading training')
-        model = Model.load_from_checkpoint(cfg.training.load_path)
+        model = getattr(experimenting,
+                        cfg.training.module).load_from_checkpoint(cfg.training.load_path)
         trainer_configuration['resume_from_checkpoint'] = cfg.training.load_path
         
     trainer = pl.Trainer(**trainer_configuration)

@@ -122,17 +122,21 @@ def get_heatmap(vicon_xyz, p_mat, width, heigth):
     v = v.astype(np.int32)
 
 
+    
+    return vicon_xyz, np.stack((v,u), axis=-1), mask, label_heatmaps
+
+def _get_heatmap(joints, mask, heigth, width, num_joints):
+    u, v = joints
     # initialize, fill and smooth the heatmaps
     label_heatmaps = np.zeros((heigth, width, num_joints))
     for fmidx, zipd in enumerate(zip(v, u, mask)):
         if zipd[2]==1: # write joint position only when projection within frame boundaries
             label_heatmaps[zipd[0], zipd[1], fmidx] = 1
             label_heatmaps[:,:,fmidx] = decay_heatmap(label_heatmaps[:,:,fmidx])
+    return label_heatmaps
 
-    return vicon_xyz, np.stack((v,u), axis=-1), mask, label_heatmaps
 
-
-def get_heatmap_max(y_pr):
+def get_joints_from_heatmap(y_pr):
     batch_size = y_pr.shape[0]
     n_joints = y_pr.shape[1]
     confidence = torch.zeros((batch_size, n_joints))
