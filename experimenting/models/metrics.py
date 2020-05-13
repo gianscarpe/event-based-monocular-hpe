@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from ..utils import get_heatmap_max
+from .dsnt import dsnt
 
 class BaseMetric(nn.Module):
     pass
@@ -9,10 +10,11 @@ class BaseMetric(nn.Module):
 
 class MPJPE(BaseMetric):
 
-    def __init__(self, confidence=0, n_joints=13, **kwargs):
+    def __init__(self, reduction=None, confidence=0, n_joints=13, **kwargs):
         super().__init__(**kwargs)
         self.confidence = confidence
         self.n_joints = n_joints
+        self.reduction = reduction
         
     def forward(self, y_pr, y_gt, mask=None):
         """
@@ -20,26 +22,21 @@ class MPJPE(BaseMetric):
         y_pr = heatmap obtained with CNN
         y_gt = 2d points of joints, in order
         """
-        gt_mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) > 0
-        gt_coords, _ = get_heatmap_max(y_gt)
-        gt_coords = gt_coords.type(torch.float)
 
-        p_coords_max, confidence = get_heatmap_max(y_pr)
+        #gt_coords, _ = get_heatmap_max(y_gt)
+        #gt_coords = gt_coords.type(torch.float)
         
+        #p_coords_max, confidence = get_heatmap_max(y_pr)
+        p_coords_max = dsnt(y_pr)
+        gt_coords = dsnt(y_gt)
         # where mask is 0, set gt back to NaN
 
-        gt_coords[gt_mask==0] = float('nan')
+        mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) >0
         dist_2d = torch.norm((gt_coords - p_coords_max), dim=-1)
+        if self.reduction:
+            dist_2d = self.reduction(dist_2d, mask)
+        return dist_2d
 
-        mpjpe = nanmean(dist_2d)
-        return mpjpe
-
-def nanmean(v, *args, inplace=False, **kwargs):
-    if not inplace:
-        v = v.clone()
-        is_nan = torch.isnan(v)
-        v[is_nan] = 0
-    return v.sum(*args, **kwargs) / (~is_nan).float().sum(*args, **kwargs)
     
 def _get_max_indices(self, x):
     """

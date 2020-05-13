@@ -29,7 +29,7 @@ def main(cfg: DictConfig) -> None:
 
     profiler = pl.profiler.SimpleProfiler()
     trainer_configuration = {
-        'gpus':1, 'benchmark':True, 'max_epochs':cfg.training.epochs,
+        'gpus':[0], 'benchmark':True, 'max_epochs':cfg.training.epochs,
         'fast_dev_run':debug,
         'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
         'weights_summary': 'top', 'logger':logger,

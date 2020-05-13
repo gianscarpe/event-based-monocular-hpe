@@ -29,7 +29,7 @@ def get_data(hparams, dataset_type):
 
 def get_dataloader(dataset, batch_size, num_workers, shuffle=True):
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
-                        num_workers=num_workers)
+                        num_workers=num_workers, pin_memory=True)
     return loader
 
 def _get_datasets(hparams, dataset_type):

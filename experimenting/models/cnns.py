@@ -4,14 +4,15 @@ from torchvision import models
 import torch.nn as nn
 import torch.nn.functional as F
 import segmentation_models_pytorch as smp
-
+from .custom import FlatSoftmax
             
 def get_cnn(model_name, params):
     switcher = {
         'resnet18': _get_resnet18,
         'resnet34': _get_resnet34,
         'unet_resnet18' : lambda **args: _get_unet_resnet('resnet18', **args),
-        'unet_resnet34' : lambda **args: _get_unet_resnet('resnet34', **args)
+        'unet_resnet34' : lambda **args: _get_unet_resnet('resnet34', **args),
+        'dhp19' : _get_dhp19_model
     }
     return switcher[model_name](**params)
 
@@ -109,7 +110,110 @@ def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_de
     model.encoder.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
                                     stride=(2, 2), padding=(3, 3), bias=False)
     model.segmentation_head[-1] = nn.ReLU()
+                            
+    #model.segmentation_head[-1] = nn.Sequential(nn.Conv2d(n_classes, n_classes,
+    #                                kernel_size=1),
+    #                                            nn.ReLU())
     
     return model
 
+
+
+    
+
+class DHP19Model(nn.Module):
+    def __init__(self, n_channels, n_joints):
+        super(DHP19Model, self).__init__()
+        self.max_pool = nn.MaxPool2d(2)
+        self.block1 = nn.Sequential(nn.Conv2d(in_channels=n_channels,
+                                              out_channels=16, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU())
+        
+
+
+        self.block2 = nn.Sequential(nn.Conv2d(in_channels=16,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=32,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=32,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU())
+
+        self.block3 = nn.Sequential(nn.Conv2d(in_channels=32,
+                                              out_channels=64, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=64,
+                                              out_channels=64, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=64,
+                                              out_channels=64, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU())
+        self.up1 = nn.Sequential(nn.ConvTranspose2d(in_channels=64,
+                                                    out_channels=32,
+                                                    stride=2,
+                                                    padding=1,
+                                                    output_padding=1,
+                                                    kernel_size=3),
+                                 nn.LeakyReLU())
+        self.block4 = nn.Sequential(nn.Conv2d(in_channels=32,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=32,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=32,
+                                              out_channels=32, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU())
+        self.up2 = nn.Sequential(nn.ConvTranspose2d(in_channels=32,
+                                                    out_channels=16,
+                                                    stride=2,
+                                                    padding=1,
+                                                    output_padding=1,
+                                                    kernel_size=3),
+                                 nn.LeakyReLU())
+        
+        self.block5 = nn.Sequential(nn.Conv2d(in_channels=16,
+                                              out_channels=16, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU(),
+                                    nn.Conv2d(in_channels=16,
+                                              out_channels=16, kernel_size=3,
+                                              padding=1),
+                                    nn.LeakyReLU())
+        self.head = nn.Sequential(nn.Conv2d(in_channels=16,
+                                              out_channels=n_joints, kernel_size=3,
+                                              padding=1),
+                                    nn.ReLU())
+    def forward(self, x):
+
+        x1 = self.block1(x)
+        x = self.max_pool(x1)
+        x2 = self.block2(x)
+        x = self.max_pool(x2)
+        x3 = self.block3(x)
+        
+        x4 = self.up1(x3)
+        x = x2 + x4
+        x5 = self.block4(x)
+        x6 = self.up2(x5)
+        x = x6 + x1
+        x7 = self.block5(x)
+        out = self.head(x7)
+        return out
+
+def _get_dhp19_model(n_channels, n_classes):
+    return DHP19Model(n_channels, n_classes)
+    
 

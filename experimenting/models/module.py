@@ -13,6 +13,8 @@ import collections
 import os
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 import segmentation_models_pytorch as smp
+from ..utils import flatten, unflatten
+from .dsnt import average_loss
 
 __all__ = ['Classifier', 'PoseEstimator']
 
@@ -25,7 +27,7 @@ class BaseModule(pl.LightningModule):
         super(BaseModule, self).__init__()
         self.dataset_type = dataset_type
         
-        self.hparams = hparams
+        self.hparams = hparams #flatten(hparams)
 
         self.optimizer_config = hparams.optimizer
         self.scheduler_config = None
@@ -44,7 +46,7 @@ class BaseModule(pl.LightningModule):
 
     def prepare_data(self):
         self.train_loader, self.val_loader, self.test_loader = get_data(
-            self.hparams, dataset_type=self.dataset_type)
+            unflatten(self.hparams), dataset_type=self.dataset_type)
 
     def forward(self, x):
         x = self.model(x)
@@ -185,7 +187,7 @@ class PoseEstimator(BaseModule):
 
         self.model = get_cnn(hparams.training.model, params)
 
-        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5), "MPJPE":MPJPE()}
+        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5), "MPJPE":MPJPE(reduction=average_loss)}
 
     def forward(self, x):
         x = self.model(x)

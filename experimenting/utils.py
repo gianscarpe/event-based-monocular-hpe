@@ -137,7 +137,7 @@ def get_heatmap_max(y_pr):
     n_joints = y_pr.shape[1]
     confidence = torch.zeros((batch_size, n_joints))
 
-    p_coords_max = torch.zeros((batch_size, n_joints, 2), dtype=torch.uint8)
+    p_coords_max = torch.zeros((batch_size, n_joints, 2), dtype=torch.float32)
     for b in range(batch_size):
         for j in range(n_joints):
             pred_joint = y_pr[b, j]
