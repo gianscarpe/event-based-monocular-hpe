@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import segmentation_models_pytorch as smp
 from .custom import FlatSoftmax
+from .dhp19 import DHP19Model
             
 def get_cnn(model_name, params):
     switcher = {
@@ -102,9 +103,10 @@ def _get_inceptionv3(n_channels, n_classes, pretrained=False):
 
 def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_depth=3):
     encoder_weights = 'imagenet' if pretrained else None
+    decoder_channels = tuple([16 * (2 ** i) for i in reversed(range(0, 3))])
     model : smp.Unet = smp.Unet(resnet, encoder_weights=encoder_weights,
                                 encoder_depth=encoder_depth,
-                                decoder_channels=(64, 32, 16),
+                                decoder_channels=decoder_channels,
                                 classes=n_classes,activation=None)
     
     model.encoder.conv1 = nn.Conv2d(n_channels, 64, kernel_size=(7, 7),

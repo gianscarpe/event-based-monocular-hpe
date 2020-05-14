@@ -139,9 +139,10 @@ def _get_heatmap(joints, mask, heigth, width, num_joints):
 def get_joints_from_heatmap(y_pr):
     batch_size = y_pr.shape[0]
     n_joints = y_pr.shape[1]
-    confidence = torch.zeros((batch_size, n_joints))
+    device = y_pr.device
+    confidence = torch.zeros((batch_size, n_joints), device=device)
 
-    p_coords_max = torch.zeros((batch_size, n_joints, 2), dtype=torch.float32)
+    p_coords_max = torch.zeros((batch_size, n_joints, 2), dtype=torch.float32, device=device)
     for b in range(batch_size):
         for j in range(n_joints):
             pred_joint = y_pr[b, j]

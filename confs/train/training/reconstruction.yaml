@@ -7,5 +7,6 @@ training:
   load_training: false
   module: PoseEstimator
   model: unet_resnet18
-  encoder_depth: 3
+
+  encoder_depth: 1o
   load_path:

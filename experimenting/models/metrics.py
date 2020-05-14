@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from ..utils import  get_joints_from_heatmap
-from .dsnt import euclidean_losses
+from .dsnt import euclidean_losses, dsnt
 from .soft_argmax import SoftArgmax2D
 
 class BaseMetric(nn.Module):
@@ -16,7 +16,7 @@ class MPJPE(BaseMetric):
         self.confidence = confidence
         self.n_joints = n_joints
         self.reduction = reduction
-        self.soft_argmax = SoftArgmax2D()
+        self.soft_argmax = SoftArgmax2D(window_fn="Uniform")
         
     def forward(self, y_pr, y_gt, mask=None):
         """
@@ -26,7 +26,7 @@ class MPJPE(BaseMetric):
         """
 
         p_coords_max = self.soft_argmax(y_pr)
-        gt_coords = self.soft_argmax(y_gt)
+        gt_coords, _ = get_joints_from_heatmap(y_gt)
 
         dist_2d = euclidean_losses(p_coords_max, gt_coords)
         
