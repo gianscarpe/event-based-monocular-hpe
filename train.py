@@ -28,8 +28,11 @@ def main(cfg: DictConfig) -> None:
     ckpt_cb = ModelCheckpoint(filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}"))
 
     profiler = pl.profiler.SimpleProfiler()
+
+    if debug:
+        torch.autograd.set_detect_anomaly(True)
     trainer_configuration = {
-        'gpus':[1], 'benchmark':True, 'max_epochs':cfg.training.epochs,
+        'gpus':cfg.gpus, 'benchmark':True, 'max_epochs':cfg.training.epochs,
         'fast_dev_run':debug,
         'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
         'weights_summary': 'top', 'logger':logger,

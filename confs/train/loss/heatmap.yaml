@@ -1,3 +1,4 @@
 loss:
   class: experimenting.models.losses.HeatmapLoss
-  reduction: sum
+  params:
+    reduction: sum

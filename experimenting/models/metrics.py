@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch import nn
+from torch.nn.functional import mse_loss
 from ..utils import  get_joints_from_heatmap
 from .dsnt import euclidean_losses, dsnt
 from .soft_argmax import SoftArgmax2D
@@ -28,12 +29,14 @@ class MPJPE(BaseMetric):
         p_coords_max = self.soft_argmax(y_pr)
         gt_coords, _ = get_joints_from_heatmap(y_gt)
 
-        dist_2d = euclidean_losses(p_coords_max, gt_coords)
+        #dist_2d = euclidean_losses(p_coords_max, gt_coords)
         
+        gt_mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) >0        
+        dist_2d = euclidean_losses(gt_coords, p_coords_max)
+
         if self.reduction:
             # To apply a reduction method (e.g. mean) we need a mask of gt
             # joints
-            
-            mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) >0
-            dist_2d = self.reduction(dist_2d, mask)
+
+            dist_2d = self.reduction(dist_2d, gt_mask)
         return dist_2d

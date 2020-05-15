@@ -28,7 +28,7 @@ class PixelWiseLoss(nn.Module):
     """
     from https://github.com/anibali/margipose/blob/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py#L202
     """
-    def __init__(self, reduction='mask_mean'):
+    def __init__(self, reduction='nanmean'):
         """
         Args:
          reduction (String, optional): only "mask" methods allowed
@@ -46,11 +46,13 @@ class PixelWiseLoss(nn.Module):
         """
         ndims = 2
         n_joints = pred.shape[1]
-        loss = self.divergence(pred, gt, ndims)
-        loss += self.mpjpe(pred, gt)
+        
+        loss = torch.add(self.mpjpe(pred, gt), self.divergence(pred, gt, ndims))
 
-        mask = gt.view(gt.size()[0], -1, n_joints).sum(1) >0
-        return self.reduction(loss, mask)
+        gt_mask = gt.view(gt.size()[0], -1, n_joints).sum(1) >0
+
+        
+        return self.reduction(loss, gt_mask)
         
 
 def _kl(p, q, ndims):
@@ -65,9 +67,15 @@ def _js(p, q, ndims):
     return 0.5 * _kl(p, m, ndims) + 0.5 * _kl(q, m, ndims)
 
 def _get_reduction(reduction_type):
-    switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
+    switch = {'mean': torch.mean, 'mask_mean': average_loss , 'sum': torch.sum}
     
     return switch[reduction_type]
 
+def nanmean(v,  *args, inplace=False, **kwargs):
+    if not inplace:
+        v = v.clone()
+        is_nan = torch.isnan(v)
+        v[is_nan] = 0
+    return v.sum(*args, **kwargs) / (~is_nan).float().sum(*args, **kwargs)
 
 

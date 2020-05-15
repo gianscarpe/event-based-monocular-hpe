@@ -7,5 +7,6 @@ defaults:
   - training: reconstruction
   - hydra: standard
 
+gpus: 1
 debug: false
 root_dir: /home/gianscarpe/dev
