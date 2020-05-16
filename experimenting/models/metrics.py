@@ -32,8 +32,9 @@ class MPJPE(BaseMetric):
         #dist_2d = euclidean_losses(p_coords_max, gt_coords)
         
         gt_mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) >0        
-        dist_2d = euclidean_losses(gt_coords, p_coords_max)
+        #dist_2d = euclidean_losses(gt_coords, p_coords_max)
 
+        dist_2d = torch.norm((gt_coords - p_coords_max), dim=-1)
         if self.reduction:
             # To apply a reduction method (e.g. mean) we need a mask of gt
             # joints

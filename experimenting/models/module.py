@@ -1,12 +1,12 @@
 import torch
 from torch import nn
 import numpy as np
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from ..dataset  import get_data, DatasetType
 from .cnns import get_cnn
 import torchvision
 from .metrics import MPJPE
 import torch.nn.functional as F
+
 import hydra
 import pytorch_lightning as pl
 import collections
@@ -184,11 +184,13 @@ class PoseEstimator(BaseModule):
         self.n_channels = hparams.dataset.n_channels
         self.n_joints = hparams.dataset.n_joints
         params = {'n_channels': hparams.dataset['n_channels'],
-                  'n_classes': hparams.dataset['n_joints']}
+                  'n_classes': hparams.dataset['n_joints'],
+                  'encoder_depth':hparams.training.encoder_depth
+        }
 
         self.model = get_cnn(hparams.training.model, params)
 
-        self.metrics = {"IOU" : smp.utils.metrics.IoU(threshold=0.5), "MPJPE":MPJPE(reduction=average_loss)}
+        self.metrics = {"MPJPE":MPJPE(reduction=average_loss)}
 
     def forward(self, x):
         x = self.model(x)
@@ -199,7 +201,6 @@ class PoseEstimator(BaseModule):
         
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
-
         logs = {"loss":loss}
         return {"loss":loss, "log":logs}
 

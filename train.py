@@ -2,6 +2,7 @@ import os
 import hydra
 from omegaconf import DictConfig
 import experimenting
+import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -17,7 +18,7 @@ def main(cfg: DictConfig) -> None:
 
     exp_path = os.getcwd()
     log_path, cur_dir = os.path.split(exp_path)
-    logger = TensorBoardLogger(os.path.join(log_path, "tb_logs"),
+    logger = TensorBoardLogger(os.path.join(cur_dir, "tb_logs"),
                                version=cur_dir)
 
     
@@ -32,10 +33,11 @@ def main(cfg: DictConfig) -> None:
     if debug:
         torch.autograd.set_detect_anomaly(True)
     trainer_configuration = {
-        'gpus':cfg.gpus, 'benchmark':True, 'max_epochs':cfg.training.epochs,
+        'gpus':[1], 'benchmark':True, 'max_epochs':cfg.training.epochs,
         'fast_dev_run':debug,
         'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
         'weights_summary': 'top', 'logger':logger,
+        'gradient_clip_val':1.5,
         'profiler':profiler}
 
     if cfg.training.early_stopping > 0:
@@ -50,11 +52,12 @@ def main(cfg: DictConfig) -> None:
 
     model = getattr(experimenting, cfg.training.module)(cfg)
     
-    if cfg.training.load_training:
+    if cfg.load_path:
         print('Loading training')
         model = getattr(experimenting,
-                        cfg.training.module).load_from_checkpoint(cfg.training.load_path)
-        trainer_configuration['resume_from_checkpoint'] = cfg.training.load_path
+                        cfg.training.module).load_from_checkpoint(cfg.load_path)
+    if cfg.resume:
+        trainer_configuration['resume_from_checkpoint'] = cfg.load_path
         
     trainer = pl.Trainer(**trainer_configuration)
     trainer.fit(model)

@@ -103,7 +103,8 @@ def _get_inceptionv3(n_channels, n_classes, pretrained=False):
 
 def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_depth=3):
     encoder_weights = 'imagenet' if pretrained else None
-    decoder_channels = tuple([16 * (2 ** i) for i in reversed(range(0, 3))])
+    encoder_depth = 3
+    decoder_channels = tuple([16 * (2 ** i) for i in reversed(range(0, int(encoder_depth)))])
     model : smp.Unet = smp.Unet(resnet, encoder_weights=encoder_weights,
                                 encoder_depth=encoder_depth,
                                 decoder_channels=decoder_channels,

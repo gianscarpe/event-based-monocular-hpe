@@ -1,12 +1,10 @@
 training:
-  epochs: 100
-  early_stopping: 10
+  epochs: 50
+  early_stopping: 0
   batch_size: 32
   num_workers: 12
   use_lr_scheduler: false
-  load_training: false
   module: PoseEstimator
   model: unet_resnet18
 
-  encoder_depth: 1o
-  load_path:
+  encoder_depth: 1
