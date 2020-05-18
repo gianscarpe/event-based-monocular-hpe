@@ -43,16 +43,15 @@ def _get_classification_datasets(hparams):
     preprocess_val = get_augmentation(hparams.augmentation_test)
     
     params = get_dataset_params(hparams.dataset)
-    file_paths, train_index, val_index, test_index, labels = params
+    file_paths, train_index, val_index, test_index = params
 
     train_params = {'file_paths': file_paths, 'indexes':train_index,
-                    'transform':preprocess_train, 'labels':labels}
-
+                    'transform':preprocess_train}
     val_params = {'file_paths': file_paths, 'indexes':val_index,
-                    'transform':preprocess_val, 'labels':labels}
+                    'transform':preprocess_val}
 
     test_params = {'file_paths': file_paths, 'indexes':test_index,
-                    'transform':preprocess_val, 'labels':labels}
+                    'transform':preprocess_val}
 
     return DHP19ClassificationDataset(**train_params), DHP19ClassificationDataset(**val_params), DHP19ClassificationDataset(**test_params)
 
@@ -61,7 +60,11 @@ def _get_reconstruction_datasets(hparams):
     preprocess_val = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints
     params = get_dataset_params(hparams.dataset)
-    file_paths, train_index, val_index, test_index, _ = params
+    
+    file_paths = params['file_paths']
+    train_index = params['train_indexes']
+    val_index = params['val_indexes']
+    test_index = params['test_indexes']
     
 
     train_params = {'file_paths': file_paths, 'indexes':train_index,

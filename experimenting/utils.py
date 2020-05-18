@@ -86,16 +86,33 @@ n    S1_session_2_mov_1_frame_249.npy
     
     label = 0
     filename = os.path.basename(filepath)
-    session = int(filename[filename.find('session_') + len('session_')])
-    mov = int(filename[filename.find('mov_') + len('mov_')])
+    info = get_frame_info(filepath)
 
-    for i in range(1, session):
+    for i in range(1, info['session']):
         label += MOVEMENTS_PER_SESSION[i]
 
-    return label + mov - 1
+    return label + info['mov'] - 1
 
 def get_preload_dir(data_dir):
     return os.path.join(data_dir, 'preload')
+
+def get_frame_info(filename):
+
+    filename = os.path.splitext(os.path.basename(filename))[0]
+
+    result = {
+        'subject': int(filename[filename.find('S') + 1 : filename.find('S') +
+                                   4].split('_')[0]),
+                              'session': _get_info_from_string(filename, 'session'),
+               'mov': _get_info_from_string(filename, 'mov'),
+               'cam': _get_info_from_string(filename, 'cam'),
+               'frame': _get_info_from_string(filename, 'frame')
+    }
+
+    return result
+
+def _get_info_from_string(filename, info, split_symbol='_'):
+    return int(filename[filename.find(info) :].split(split_symbol)[1])
 
 
 def decay_heatmap(heatmap, sigma2=4):

@@ -3,7 +3,7 @@ defaults:
   - lr_scheduler: step_lr
   - dataset: timecount_pose
   - loss: heatmap
-  - augmentation: no_aug
+  - augmentation: center_crop
   - training: reconstruction
   - hydra: standard
 

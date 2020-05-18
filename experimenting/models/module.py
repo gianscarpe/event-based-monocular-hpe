@@ -28,7 +28,8 @@ class BaseModule(pl.LightningModule):
         super(BaseModule, self).__init__()
         self.dataset_type = dataset_type
         
-        self.hparams = hparams #flatten(hparams)
+        self.hparams = flatten(hparams)
+        self._hparams = unflatten(hparams)
 
         self.optimizer_config = hparams.optimizer
         self.scheduler_config = None
@@ -47,7 +48,7 @@ class BaseModule(pl.LightningModule):
 
     def prepare_data(self):
         self.train_loader, self.val_loader, self.test_loader = get_data(
-            unflatten(self.hparams), dataset_type=self.dataset_type)
+            unflatten(self._hparams), dataset_type=self.dataset_type)
 
     def forward(self, x):
         x = self.model(x)

@@ -17,9 +17,8 @@ def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
 
     exp_path = os.getcwd()
-    log_path, cur_dir = os.path.split(exp_path)
-    logger = TensorBoardLogger(os.path.join(cur_dir, "tb_logs"),
-                               version=cur_dir)
+    logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+                               
 
     
     debug = cfg.debug
