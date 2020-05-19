@@ -2,12 +2,12 @@ defaults:
   - optimizer: adam
   - lr_scheduler: step_lr
   - dataset: timecount_pose
-  - loss: heatmap
+  - loss: pixelwiseloss
   - augmentation: center_crop
   - training: reconstruction
   - hydra: standard
 
-gpus: [1]
+gpus: [0]
 debug: false
 root_dir: /home/gianscarpe/dev
 

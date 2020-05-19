@@ -1,26 +1,18 @@
-import os
-import hydra
-from omegaconf import DictConfig
-import experimenting
-import torch
-
+from hyperopt import hp
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
+from omegaconf import DictConfig
 
-import logging
+import torch
+import os
 
-logging.basicConfig(level=logging.INFO)
-
-@hydra.main(config_path='./confs/train/config.yaml')
-def main(cfg: DictConfig) -> None:
+def get_training_params(cfg: DictConfig):
     print(cfg.pretty())
 
     exp_path = os.getcwd()
     logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
                                
-
-    
     debug = cfg.debug
     
     checkpoint_dir = os.path.join(exp_path,"checkpoints")
@@ -28,15 +20,15 @@ def main(cfg: DictConfig) -> None:
     ckpt_cb = ModelCheckpoint(filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}"))
 
     profiler = pl.profiler.SimpleProfiler()
-
+    gpus = [int(x) for x in cfg.gpus]
     if debug:
         torch.autograd.set_detect_anomaly(True)
+        
     trainer_configuration = {
-        'gpus':[1], 'benchmark':True, 'max_epochs':cfg.training.epochs,
+        'gpus':gpus, 'benchmark':True, 'max_epochs':cfg.training.epochs,
         'fast_dev_run':debug,
         'checkpoint_callback':ckpt_cb, 'track_grad_norm':2,
         'weights_summary': 'top', 'logger':logger,
-        'gradient_clip_val':1.5,
         'profiler':profiler}
 
     if cfg.training.early_stopping > 0:
@@ -48,23 +40,15 @@ def main(cfg: DictConfig) -> None:
             mode='min'
         )
         trainer_configuration['early_stop_callback'] = early_stop_callback
-
-    model = getattr(experimenting, cfg.training.module)(cfg)
-    
-    if cfg.load_path:
-        print('Loading training')
-        model = getattr(experimenting,
-                        cfg.training.module).load_from_checkpoint(cfg.load_path)
+        
     if cfg.resume:
         trainer_configuration['resume_from_checkpoint'] = cfg.load_path
         
-    trainer = pl.Trainer(**trainer_configuration)
-    trainer.fit(model)
-    trainer.test(model)
-
+    return trainer_configuration
     
 
-    
-if __name__ == '__main__':
-    main()
-    
+def load_model(cfg):
+    print('Loading training')
+    model = getattr(experimenting,
+                    cfg.training.module).load_from_checkpoint(cfg.load_path)
+    return model

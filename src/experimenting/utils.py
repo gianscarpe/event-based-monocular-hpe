@@ -8,6 +8,8 @@ import numpy as np
 import cv2
 import torch
 
+
+
 def get_file_paths(path, extensions):
     extension_regex = "|".join(extensions)
     print(extension_regex)
@@ -81,11 +83,10 @@ def get_label_from_filename(filepath):
     """Given the filepath of .h5 data, return the correspondent label
 
     E.g.
-n    S1_session_2_mov_1_frame_249.npy
+n    S1_session_2_mov_1_frame_249_cam_2.npy
     """
     
     label = 0
-    filename = os.path.basename(filepath)
     info = get_frame_info(filepath)
 
     for i in range(1, info['session']):
@@ -97,8 +98,11 @@ def get_preload_dir(data_dir):
     return os.path.join(data_dir, 'preload')
 
 def get_frame_info(filename):
+q
 
-    filename = os.path.splitext(os.path.basename(filename))[0]
+
+filename = os.path.splitext(os.path.basename(filename))[0]
+
 
     result = {
         'subject': int(filename[filename.find('S') + 1 : filename.find('S') +
@@ -108,6 +112,7 @@ def get_frame_info(filename):
                'cam': _get_info_from_string(filename, 'cam'),
                'frame': _get_info_from_string(filename, 'frame')
     }
+    
 
     return result
 

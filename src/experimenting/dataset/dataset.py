@@ -81,7 +81,7 @@ class DHP19ClassificationDataset(DHP19BaseDataset):
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
         labels = labels if labels is not None else [get_label_from_filename(x_path)
-                                                                   for x_path in self.x_paths]
+                                                                   for x_path in file_paths]
         
         super(DHP19ClassificationDataset, self).__init__(file_paths, labels,
                                                          x_indexes, transform,

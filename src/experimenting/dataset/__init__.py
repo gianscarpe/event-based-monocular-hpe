@@ -43,7 +43,10 @@ def _get_classification_datasets(hparams):
     preprocess_val = get_augmentation(hparams.augmentation_test)
     
     params = get_dataset_params(hparams.dataset)
-    file_paths, train_index, val_index, test_index = params
+    file_paths = params['file_paths']
+    train_index = params['train_indexes']
+    val_index = params['val_indexes']
+    test_index = params['test_indexes']
 
     train_params = {'file_paths': file_paths, 'indexes':train_index,
                     'transform':preprocess_train}

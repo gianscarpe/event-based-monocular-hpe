@@ -6,14 +6,15 @@ import re
 from ..utils import get_file_paths, get_preload_dir, get_label_from_filename, get_frame_info
 
 
-def get_dataset_params(hparams_dataset, split_at=.8, save_split=True):
+def get_dataset_params(hparams_dataset):
     preload_dir = get_preload_dir(hparams_dataset.labels_dir)
-    
+    split_at = hparams_dataset.split_at
+    save_split = hparams_dataset.save_split
 
-    if os.path.exists(preload_dir):
+
+    if os.path.exists(preload_dir) and hparams_dataset.load_split:
         params = load_npy_indexes_and_map(preload_dir)
     else:
-
         file_paths = _get_file_paths_with_cam(hparams_dataset.data_dir,
                                               hparams_dataset.cams)
         
