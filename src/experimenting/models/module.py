@@ -31,20 +31,21 @@ class BaseModule(pl.LightningModule):
         self.hparams = flatten(hparams)
         self._hparams = unflatten(hparams)
 
-        self.optimizer_config = hparams.optimizer
+
+        self.optimizer_config = self._hparams.optimizer
         self.scheduler_config = None
 
-        self.loss_func = hydra.utils.instantiate(hparams.loss)
+        self.loss_func = hydra.utils.instantiate(self._hparams.loss)
 
-        self.set_params(hparams)
-        self.set_optional_params(hparams)
+        self.set_params()
+        self.set_optional_params()
 
-    def set_params(self, hparams):
+    def set_params(self):
         pass
 
-    def set_optional_params(self, hparams):
-        if hparams.training.use_lr_scheduler:
-            self.scheduler_config = hparams.lr_scheduler
+    def set_optional_params(self):
+        if self._hparams.training.use_lr_scheduler:
+            self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
         self.train_loader, self.val_loader, self.test_loader = get_data(
@@ -104,10 +105,10 @@ class Classifier(BaseModule):
         super(Classifier, self).__init__(hparams, DatasetType.CLASSIFICATION_DATASET)
     
 
-    def set_params(self, hparams):
-        params = {'n_channels': hparams.dataset['n_channels'],
-                  'n_classes': hparams.dataset['n_classes']}
-        self.model = get_cnn(hparams.training.model, params)
+    def set_params(self):
+        params = {'n_channels': self._hparams.dataset['n_channels'],
+                  'n_classes': self._hparams.dataset['n_classes']}
+        self.model = get_cnn(self._hparams.training.model, params)
 
 
     def training_step(self, batch, batch_idx):
@@ -181,15 +182,15 @@ class PoseEstimator(BaseModule):
         super(PoseEstimator, self).__init__(hparams, DatasetType.RECONSTUCTION_DATASET)
 
 
-    def set_params(self, hparams):
-        self.n_channels = hparams.dataset.n_channels
-        self.n_joints = hparams.dataset.n_joints
-        params = {'n_channels': hparams.dataset['n_channels'],
-                  'n_classes': hparams.dataset['n_joints'],
-                  'encoder_depth':hparams.training.encoder_depth
+    def set_params(self):
+        self.n_channels = self._hparams.dataset.n_channels
+        self.n_joints = self._hparams.dataset.n_joints
+        params = {'n_channels': self._hparams.dataset['n_channels'],
+                  'n_classes': self._hparams.dataset['n_joints'],
+                  'encoder_depth':self._hparams.training.encoder_depth
         }
 
-        self.model = get_cnn(hparams.training.model, params)
+        self.model = get_cnn(self._hparams.training.model, params)
 
         self.metrics = {"MPJPE":MPJPE(reduction=average_loss)}
 

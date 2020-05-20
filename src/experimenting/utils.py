@@ -98,10 +98,7 @@ def get_preload_dir(data_dir):
     return os.path.join(data_dir, 'preload')
 
 def get_frame_info(filename):
-q
-
-
-filename = os.path.splitext(os.path.basename(filename))[0]
+    filename = os.path.splitext(os.path.basename(filename))[0]
 
 
     result = {
