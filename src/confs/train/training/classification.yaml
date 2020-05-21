@@ -3,7 +3,6 @@ training:
   early_stopping: 10
   batch_size: 32
   num_workers: 12
-  use_lr_scheduler: false
   load_training: false
   module: Classifier
   model: resnet34

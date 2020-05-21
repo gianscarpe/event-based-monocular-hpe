@@ -9,8 +9,10 @@ from .dhp19 import DHP19Model
             
 def get_cnn(model_name, params):
     switcher = {
-        'resnet18': _get_resnet18,
-        'resnet34': _get_resnet34,
+        'resnet18':lambda **args: _get_resnet('resnet18', **args),
+        'resnet34': lambda **args: _get_resnet('resnet34', **args),
+        'resnet50': lambda **args: _get_resnet('resnet50', **args),
+        'inceptionv3': _get_inceptionv3,
         'unet_resnet18' : lambda **args: _get_unet_resnet('resnet18', **args),
         'unet_resnet34' : lambda **args: _get_unet_resnet('resnet34', **args),
         'dhp19' : _get_dhp19_model
@@ -43,9 +45,9 @@ def _get_vgg19(n_channels, n_classes, pretrained=False):
     return cnn
 
 
-def _get_resnet50(n_channels, n_classes, pretrained=False):
+def _get_resnet(resnet, n_channels, n_classes, pretrained=False):
 
-    cnn = models.resnet50(pretrained)
+    cnn = getattr(models, resnet)(pretrained)
 
     if n_channels != 3:
         cnn.conv1 = torch.nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
@@ -53,38 +55,6 @@ def _get_resnet50(n_channels, n_classes, pretrained=False):
 
     num_ftrs = cnn.fc.in_features
     cnn.fc = nn.Linear(num_ftrs, n_classes)
-
-    return cnn
-
-def _get_resnet34(n_channels, n_classes, pretrained=False):
-
-    cnn = models.resnet34(pretrained)
-
-    if n_channels != 3:
-        l = nn.Conv2d(n_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        nn.init.xavier_normal_(l.weight)
-        
-        cnn.conv1 = l
-
-    num_ftrs = cnn.fc.in_features
-    cnn.fc = nn.Linear(num_ftrs, n_classes)
-
-    return cnn
-
-
-def _get_resnet18(n_channels, n_classes, pretrained=False):
-
-    cnn = models.resnet18(pretrained)
-
-    if n_channels != 3:
-        l = torch.nn.Conv2d(n_channels, 64, kernel_size=(7, 7),
-                            stride=(2, 2), padding=(3, 3), bias=False)
-        nn.init.kaiming_normal_(l.weight, mode='fan_in')
-        
-        cnn.conv1 = l
-        num_ftrs = cnn.fc.in_features
-        cnn.fc = nn.Linear(num_ftrs, n_classes)
-        nn.init.kaiming_normal_(cnn.fc.weight, mode='fan_in')
 
     return cnn
 
@@ -115,10 +85,6 @@ def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_de
     model.segmentation_head[-1] = FlatSoftmax()
           
     return model
-
-
-
-    
 
 
 def _get_dhp19_model(n_channels, n_classes):

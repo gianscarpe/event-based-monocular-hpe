@@ -44,7 +44,7 @@ class BaseModule(pl.LightningModule):
         pass
 
     def set_optional_params(self):
-        if self._hparams.training.use_lr_scheduler:
+        if self._hparams.optimizer.use_lr_scheduler:
             self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
