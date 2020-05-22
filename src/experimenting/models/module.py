@@ -300,7 +300,7 @@ class HourglassEstimator(BaseModule):
                                                             self._hparams.dataset.max_h,
                                                             self._hparams.dataset.max_w)
             
-        results = {metric_name:metric_function(pred_joints, b_y, b_masks) for metric_name,
+        results = {metric_name:metric_function(pred_joints, gt_joints, b_masks) for metric_name,
                    metric_function in self.metrics.items()}
         return loss, results
 
