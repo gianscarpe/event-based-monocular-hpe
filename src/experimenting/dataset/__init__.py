@@ -7,7 +7,8 @@ from ..utils import get_augmentation
 
 class DatasetType(Enum):
         CLASSIFICATION_DATASET = 0
-        RECONSTUCTION_DATASET = 1
+        HM_DATASET = 1
+        JOINTS_DATASET = 2
 
 def get_data(hparams, dataset_type):
     batch_size = hparams.training['batch_size']
@@ -34,7 +35,8 @@ def get_dataloader(dataset, batch_size, num_workers, shuffle=True):
 
 def _get_datasets(hparams, dataset_type):
     switch = { DatasetType.CLASSIFICATION_DATASET : _get_classification_datasets,
-               DatasetType.RECONSTUCTION_DATASET : _get_reconstruction_datasets}
+               DatasetType.HM_DATASET : _get_hm_datasets,
+               DatasetType.JOINTS_DATASET: _get_joints_datasets}
 
     return switch[dataset_type](hparams)
 
@@ -58,7 +60,7 @@ def _get_classification_datasets(hparams):
 
     return DHP19ClassificationDataset(**train_params), DHP19ClassificationDataset(**val_params), DHP19ClassificationDataset(**test_params)
 
-def _get_reconstruction_datasets(hparams):
+def _get_joints_datasets(hparams):
     preprocess_train = get_augmentation(hparams.augmentation_train)
     preprocess_val = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints
@@ -68,20 +70,51 @@ def _get_reconstruction_datasets(hparams):
     train_index = params['train_indexes']
     val_index = params['val_indexes']
     test_index = params['test_indexes']
+    max_h = hparams.dataset.max_h
+    max_w = hparams.dataset.max_w
     
 
     train_params = {'file_paths': file_paths, 'indexes':train_index,
-                    'transform':preprocess_train,
-                    'labels_dir':hparams.dataset.labels_dir, 'n_joints':n_joints}
+                    'transform':preprocess_train, 'max_h': max_h, 'max_w':max_w,
+                    'labels_dir':hparams.dataset.joints_dir,
+                    'n_joints':n_joints}
 
-    val_params = {'file_paths': file_paths, 'indexes':val_index,
-                  'transform':preprocess_val, 'labels_dir':hparams.dataset.labels_dir}
+    val_params = {'file_paths': file_paths, 'indexes':val_index, 'max_h': max_h,
+                  'max_w':max_w, 'transform':preprocess_val,
+                  'labels_dir':hparams.dataset.joints_dir}
 
     test_params = {'file_paths': file_paths, 'indexes':test_index,
-                    'transform':preprocess_val,
-                    'labels_dir':hparams.dataset.labels_dir}
+                    'transform':preprocess_val, 'max_h': max_h, 'max_w':max_w,
+                    'labels_dir':hparams.dataset.joints_dir}
+
+    return DHPJointsDataset(**train_params), DHPJointsDataset(**val_params), DHPJointsDataset(**test_params)
+
+
+def _get_hm_datasets(hparams):
+    preprocess_train = get_augmentation(hparams.augmentation_train)
+    preprocess_val = get_augmentation(hparams.augmentation_test)
+    n_joints = hparams.dataset.n_joints
+    params = get_dataset_params(hparams.dataset)
     
-    return DHP3DDataset(**train_params), DHP3DDataset(**val_params), DHP3DDataset(**test_params)
+    file_paths = params['file_paths']
+    train_index = params['train_indexes']
+    val_index = params['val_indexes']
+    test_index = params['test_indexes']
+
+    train_params = {'file_paths': file_paths, 'indexes':train_index,
+                    'transform':preprocess_train,
+                    'labels_dir':hparams.dataset.hm_dir,
+                    'n_joints':n_joints}
+
+    val_params = {'file_paths': file_paths, 'indexes':val_index, 
+                  'transform':preprocess_val,
+                  'labels_dir':hparams.dataset.hm_dir}
+
+    test_params = {'file_paths': file_paths, 'indexes':test_index,
+                    'transform':preprocess_val, 
+                    'labels_dir':hparams.dataset.hm_dir}
+
+    return DHPHeatmapDataset(**train_params), DHPHeatmapDataset(**val_params), DHPHeatmapDataset(**test_params)
 
 
 

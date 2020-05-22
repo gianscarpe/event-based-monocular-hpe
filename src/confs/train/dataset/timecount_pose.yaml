@@ -2,9 +2,17 @@ dataset:
   name: timecount_pose
   base_path: /data/dhp19/time_count_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
-  labels_dir: ${dataset.base_path}/labels
-  load_split: true
+  hm_dir: ${dataset.base_path}/labels
+  joints_dir: ${dataset.base_path}/labels_joints
+  
+  load_split: false
+  save_split: false
+  preload_dir : ${dataset.base_path}/preload
+  
   test_subjects: [1, 2, 3, 4, 5]
   cams: [3]
   n_channels: 1
   n_joints: 13
+  max_h: 342
+  max_w: 300
+

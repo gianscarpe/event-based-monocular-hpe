@@ -1,4 +1,5 @@
 from __future__ import division
+from kornia.geometry import normalize_points
 
 import torch
 

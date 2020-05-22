@@ -23,9 +23,9 @@ def _up_stride_block(in_chans, out_chans):
     return ResidualBlock(
         out_chans,
         nn.ConvTranspose2d(in_chans, out_chans, kernel_size=3, padding=1, stride=2,
-                           output_padding=1, bias=False),
+                           output_padding=(0, 1), bias=False),
         nn.ConvTranspose2d(in_chans, out_chans, kernel_size=1, stride=2,
-                           output_padding=1, bias=False))
+                           output_padding=(0, 1), bias=False))
 
     
 def init_parameters(net):
@@ -95,12 +95,6 @@ class HeatmapPredictor(nn.Module):
             _regular_block(192, 192),
             _up_stride_block(192, 128),
             _regular_block(128, 128),
-            _up_stride_block(128, 128),
-            _regular_block(128, 128),
-            _up_stride_block(128, 128),
-            _regular_block(128, 128),
-            _up_stride_block(128, 128),
-            _regular_block(128, 128),
             _regular_block(128, self.n_joints),
         )
         init_parameters(self)
@@ -111,8 +105,8 @@ class HeatmapPredictor(nn.Module):
         return self.up_layers(mid_in)
 
 
-def _get_feature_extractor(model_path, device):
-    resnet = torch.load(model_path, map_location=device)
+def _get_feature_extractor(model_path):
+    resnet = torch.load(model_path)
     net = nn.Sequential(
         resnet.conv1,
         resnet.bn1,
@@ -138,17 +132,16 @@ class HourglassStage(nn.Module):
         return out
     
 class HourglassModel(nn.Module):
-    def __init__(self, n_stages, backbone_path, n_joints, device):   
+    def __init__(self, n_stages, backbone_path, n_joints):   
         super().__init__()
 
         self.mid_feature_dimension = 128
         self.n_stages = n_stages
-        self.in_cnn = _get_feature_extractor(backbone_path, device)
+        self.in_cnn = _get_feature_extractor(backbone_path)
         self.softmax = FlatSoftmax()
-        self.hg_stages = []
-        self.hm_combiners = []
         self.n_joints = n_joints
-
+        self.hm_combiners = nn.ModuleList()
+        self.hg_stages = nn.ModuleList()
         self.softmax = FlatSoftmax()
 
         for t in range(self.n_stages):
@@ -158,12 +151,12 @@ class HourglassModel(nn.Module):
 
 
     def forward(self, x):
-        inp = self.in_cnn(inputs)
+        inp = self.in_cnn(x)
         
         outs = []
         for t in range(self.n_stages):
             if t > 0:
-                inp = inp, self.hm_combiners[t](outs[-1])], 1)
+                inp = inp + self.hm_combiners[t-1](outs[-1])
                 
             outs.append(self.hg_stages[t](inp))
             

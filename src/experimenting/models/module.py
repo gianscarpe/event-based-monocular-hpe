@@ -6,7 +6,7 @@ from .cnns import get_cnn
 import torchvision
 from .metrics import MPJPE
 import torch.nn.functional as F
-
+import functools
 import hydra
 import pytorch_lightning as pl
 import collections
@@ -15,9 +15,11 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 import segmentation_models_pytorch as smp
 from ..utils import flatten, unflatten
 from .dsnt import average_loss
+from .hourglass import HourglassModel
+from kornia import geometry
+from ..utils import  get_joints_from_heatmap
 
-
-__all__ = ['Classifier', 'PoseEstimator']
+__all__ = ['Classifier', 'PoseEstimator', 'HourglassEstimator']
 
 class BaseModule(pl.LightningModule):
     def __init__(self, hparams, dataset_type):
@@ -179,7 +181,7 @@ class Classifier(BaseModule):
 class PoseEstimator(BaseModule):
 
     def __init__(self, hparams):
-        super(PoseEstimator, self).__init__(hparams, DatasetType.RECONSTUCTION_DATASET)
+        super(PoseEstimator, self).__init__(hparams, DatasetType.HM_DATASET)
 
 
     def set_params(self):
@@ -198,6 +200,23 @@ class PoseEstimator(BaseModule):
         x = self.model(x)
         return x
 
+    def predict(self, output):
+        pred_joints, _ = get_joints_from_heatmap(output)
+        return pred_joints
+
+    def _eval(self, batch):
+        b_x, b_y = batch
+
+        output = self.forward(b_x)               # cnn output
+        loss = self.loss_func(output, b_y)   # cross entropy loss
+
+        gt_joints, _ = get_joints_from_heatmap(b_y)
+        pred_joints = self.predict(output)
+        
+        results = {metric_name:metric_function(pred_joints, gt_joints) for metric_name,
+                   metric_function in self.metrics.items()}
+        return loss, results
+
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
         
@@ -208,13 +227,7 @@ class PoseEstimator(BaseModule):
 
     
     def validation_step(self, batch, batch_idx): 
-        b_x, b_y = batch
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
-        
-        results = {metric_name:metric_function(output, b_y) for metric_name,
-                   metric_function in self.metrics.items()}
-
+        loss, results = self._eval(batch)
         return {"batch_val_loss":loss, **results}
 
     def validation_epoch_end(self, outputs):
@@ -224,14 +237,8 @@ class PoseEstimator(BaseModule):
 
         return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
-    def test_step(self, batch, batch_idx): 
-        b_x, b_y = batch
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)  
-        
-        results = {metric_name:metric_function(output, b_y) for metric_name, 
-                   metric_function in self.metrics.items()}
-
+    def test_step(self, batch, batch_idx):
+        loss, results = self._eval(batch)
         return {"batch_test_loss":loss, **results}
 
     def test_epoch_end(self, outputs):
@@ -242,3 +249,91 @@ class PoseEstimator(BaseModule):
         
         return {**logs, 'log': logs, 'progress_bar': logs}
 
+    
+class HourglassEstimator(BaseModule):
+
+    def __init__(self, hparams):
+
+        super(HourglassEstimator, self).__init__(hparams, DatasetType.JOINTS_DATASET)
+
+
+    def set_params(self):
+        self.n_channels = self._hparams.dataset.n_channels
+        self.n_joints = self._hparams.dataset.n_joints
+        params = {'n_channels': self._hparams.dataset['n_channels'],
+                  'n_classes': self._hparams.dataset['n_joints'],
+                  
+        }
+
+        backbone_path = "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
+        self.model = HourglassModel(self._hparams.training['stages'], backbone_path, self.n_joints)
+
+        self.metrics = {"MPJPE":MPJPE(reduction=average_loss)}
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
+
+    def predict(self, output):
+        pred_joints = geometry.denormalize_pixel_coordinates(
+            geometry.spatial_expectation2d(output[-1]),
+            self._hparams.dataset.max_h, self._hparams.dataset.max_w)
+        return pred_joints
+        
+
+    def _calculate_loss(self, outs, b_y, b_masks):
+        loss = 0
+        for x in outs:
+            loss += self.loss_func(x, b_y, b_masks)
+        return loss / len(outs)
+
+    def _eval(self, batch):
+        b_x, b_y, b_masks = batch
+
+        output = self.forward(b_x)               # cnn output
+    
+
+        loss = self._calculate_loss(output, b_y, b_masks)
+
+        pred_joints = self.predict(output)
+        gt_joints = geometry.denormalize_pixel_coordinates( b_y,
+                                                            self._hparams.dataset.max_h,
+                                                            self._hparams.dataset.max_w)
+            
+        results = {metric_name:metric_function(pred_joints, b_y, b_masks) for metric_name,
+                   metric_function in self.metrics.items()}
+        return loss, results
+
+    
+    def training_step(self, batch, batch_idx):
+        b_x, b_y, b_masks = batch
+        
+        outs = self.forward(b_x)               # cnn output
+        loss = self._calculate_loss(outs, b_y, b_masks)
+        
+        logs = {"loss":loss}
+        return {"loss":loss, "log":logs}
+
+        
+    def validation_step(self, batch, batch_idx):
+        loss, results = self._eval(batch)
+        return {"batch_val_loss":loss, **results}
+
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'val_mean')
+        logs = {'val_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+
+    def test_step(self, batch, batch_idx):
+        loss, results = self._eval(batch)
+        return {"batch_test_loss":loss, **results}
+
+    def test_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'test_mean')
+
+        logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
+        
+        return {**logs, 'log': logs, 'progress_bar': logs}
