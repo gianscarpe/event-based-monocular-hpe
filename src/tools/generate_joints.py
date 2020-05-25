@@ -9,10 +9,9 @@ from experimenting.utils import get_heatmap
 from tqdm import tqdm
 
 if __name__ == '__main__':
-    homedir = '/home/gianscarpe/dev/data/dhp19'
+    homedir = '/data/dhp19'
     dataset = 'time_count_dataset'
-    input_dir = join(homedir, 'labels')
-    events_dir = join(homedir, dataset, '346x260')
+    input_dir = join(homedir, 'raw_labels')
     p_mat_dir = join(homedir, 'P_matrices/')
     out_dir = join('/data/dhp19/', dataset, 'labels_joints')
     os.makedirs(out_dir, exist_ok=True)
@@ -45,14 +44,18 @@ if __name__ == '__main__':
 
             frames = x_h5['XYZ']
             for cam in range(4):
-                if cam != 2:
+                if cam == 2:
                     continue
                 for ind in list(range(len(frames))):
                     
-                    xyz, joints, mask, _ = get_heatmap(frames[ind, :],p_mats[cam],
+                    xyz, joints, mask = get_heatmap(frames[ind, :],p_mats[cam],
                                                        width, height)
                     out_filename = frame_path.format(ind, cam)
                     out_path = os.path.join(out_dir, out_filename)
 
                     np.savez(out_path, joints=joints, mask=mask)
+
+
+
+
 

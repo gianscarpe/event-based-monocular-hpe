@@ -7,6 +7,8 @@ from omegaconf import DictConfig
 import torch
 import os
 
+__all__ = ['get_training_params', 'load_model']
+
 def get_training_params(cfg: DictConfig):
     print(cfg.pretty())
 

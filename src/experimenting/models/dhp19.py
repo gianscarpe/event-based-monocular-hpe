@@ -1,10 +1,7 @@
-import torch
-import torchvision
-from torchvision import models
+
 import torch.nn as nn
-import torch.nn.functional as F
-import segmentation_models_pytorch as smp
-from .custom import FlatSoftmax
+
+from ..utils import FlatSoftmax
 
 
 class DHP19Model(nn.Module):
@@ -16,8 +13,6 @@ class DHP19Model(nn.Module):
                                               padding=1),
                                     nn.LeakyReLU())
         
-
-
         self.block2 = nn.Sequential(nn.Conv2d(in_channels=16,
                                               out_channels=32, kernel_size=3,
                                               padding=1),
@@ -79,9 +74,9 @@ class DHP19Model(nn.Module):
                                               padding=1),
                                     nn.LeakyReLU())
         self.head = nn.Sequential(nn.Conv2d(in_channels=16,
-                                              out_channels=n_joints, kernel_size=3,
-                                              padding=1),
-                                    FlatSoftmax())
+                                            out_channels=n_joints,
+                                            kernel_size=3, padding=1),
+                                  FlatSoftmax())
         
     def forward(self, x):
 

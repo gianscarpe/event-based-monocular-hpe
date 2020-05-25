@@ -1,38 +1,30 @@
 import torch
-from torch import nn
-import numpy as np
-from ..dataset  import get_data, DatasetType
-from .cnns import get_cnn
-import torchvision
-from .metrics import MPJPE
-import torch.nn.functional as F
-import functools
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
 import hydra
 import pytorch_lightning as pl
-import collections
-import os
-from sklearn.metrics import precision_score, recall_score, accuracy_score
-import segmentation_models_pytorch as smp
-from ..utils import flatten, unflatten
-from .dsnt import average_loss
-from .hourglass import HourglassModel
 from kornia import geometry
-from ..utils import  get_joints_from_heatmap
+
+from ..dataset import DatasetType, get_data
+from ..utils import average_loss, flatten, get_joints_from_heatmap, unflatten
+from .cnns import get_cnn
+from .hourglass import HourglassModel
+from .metrics import MPJPE
 
 __all__ = ['Classifier', 'PoseEstimator', 'HourglassEstimator']
+
 
 class BaseModule(pl.LightningModule):
     def __init__(self, hparams, dataset_type):
         """
         Initialize Classifier model
         """
-        
+
         super(BaseModule, self).__init__()
         self.dataset_type = dataset_type
-        
+
         self.hparams = flatten(hparams)
         self._hparams = unflatten(hparams)
-
 
         self.optimizer_config = self._hparams.optimizer
         self.scheduler_config = None
@@ -60,18 +52,17 @@ class BaseModule(pl.LightningModule):
     def train_dataloader(self):
         return self.train_loader
 
-    
     def val_dataloader(self):
         return self.val_loader
 
     def test_dataloader(self):
         return self.test_loader
 
-
     def configure_optimizers(self):
         optimizer = getattr(torch.optim,
                             self.optimizer_config['type'])(params=self.parameters(),
                                                            **self.optimizer_config['params'])
+        
         scheduler = None
         if self.scheduler_config:
             scheduler = getattr(torch.optim.lr_scheduler,
@@ -81,7 +72,6 @@ class BaseModule(pl.LightningModule):
 
         return optimizer
 
-    
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         logs = {'avg_train_loss': avg_loss,  'step': self.current_epoch}
@@ -91,11 +81,11 @@ class BaseModule(pl.LightningModule):
     def _get_aggregated_results(self, outputs, prefix):
         results = {}
         for metric_key in self.metrics.keys():
-            results[prefix + metric_key] = torch.stack([x[metric_key] for x in outputs]).mean()
-        
+            results[prefix + metric_key] = torch.stack([x[metric_key] for x in
+                                                        outputs]).mean()
+
         return results
 
-     
 
 class Classifier(BaseModule):
 
@@ -103,38 +93,33 @@ class Classifier(BaseModule):
         """
         Initialize Classifier model
         """
-        
-        super(Classifier, self).__init__(hparams, DatasetType.CLASSIFICATION_DATASET)
-    
+
+        super(Classifier, self).__init__(hparams,
+                                         DatasetType.CLASSIFICATION_DATASET)
 
     def set_params(self):
         params = {'n_channels': self._hparams.dataset['n_channels'],
                   'n_classes': self._hparams.dataset['n_classes']}
         self.model = get_cnn(self._hparams.training.model, params)
 
-
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
-        
+
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
 
-        logs = {"loss":loss}
-        return {"loss":loss, "log":logs}
+        logs = {"loss": loss}
+        return {"loss": loss, "log": logs}
 
-
-    def validation_step(self, batch, batch_idx): 
+    def validation_step(self, batch, batch_idx):
         b_x, b_y = batch
-        
+
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
 
         _, pred_y = torch.max(output.data, 1)
-        correct_predictions = (pred_y == b_y).sum().item()
+        return {"batch_val_loss": loss, "y_pred": pred_y, "y_true": b_y}
 
-        return {"batch_val_loss":loss, "y_pred":pred_y, "y_true":b_y}
-
-    
     def validation_epoch_end(self, outputs):
         y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
         y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
@@ -143,25 +128,22 @@ class Classifier(BaseModule):
         acc = accuracy_score(y_true, y_pred)
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
-        
-        logs = {'val_loss': avg_loss, "val_acc":acc, 'val_precision':precision,
-                'val_recall':recall, 'step': self.current_epoch}
-        
-        return {'val_loss': avg_loss, 'val_acc':acc,'log': logs,
+
+        logs = {'val_loss': avg_loss, "val_acc": acc, 'val_precision': precision,
+                'val_recall': recall, 'step': self.current_epoch}
+
+        return {'val_loss': avg_loss, 'val_acc': acc, 'log': logs,
                 'progress_bar': logs}
-   
-    
-    def test_step(self, batch, batch_idx): 
+
+    def test_step(self, batch, batch_idx):
         b_x, b_y = batch
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
 
         _, pred_y = torch.max(output.data, 1)
-        correct_predictions = (pred_y == b_y).sum().item()
 
-        return {"batch_test_loss":loss, "y_pred":pred_y, "y_true":b_y}
+        return {"batch_test_loss": loss, "y_pred": pred_y, "y_true": b_y}
 
-    
     def test_epoch_end(self, outputs):
         y_true = torch.cat([x['y_true'] for x in outputs]).cpu()
         y_pred = torch.cat([x['y_pred'] for x in outputs]).cpu()
@@ -170,11 +152,11 @@ class Classifier(BaseModule):
         acc = accuracy_score(y_true, y_pred)
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
-        
-        logs = {'test_loss': avg_loss, "test_acc":acc,
-                'test_precision':precision, 'test_recall':recall, 'step':
+
+        logs = {'test_loss': avg_loss, "test_acc": acc,
+                'test_precision': precision, 'test_recall': recall, 'step':
                 self.current_epoch}
-        
+
         return {**logs, 'log': logs, 'progress_bar': logs}
 
 
@@ -183,18 +165,17 @@ class PoseEstimator(BaseModule):
     def __init__(self, hparams):
         super(PoseEstimator, self).__init__(hparams, DatasetType.HM_DATASET)
 
-
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
         params = {'n_channels': self._hparams.dataset['n_channels'],
                   'n_classes': self._hparams.dataset['n_joints'],
-                  'encoder_depth':self._hparams.training.encoder_depth
-        }
+                  'encoder_depth': self._hparams.training.encoder_depth
+                  }
 
         self.model = get_cnn(self._hparams.training.model, params)
 
-        self.metrics = {"MPJPE":MPJPE(reduction=average_loss)}
+        self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
 
     def forward(self, x):
         x = self.model(x)
@@ -212,23 +193,22 @@ class PoseEstimator(BaseModule):
 
         gt_joints, _ = get_joints_from_heatmap(b_y)
         pred_joints = self.predict(output)
-        
-        results = {metric_name:metric_function(pred_joints, gt_joints) for metric_name,
-                   metric_function in self.metrics.items()}
+
+        results = {metric_name: metric_function(pred_joints, gt_joints) for
+                   metric_name, metric_function in self.metrics.items()}
         return loss, results
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
-        
+
         output = self.forward(b_x)               # cnn output
         loss = self.loss_func(output, b_y)   # cross entropy loss
-        logs = {"loss":loss}
-        return {"loss":loss, "log":logs}
+        logs = {"loss": loss}
+        return {"loss": loss, "log": logs}
 
-    
-    def validation_step(self, batch, batch_idx): 
+    def validation_step(self, batch, batch_idx):
         loss, results = self._eval(batch)
-        return {"batch_val_loss":loss, **results}
+        return {"batch_val_loss": loss, **results}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
@@ -239,36 +219,37 @@ class PoseEstimator(BaseModule):
 
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(batch)
-        return {"batch_test_loss":loss, **results}
+        return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, 'test_mean')
 
         logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
-        
+
         return {**logs, 'log': logs, 'progress_bar': logs}
 
-    
+
 class HourglassEstimator(BaseModule):
 
     def __init__(self, hparams):
 
-        super(HourglassEstimator, self).__init__(hparams, DatasetType.JOINTS_DATASET)
-
+        super(HourglassEstimator, self).__init__(hparams,
+                                                 DatasetType.JOINTS_DATASET)
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
         params = {'n_channels': self._hparams.dataset['n_channels'],
-                  'n_classes': self._hparams.dataset['n_joints'],
-                  
+                  'n_joints': self._hparams.dataset['n_joints'],
+                  'backbone_path' :
+                  "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt",
+                  'n_stages': self._hparams.training['stages']
         }
 
-        backbone_path = "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
-        self.model = HourglassModel(self._hparams.training['stages'], backbone_path, self.n_joints)
+        self.model = HourglassModel(**params)
 
-        self.metrics = {"MPJPE":MPJPE(reduction=average_loss)}
+        self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
 
     def forward(self, x):
         x = self.model(x)
@@ -279,7 +260,6 @@ class HourglassEstimator(BaseModule):
             geometry.spatial_expectation2d(output[-1]),
             self._hparams.dataset.max_h, self._hparams.dataset.max_w)
         return pred_joints
-        
 
     def _calculate_loss(self, outs, b_y, b_masks):
         loss = 0
@@ -291,33 +271,30 @@ class HourglassEstimator(BaseModule):
         b_x, b_y, b_masks = batch
 
         output = self.forward(b_x)               # cnn output
-    
 
         loss = self._calculate_loss(output, b_y, b_masks)
 
         pred_joints = self.predict(output)
-        gt_joints = geometry.denormalize_pixel_coordinates( b_y,
-                                                            self._hparams.dataset.max_h,
-                                                            self._hparams.dataset.max_w)
-            
-        results = {metric_name:metric_function(pred_joints, gt_joints, b_masks) for metric_name,
+        gt_joints = geometry.denormalize_pixel_coordinates(b_y,
+                                                           self._hparams.dataset.max_h,
+                                                           self._hparams.dataset.max_w)
+
+        results = {metric_name: metric_function(pred_joints, gt_joints, b_masks) for metric_name,
                    metric_function in self.metrics.items()}
         return loss, results
 
-    
     def training_step(self, batch, batch_idx):
         b_x, b_y, b_masks = batch
-        
+
         outs = self.forward(b_x)               # cnn output
         loss = self._calculate_loss(outs, b_y, b_masks)
-        
-        logs = {"loss":loss}
-        return {"loss":loss, "log":logs}
 
-        
+        logs = {"loss": loss}
+        return {"loss": loss, "log": logs}
+
     def validation_step(self, batch, batch_idx):
         loss, results = self._eval(batch)
-        return {"batch_val_loss":loss, **results}
+        return {"batch_val_loss": loss, **results}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
@@ -328,12 +305,12 @@ class HourglassEstimator(BaseModule):
 
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(batch)
-        return {"batch_test_loss":loss, **results}
+        return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, 'test_mean')
 
         logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
-        
+
         return {**logs, 'log': logs, 'progress_bar': logs}

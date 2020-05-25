@@ -1,10 +1,11 @@
+from math import sqrt
+
 import torch
 from torch import nn
-from .custom import FlatSoftmax
-from math import sqrt
-from torch import nn
-from torch.nn.modules.conv import _ConvNd
 from torch.nn import init
+from torch.nn.modules.conv import _ConvNd
+
+from ..utils import FlatSoftmax
 
 
 def _regular_block(in_chans, out_chans):
@@ -13,11 +14,13 @@ def _regular_block(in_chans, out_chans):
         nn.Conv2d(in_chans, out_chans, kernel_size=3, padding=1, bias=False),
         nn.Conv2d(in_chans, out_chans, kernel_size=1, bias=False))
 
+
 def _down_stride_block(in_chans, out_chans):
     return ResidualBlock(
         out_chans,
         nn.Conv2d(in_chans, out_chans, kernel_size=3, padding=1, stride=2, bias=False),
         nn.Conv2d(in_chans, out_chans, kernel_size=1, stride=2, bias=False))
+
 
 def _up_stride_block(in_chans, out_chans):
     return ResidualBlock(
@@ -75,6 +78,7 @@ class HeatmapCombiner(nn.Module):
     def forward(self, x):
         return self.combine_block(x)
 
+    
 class HeatmapPredictor(nn.Module):
     """
     From https://raw.githubusercontent.com/anibali/margipose/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py
@@ -98,7 +102,6 @@ class HeatmapPredictor(nn.Module):
             _regular_block(128, self.n_joints),
         )
         init_parameters(self)
-
 
     def forward(self, inputs):
         mid_in = self.down_layers(inputs)
@@ -124,20 +127,21 @@ class HourglassStage(nn.Module):
 
         self.softmax = FlatSoftmax()
         self.hm_predictor = HeatmapPredictor(n_joints)
-
         
     def forward(self, x):
         out = self.softmax(self.hm_predictor(x))
             
         return out
+
     
 class HourglassModel(nn.Module):
-    def __init__(self, n_stages, backbone_path, n_joints):   
+    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):   
         super().__init__()
 
         self.mid_feature_dimension = 128
         self.n_stages = n_stages
         self.in_cnn = _get_feature_extractor(backbone_path)
+        self.in_channels = n_channels
         self.softmax = FlatSoftmax()
         self.n_joints = n_joints
         self.hm_combiners = nn.ModuleList()
@@ -146,9 +150,9 @@ class HourglassModel(nn.Module):
 
         for t in range(self.n_stages):
             if t > 0:
-                self.hm_combiners.append(HeatmapCombiner(self.n_joints, self.mid_feature_dimension))
+                self.hm_combiners.append(HeatmapCombiner(self.n_joints,
+                                                         self.mid_feature_dimension))
             self.hg_stages.append(HourglassStage(n_joints))
-
 
     def forward(self, x):
         inp = self.in_cnn(x)

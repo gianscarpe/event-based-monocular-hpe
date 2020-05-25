@@ -3,6 +3,8 @@ from kornia.geometry import normalize_points
 
 import torch
 
+__all__ = ['SoftArgmax2D']
+
 def _make_radial_window(width, height, cx, cy, fn, device, window_width=10.0):
     """
     Returns a grid, where grid[i,j] = fn((i**2 + j**2)**0.5)

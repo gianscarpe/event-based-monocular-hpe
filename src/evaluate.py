@@ -1,15 +1,18 @@
+import logging
 import os
+
 import hydra
+import pytorch_lightning as pl
 from omegaconf import DictConfig
+
 from experimenting import Model
 
-import pytorch_lightning as pl
-
-import logging
 logging.basicConfig(level=logging.INFO)
+
 
 @hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
+
     print(cfg.pretty())
 
     load_path = cfg.training.load_path
@@ -23,7 +26,6 @@ def main(cfg: DictConfig) -> None:
     else:
         print(f"Error loading, {load_path} does not exist!")
 
-    
+
 if __name__ == '__main__':
     main()
-    

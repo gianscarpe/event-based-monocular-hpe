@@ -1,12 +1,12 @@
+from functools import reduce
+
 import torch
 import torch.nn as nn
-from operator import mul
+
+from kornia.geometry import render_gaussian2d, spatial_expectation2d
+
+from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap
 from .metrics import MPJPE
-from functools import reduce
-from .dsnt import average_loss
-from kornia.geometry import spatial_expectation2d, render_gaussian2d
-from .soft_argmax import SoftArgmax2D
-from ..utils import get_joints_from_heatmap
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss']
 
@@ -52,10 +52,9 @@ class HeatmapLoss(nn.Module):
         ndims = 2
         n_joints = pred.shape[1]
         
-        loss = torch.add(self._mpjpe(pred, gt), self.divergence(pred, gt, ndims))
-
-        gt_mask = gt.view(gt.size()[0], -1, n_joints).sum(1) >0
-
+        loss = torch.add(self._mpjpe(pred, gt), self.divergence(pred, gt,
+                                                                ndims))
+        gt_mask = gt.view(gt.size()[0], -1, n_joints).sum(1) > 0
         
         return self.reduction(loss, gt_mask)
 
@@ -96,6 +95,7 @@ class PixelWiseLoss(nn.Module):
                          self.divergence(pred_hm, gt_hm, ndims))
         return self.reduction(loss, gt_mask)
 
+    
 def _kl(p, q, ndims):
     eps = 1e-24
     unsummed_kl = p * ((p + eps).log() - (q + eps).log())
@@ -107,16 +107,8 @@ def _js(p, q, ndims):
     m = 0.5 * (p + q)
     return 0.5 * _kl(p, m, ndims) + 0.5 * _kl(q, m, ndims)
 
+
 def _get_reduction(reduction_type):
     switch = {'mean': torch.mean, 'mask_mean': average_loss , 'sum': torch.sum}
     
     return switch[reduction_type]
-
-def nanmean(v,  *args, inplace=False, **kwargs):
-    if not inplace:
-        v = v.clone()
-        is_nan = torch.isnan(v)
-        v[is_nan] = 0
-    return v.sum(*args, **kwargs) / (~is_nan).float().sum(*args, **kwargs)
-
-

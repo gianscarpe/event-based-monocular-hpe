@@ -1,10 +1,10 @@
-import os
-import hydra
-from experimenting.trainHelper import get_training_params
-from omegaconf import DictConfig
-import pytorch_lightning as pl
-import experimenting
 import logging
+
+import experimenting
+import hydra
+import pytorch_lightning as pl
+from experimenting.utils import get_training_params
+from omegaconf import DictConfig
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,17 +13,16 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: DictConfig) -> None:
     trainer_configuration = get_training_params(cfg)
     model = getattr(experimenting, cfg.training.module)(cfg)
-    
+
     if cfg.load_path:
         print('Loading training')
         model = getattr(experimenting,
                         cfg.training.module).load_from_checkpoint(cfg.load_path)
-        
+
     trainer = pl.Trainer(**trainer_configuration)
     trainer.fit(model)
     trainer.test(model)
 
-    
+
 if __name__ == '__main__':
     main()
-    
