@@ -2,7 +2,6 @@ from functools import reduce
 
 import torch
 import torch.nn as nn
-
 from kornia.geometry import render_gaussian2d, spatial_expectation2d
 
 from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap
@@ -13,7 +12,7 @@ __all__ = ['HeatmapLoss', 'PixelWiseLoss']
 
 class HeatmapLoss(nn.Module):
     """
-    from https://github.com/anibali/margipose/blob/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py#L202
+    from https://github.com/anibali/margipose
     """
     def __init__(self, reduction='mask_mean', n_joints=13):
         """

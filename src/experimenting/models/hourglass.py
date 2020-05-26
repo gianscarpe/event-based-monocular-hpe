@@ -18,19 +18,33 @@ def _regular_block(in_chans, out_chans):
 def _down_stride_block(in_chans, out_chans):
     return ResidualBlock(
         out_chans,
-        nn.Conv2d(in_chans, out_chans, kernel_size=3, padding=1, stride=2, bias=False),
+        nn.Conv2d(in_chans,
+                  out_chans,
+                  kernel_size=3,
+                  padding=1,
+                  stride=2,
+                  bias=False),
         nn.Conv2d(in_chans, out_chans, kernel_size=1, stride=2, bias=False))
 
 
 def _up_stride_block(in_chans, out_chans):
     return ResidualBlock(
         out_chans,
-        nn.ConvTranspose2d(in_chans, out_chans, kernel_size=3, padding=1, stride=2,
-                           output_padding=(0, 1), bias=False),
-        nn.ConvTranspose2d(in_chans, out_chans, kernel_size=1, stride=2,
-                           output_padding=(0, 1), bias=False))
+        nn.ConvTranspose2d(in_chans,
+                           out_chans,
+                           kernel_size=3,
+                           padding=1,
+                           stride=2,
+                           output_padding=(0, 1),
+                           bias=False),
+        nn.ConvTranspose2d(in_chans,
+                           out_chans,
+                           kernel_size=1,
+                           stride=2,
+                           output_padding=(0, 1),
+                           bias=False))
 
-    
+
 def init_parameters(net):
     for m in net.modules():
         if isinstance(m, _ConvNd):
@@ -50,7 +64,7 @@ def init_parameters(net):
 
 class ResidualBlock(nn.Module):
     """
-    From https://raw.githubusercontent.com/anibali/margipose/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py
+    From https://raw.githubusercontent.com/anibali/margipose/
     """
     def __init__(self, chans, main_conv_in, shortcut_conv_in):
         super().__init__()
@@ -72,34 +86,32 @@ class ResidualBlock(nn.Module):
 class HeatmapCombiner(nn.Module):
     def __init__(self, n_joints, out_channels):
         super().__init__()
-        self.combine_block = _regular_block(n_joints,
-                                            out_channels)
+        self.combine_block = _regular_block(n_joints, out_channels)
 
     def forward(self, x):
         return self.combine_block(x)
 
-    
+
 class HeatmapPredictor(nn.Module):
     """
-    From https://raw.githubusercontent.com/anibali/margipose/a9dbe5c3151d7a7e071df6275d5702c07ef5152d/src/margipose/models/margipose_model.py
+    From https://raw.githubusercontent.com/anibali/margipose/
     """
-
-    def __init__(self, n_joints):
+    def __init__(self, n_joints, in_channels):
         super().__init__()
         self.n_joints = n_joints
         self.down_layers = nn.Sequential(
-            _regular_block(128, 128),
-            _regular_block(128, 128),
-            _down_stride_block(128, 192),
+            _regular_block(in_channels, in_channels),
+            _regular_block(in_channels, in_channels),
+            _down_stride_block(in_channels, 192),
             _regular_block(192, 192),
             _regular_block(192, 192),
         )
         self.up_layers = nn.Sequential(
             _regular_block(192, 192),
             _regular_block(192, 192),
-            _up_stride_block(192, 128),
-            _regular_block(128, 128),
-            _regular_block(128, self.n_joints),
+            _up_stride_block(192, in_channels),
+            _regular_block(in_channels, in_channels),
+            _regular_block(in_channels, self.n_joints),
         )
         init_parameters(self)
 
@@ -109,7 +121,12 @@ class HeatmapPredictor(nn.Module):
 
 
 def _get_feature_extractor(model_path):
+    return _get_resnet34_feature_extactor(model_path)
+
+
+def _get_resnet34_feature_extactor(model_path):
     resnet = torch.load(model_path)
+
     net = nn.Sequential(
         resnet.conv1,
         resnet.bn1,
@@ -118,29 +135,48 @@ def _get_feature_extractor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    return net
-    
+    mid_feature_dimension = net[-1][-1].conv3.out_channels
+
+    return net, mid_feature_dimension
+
+
+def _get_resnet50_feature_extactor(model_path):
+    resnet = torch.load(model_path)
+
+    net = nn.Sequential(
+        resnet.conv1,
+        resnet.bn1,
+        resnet.relu,
+        resnet.maxpool,
+        resnet.layer1,
+        resnet.layer2,
+    )
+    mid_feature_dimension = net[-1][-1].conv3.out_channels
+
+    return net, mid_feature_dimension
+
 
 class HourglassStage(nn.Module):
-    def __init__(self, n_joints):   
+    def __init__(self, n_joints, mid_feature_dimension):
         super().__init__()
 
         self.softmax = FlatSoftmax()
-        self.hm_predictor = HeatmapPredictor(n_joints)
-        
+        self.hm_predictor = HeatmapPredictor(n_joints, mid_feature_dimension)
+
     def forward(self, x):
         out = self.softmax(self.hm_predictor(x))
-            
+
         return out
 
-    
+
 class HourglassModel(nn.Module):
-    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):   
+    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
         super().__init__()
 
-        self.mid_feature_dimension = 128
         self.n_stages = n_stages
-        self.in_cnn = _get_feature_extractor(backbone_path)
+        self.in_cnn, self.mid_feature_dimension = _get_feature_extractor(
+            backbone_path)
+
         self.in_channels = n_channels
         self.softmax = FlatSoftmax()
         self.n_joints = n_joints
@@ -150,18 +186,19 @@ class HourglassModel(nn.Module):
 
         for t in range(self.n_stages):
             if t > 0:
-                self.hm_combiners.append(HeatmapCombiner(self.n_joints,
-                                                         self.mid_feature_dimension))
-            self.hg_stages.append(HourglassStage(n_joints))
+                self.hm_combiners.append(
+                    HeatmapCombiner(self.n_joints, self.mid_feature_dimension))
+            self.hg_stages.append(
+                HourglassStage(n_joints, self.mid_feature_dimension))
 
     def forward(self, x):
         inp = self.in_cnn(x)
-        
+
         outs = []
         for t in range(self.n_stages):
             if t > 0:
-                inp = inp + self.hm_combiners[t-1](outs[-1])
-                
+                inp = inp + self.hm_combiners[t - 1](outs[-1])
+
             outs.append(self.hg_stages[t](inp))
-            
+
         return outs
