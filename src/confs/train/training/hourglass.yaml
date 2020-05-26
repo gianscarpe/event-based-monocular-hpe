@@ -6,4 +6,5 @@ training:
   use_lr_scheduler: false
   module: HourglassEstimator
   model: HourglassModel
+  backbone: classification/resnet34.pt
   stages: 2  

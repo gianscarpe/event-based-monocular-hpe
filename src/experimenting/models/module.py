@@ -1,3 +1,5 @@
+from os.path import join
+
 import torch
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
@@ -59,36 +61,35 @@ class BaseModule(pl.LightningModule):
         return self.test_loader
 
     def configure_optimizers(self):
-        optimizer = getattr(torch.optim,
-                            self.optimizer_config['type'])(params=self.parameters(),
-                                                           **self.optimizer_config['params'])
-        
+        optimizer = getattr(torch.optim, self.optimizer_config['type'])(
+            params=self.parameters(), **self.optimizer_config['params'])
+
         scheduler = None
         if self.scheduler_config:
             scheduler = getattr(torch.optim.lr_scheduler,
-                                self.scheduler_config['type'])(optimizer,
-                                                               **self.scheduler_config['params'])
+                                self.scheduler_config['type'])(
+                                    optimizer,
+                                    **self.scheduler_config['params'])
             return [optimizer], [scheduler]
 
         return optimizer
 
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        logs = {'avg_train_loss': avg_loss,  'step': self.current_epoch}
+        logs = {'avg_train_loss': avg_loss, 'step': self.current_epoch}
 
         return {'train_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
     def _get_aggregated_results(self, outputs, prefix):
         results = {}
         for metric_key in self.metrics.keys():
-            results[prefix + metric_key] = torch.stack([x[metric_key] for x in
-                                                        outputs]).mean()
+            results[prefix + metric_key] = torch.stack(
+                [x[metric_key] for x in outputs]).mean()
 
         return results
 
 
 class Classifier(BaseModule):
-
     def __init__(self, hparams):
         """
         Initialize Classifier model
@@ -98,15 +99,17 @@ class Classifier(BaseModule):
                                          DatasetType.CLASSIFICATION_DATASET)
 
     def set_params(self):
-        params = {'n_channels': self._hparams.dataset['n_channels'],
-                  'n_classes': self._hparams.dataset['n_classes']}
+        params = {
+            'n_channels': self._hparams.dataset['n_channels'],
+            'n_classes': self._hparams.dataset['n_classes']
+        }
         self.model = get_cnn(self._hparams.training.model, params)
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
 
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_y)  # cross entropy loss
 
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
@@ -114,8 +117,8 @@ class Classifier(BaseModule):
     def validation_step(self, batch, batch_idx):
         b_x, b_y = batch
 
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_y)  # cross entropy loss
 
         _, pred_y = torch.max(output.data, 1)
         return {"batch_val_loss": loss, "y_pred": pred_y, "y_true": b_y}
@@ -129,16 +132,25 @@ class Classifier(BaseModule):
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
 
-        logs = {'val_loss': avg_loss, "val_acc": acc, 'val_precision': precision,
-                'val_recall': recall, 'step': self.current_epoch}
+        logs = {
+            'val_loss': avg_loss,
+            "val_acc": acc,
+            'val_precision': precision,
+            'val_recall': recall,
+            'step': self.current_epoch
+        }
 
-        return {'val_loss': avg_loss, 'val_acc': acc, 'log': logs,
-                'progress_bar': logs}
+        return {
+            'val_loss': avg_loss,
+            'val_acc': acc,
+            'log': logs,
+            'progress_bar': logs
+        }
 
     def test_step(self, batch, batch_idx):
         b_x, b_y = batch
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_y)  # cross entropy loss
 
         _, pred_y = torch.max(output.data, 1)
 
@@ -153,25 +165,29 @@ class Classifier(BaseModule):
         recall = recall_score(y_true, y_pred, average='weighted')
         precision = precision_score(y_true, y_pred, average='weighted')
 
-        logs = {'test_loss': avg_loss, "test_acc": acc,
-                'test_precision': precision, 'test_recall': recall, 'step':
-                self.current_epoch}
+        logs = {
+            'test_loss': avg_loss,
+            "test_acc": acc,
+            'test_precision': precision,
+            'test_recall': recall,
+            'step': self.current_epoch
+        }
 
         return {**logs, 'log': logs, 'progress_bar': logs}
 
 
 class PoseEstimator(BaseModule):
-
     def __init__(self, hparams):
         super(PoseEstimator, self).__init__(hparams, DatasetType.HM_DATASET)
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
-        params = {'n_channels': self._hparams.dataset['n_channels'],
-                  'n_classes': self._hparams.dataset['n_joints'],
-                  'encoder_depth': self._hparams.training.encoder_depth
-                  }
+        params = {
+            'n_channels': self._hparams.dataset['n_channels'],
+            'n_classes': self._hparams.dataset['n_joints'],
+            'encoder_depth': self._hparams.training.encoder_depth
+        }
 
         self.model = get_cnn(self._hparams.training.model, params)
 
@@ -188,21 +204,23 @@ class PoseEstimator(BaseModule):
     def _eval(self, batch):
         b_x, b_y = batch
 
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_y)  # cross entropy loss
 
         gt_joints, _ = get_joints_from_heatmap(b_y)
         pred_joints = self.predict(output)
 
-        results = {metric_name: metric_function(pred_joints, gt_joints) for
-                   metric_name, metric_function in self.metrics.items()}
+        results = {
+            metric_name: metric_function(pred_joints, gt_joints)
+            for metric_name, metric_function in self.metrics.items()
+        }
         return loss, results
 
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
 
-        output = self.forward(b_x)               # cnn output
-        loss = self.loss_func(output, b_y)   # cross entropy loss
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_y)  # cross entropy loss
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
 
@@ -231,7 +249,6 @@ class PoseEstimator(BaseModule):
 
 
 class HourglassEstimator(BaseModule):
-
     def __init__(self, hparams):
 
         super(HourglassEstimator, self).__init__(hparams,
@@ -240,12 +257,13 @@ class HourglassEstimator(BaseModule):
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
-        params = {'n_channels': self._hparams.dataset['n_channels'],
-                  'n_joints': self._hparams.dataset['n_joints'],
-                  'backbone_path' :
-                  "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt",
-                  'n_stages': self._hparams.training['stages']
-        }
+
+    #                   "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
+        params = {'n_channels': self._hparams.dataset['n_channels'], 'n_joints':
+                  self._hparams.dataset['n_joints'],
+                  'backbone_path': join(self._hparams.model_zoo,
+                                        self._hparams.training.backbone),
+                  'n_stages': self._hparams.training['stages'] }
 
         self.model = HourglassModel(**params)
 
@@ -270,23 +288,24 @@ class HourglassEstimator(BaseModule):
     def _eval(self, batch):
         b_x, b_y, b_masks = batch
 
-        output = self.forward(b_x)               # cnn output
+        output = self.forward(b_x)  # cnn output
 
         loss = self._calculate_loss(output, b_y, b_masks)
 
         pred_joints = self.predict(output)
-        gt_joints = geometry.denormalize_pixel_coordinates(b_y,
-                                                           self._hparams.dataset.max_h,
-                                                           self._hparams.dataset.max_w)
+        gt_joints = geometry.denormalize_pixel_coordinates(
+            b_y, self._hparams.dataset.max_h, self._hparams.dataset.max_w)
 
-        results = {metric_name: metric_function(pred_joints, gt_joints, b_masks) for metric_name,
-                   metric_function in self.metrics.items()}
+        results = {
+            metric_name: metric_function(pred_joints, gt_joints, b_masks)
+            for metric_name, metric_function in self.metrics.items()
+        }
         return loss, results
 
     def training_step(self, batch, batch_idx):
         b_x, b_y, b_masks = batch
 
-        outs = self.forward(b_x)               # cnn output
+        outs = self.forward(b_x)  # cnn output
         loss = self._calculate_loss(outs, b_y, b_masks)
 
         logs = {"loss": loss}
