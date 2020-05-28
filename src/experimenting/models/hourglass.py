@@ -7,6 +7,9 @@ from torch.nn.modules.conv import _ConvNd
 
 from ..utils import FlatSoftmax
 
+RESNET34_MID_FEATURES = 128
+RESNET50_MID_FEATURES = 512
+
 
 def _regular_block(in_chans, out_chans):
     return ResidualBlock(
@@ -99,6 +102,7 @@ class HeatmapPredictor(nn.Module):
     def __init__(self, n_joints, in_channels):
         super().__init__()
         self.n_joints = n_joints
+        breakpoint()
         self.down_layers = nn.Sequential(
             _regular_block(in_channels, in_channels),
             _regular_block(in_channels, in_channels),
@@ -135,9 +139,8 @@ def _get_resnet34_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    mid_feature_dimension = net[-1][-1].conv3.out_channels
 
-    return net, mid_feature_dimension
+    return net
 
 
 def _get_resnet50_feature_extactor(model_path):
@@ -151,9 +154,8 @@ def _get_resnet50_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    mid_feature_dimension = net[-1][-1].conv3.out_channels
 
-    return net, mid_feature_dimension
+    return net
 
 
 class HourglassStage(nn.Module):
@@ -174,8 +176,8 @@ class HourglassModel(nn.Module):
         super().__init__()
 
         self.n_stages = n_stages
-        self.in_cnn, self.mid_feature_dimension = _get_feature_extractor(
-            backbone_path)
+        self.in_cnn = _get_feature_extractor(backbone_path)
+        self.mid_feature_dimension = 128
 
         self.in_channels = n_channels
         self.softmax = FlatSoftmax()

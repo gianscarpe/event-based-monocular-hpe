@@ -7,7 +7,7 @@ defaults:
   - training: hourglass
   - hydra: standard
 
-gpus: [1]
+gpus: [0]
 debug: false
 root_dir: /home/gianscarpe/dev
 model_zoo: /data/gscarpellini/model_zoo/timecount/
