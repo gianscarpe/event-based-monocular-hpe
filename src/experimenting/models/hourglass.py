@@ -140,7 +140,7 @@ def _get_resnet34_feature_extactor(model_path):
         resnet.layer2,
     )
 
-    return net
+    return net, RESNET34_MID_FEATURES
 
 
 def _get_resnet50_feature_extactor(model_path):
@@ -155,7 +155,7 @@ def _get_resnet50_feature_extactor(model_path):
         resnet.layer2,
     )
 
-    return net
+    return net, RESNET50_MID_FEATURES
 
 
 class HourglassStage(nn.Module):
@@ -176,8 +176,8 @@ class HourglassModel(nn.Module):
         super().__init__()
 
         self.n_stages = n_stages
-        self.in_cnn = _get_feature_extractor(backbone_path)
-        self.mid_feature_dimension = 128
+        self.in_cnn, self.mid_feature_dimension = _get_feature_extractor(
+            backbone_path)
 
         self.in_channels = n_channels
         self.softmax = FlatSoftmax()
