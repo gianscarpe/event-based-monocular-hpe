@@ -1,28 +1,35 @@
 import logging
 
 import hydra
-import pytorch_lightning as pl
+from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, tpe
 from omegaconf import DictConfig
 
-import experimenting
-from experimenting.utils import get_training_params
+from experimenting.utils import fit, get_hypersearch_cfg
 
 logging.basicConfig(level=logging.INFO)
 
 
+def objective(cfg: dict):
+    try:
+        trainer = fit(cfg)
+        breakpoint()
+        results = trainer
+        trial_path = trainer.checkpoint_callback.filename
+        return {
+            'loss': results[-1],
+            'status': STATUS_OK,
+            'model_path': trial_path
+        }
+    except Exception as ex:
+        print(ex)
+        return {'loss': 0, 'status': STATUS_FAIL, 'model_path': ''}
+
+
 @hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
-    trainer_configuration = get_training_params(cfg)
-    model = getattr(experimenting, cfg.training.module)(cfg)
-
-    if cfg.load_path:
-        print('Loading training')
-        model = getattr(experimenting,
-                        cfg.training.module).load_from_checkpoint(cfg.load_path)
-
-    trainer = pl.Trainer(**trainer_configuration)
-    trainer.fit(model)
-    trainer.test(model)
+    space = get_hypersearch_cfg(cfg)
+    best = fmin(objective, space, algo=tpe.suggest, max_evals=100)
+    print(best)
 
 
 if __name__ == '__main__':

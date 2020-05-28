@@ -1,4 +1,5 @@
 from math import sqrt
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -125,7 +126,14 @@ class HeatmapPredictor(nn.Module):
 
 
 def _get_feature_extractor(model_path):
-    return _get_resnet34_feature_extactor(model_path)
+    switch = {
+        'resnet34': _get_resnet34_feature_extactor,
+        'resnet50': _get_resnet50_feature_extactor
+    }
+
+    model_name = Path(model_path).with_suffix('').name
+
+    return switch[model_name](model_path)
 
 
 def _get_resnet34_feature_extactor(model_path):
@@ -139,7 +147,6 @@ def _get_resnet34_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-
     return net, RESNET34_MID_FEATURES
 
 
@@ -154,7 +161,6 @@ def _get_resnet50_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-
     return net, RESNET50_MID_FEATURES
 
 

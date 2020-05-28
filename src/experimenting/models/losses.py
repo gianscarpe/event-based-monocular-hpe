@@ -108,6 +108,6 @@ def _js(p, q, ndims):
 
 
 def _get_reduction(reduction_type):
-    switch = {'mean': torch.mean, 'mask_mean': average_loss , 'sum': torch.sum}
+    switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
     
     return switch[reduction_type]
