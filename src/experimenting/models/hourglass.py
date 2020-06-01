@@ -103,7 +103,6 @@ class HeatmapPredictor(nn.Module):
     def __init__(self, n_joints, in_channels):
         super().__init__()
         self.n_joints = n_joints
-        breakpoint()
         self.down_layers = nn.Sequential(
             _regular_block(in_channels, in_channels),
             _regular_block(in_channels, in_channels),
@@ -141,7 +140,7 @@ def _get_resnet34_feature_extactor(model_path):
 
     net = nn.Sequential(
         resnet.conv1,
-        resnet.bn1,
+g        resnet.bn1,
         resnet.relu,
         resnet.maxpool,
         resnet.layer1,

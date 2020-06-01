@@ -49,7 +49,6 @@ def get_training_params(cfg: dict):
     if debug:
         torch.autograd.set_detect_anomaly(True)
 
-    breakpoint()
     trainer_configuration = {
         'gpus': gpus,
         'benchmark': True,

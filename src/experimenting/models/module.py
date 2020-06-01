@@ -257,17 +257,12 @@ class HourglassEstimator(BaseModule):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
 
-        if self._hparams.training.backbone:
-            backbone_path = join(self._hparams.model_zoo,
-                                 self._hparams.training.backbone)
-        else:
-            backbone_path = '/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt'
-        params = {
-            'n_channels': self._hparams.dataset['n_channels'],
-            'n_joints': self._hparams.dataset['n_joints'],
-            'backbone_path': backbone_path,
-            'n_stages': self._hparams.training['stages']
-        }
+    #                   "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
+        params = {'n_channels': self._hparams.dataset['n_channels'], 'n_joints':
+                  self._hparams.dataset['n_joints'],
+                  'backbone_path': join(self._hparams.model_zoo,
+                                        self._hparams.training.backbone),
+                  'n_stages': self._hparams.training['stages'] }
 
         self.model = HourglassModel(**params)
 
