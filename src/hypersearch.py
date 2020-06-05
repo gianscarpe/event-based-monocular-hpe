@@ -1,7 +1,7 @@
 import logging
 
 import hydra
-from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, tpe
+from hyperopt import STATUS_FAIL, STATUS_OK, fmin, tpe
 from omegaconf import DictConfig
 
 from experimenting.utils import fit, get_hypersearch_cfg

@@ -176,6 +176,19 @@ class HourglassStage(nn.Module):
         return out
 
 
+class MargiPoseStage(nn.Module):
+    def __init__(self, n_joints, mid_feature_dimension, heatmap_space):
+        super().__init__()
+
+        self.softmax = FlatSoftmax()
+        self.hm_predictor = HeatmapPredictor(n_joints, mid_feature_dimension)
+
+    def forward(self, x):
+        out = self.softmax(self.hm_predictor(x))
+
+        return out
+
+
 class HourglassModel(nn.Module):
     def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
         super().__init__()
@@ -209,3 +222,61 @@ class HourglassModel(nn.Module):
             outs.append(self.hg_stages[t](inp))
 
         return outs
+
+
+class MargiPoseModel(nn.Module):
+    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
+        super().__init__()
+
+        self.n_stages = n_stages
+        self.in_cnn, self.mid_feature_dimension = _get_feature_extractor(
+            backbone_path)
+        self.xy_hm_cnns = nn.ModuleList()
+        self.zy_hm_cnns = nn.ModuleList()
+        self.xz_hm_cnns = nn.ModuleList()
+        self.hm_combiners = nn.ModuleList()
+        self.softmax = FlatSoftmax()
+        self.n_joints = n_joints
+
+        xy = 'xy'
+        zy = 'zy'
+        xz = 'xz'
+
+        for t in range(self.n_stages):
+            if t > 0:
+                self.hm_combiners.append(
+                    HeatmapCombiner(3 * n_joints,
+                                    self.mid_feature_dimension))
+            self.xy_hm_cnns.append(
+                MargiPoseStage(n_joints,
+                               self.mid_feature_dimension,
+                               heatmap_space=xy))
+            self.zy_hm_cnns.append(
+                MargiPoseStage(n_joints,
+                               self.mid_feature_dimension,
+                               heatmap_space=zy))
+            self.xz_hm_cnns.append(
+                MargiPoseStage(n_joints,
+                               self.mid_feature_dimension,
+                               heatmap_space=xz))
+
+    def forward(self, inputs):
+        features = self.in_cnn(inputs)
+        xy_heatmaps = []
+        zy_heatmaps = []
+        xz_heatmaps = []
+
+        inp = features
+        for t in range(self.n_stages):
+            if t > 0:
+                combined_hm_features = self.hm_combiners[t - 1](
+                    xy_heatmaps[t - 1],
+                    zy_heatmaps[t - 1],
+                    xz_heatmaps[t - 1],
+                )
+                inp = inp + combined_hm_features
+            xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))
+            zy_heatmaps.append(self.softmax(self.zy_hm_cnns[t](inp)))
+            xz_heatmaps.append(self.softmax(self.xz_hm_cnns[t](inp)))
+
+        return xy_heatmaps, zy_heatmaps, xz_heatmaps

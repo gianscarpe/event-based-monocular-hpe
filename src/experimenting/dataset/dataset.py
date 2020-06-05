@@ -7,26 +7,33 @@ from os.path import basename, join
 
 import numpy as np
 import torch
+from kornia import geometry
 from torch.utils.data import Dataset
 
-from kornia import geometry
-
 from ..utils import (
-    MAX_HEIGHT,
-    MAX_WIDTH,
+    MAX_CAM_HEIGHT,
+    MAX_CAM_WIDTH,
+    MAX_X,
+    MAX_Y,
+    MAX_Z,
     MOVEMENTS_PER_SESSION,
     N_JOINTS,
-    get_frame_info,
     get_label_from_filename,
     load_frame,
     load_heatmap,
 )
 
-__all__ = ['DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset']
+__all__ = [
+    'DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset', 'DHP3DJointsDataset'
+]
 
 
 class DHP19BaseDataset(Dataset):
-    def __init__(self, file_paths, labels=None, indexes=None, transform=None,
+    def __init__(self,
+                 file_paths,
+                 labels=None,
+                 indexes=None,
+                 transform=None,
                  augment_label=False):
 
         self.x_paths = file_paths
@@ -58,34 +65,44 @@ class DHP19BaseDataset(Dataset):
                 y = torch.squeeze(y.transpose(0, -1))
             else:
                 augmented = self.transform(image=x)
-            x = augmented['image']
+                x = augmented['image']
 
         return x, y
 
 
 class DHP19ClassificationDataset(DHP19BaseDataset):
-    def __init__(self, file_paths, labels=None, indexes=None, transform=None,
+    def __init__(self,
+                 file_paths,
+                 labels=None,
+                 indexes=None,
+                 transform=None,
                  movements_per_session=MOVEMENTS_PER_SESSION):
 
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
         self.movements_per_session = movements_per_session
-        labels = labels if labels is not None else [get_label_from_filename(x_path, movements_per_session)                                                    for x_path in file_paths]
+        labels = labels if labels is not None else [
+            get_label_from_filename(x_path, movements_per_session)
+            for x_path in file_paths
+        ]
 
-        super(DHP19ClassificationDataset, self).__init__(file_paths, labels,
-                                                         x_indexes, transform,
-                                                         False)
+        super(DHP19ClassificationDataset,
+              self).__init__(file_paths, labels, x_indexes, transform, False)
 
     def _get_y(self, idx):
         return self.labels[idx]
 
 
 class DHPHeatmapDataset(DHP19BaseDataset):
-    def __init__(self, file_paths, labels_dir, indexes=None, transform=None,
+    def __init__(self,
+                 file_paths,
+                 labels_dir,
+                 indexes=None,
+                 transform=None,
                  n_joints=N_JOINTS):
 
-        labels = DHPHeatmapDataset._retrieve_joints_files(file_paths=file_paths,
-                                                          labels_dir=labels_dir)
+        labels = DHPHeatmapDataset._retrieve_joints_files(
+            file_paths=file_paths, labels_dir=labels_dir)
 
         super(DHPHeatmapDataset, self).__init__(file_paths, labels, indexes,
                                                 transform, True)
@@ -94,7 +111,10 @@ class DHPHeatmapDataset(DHP19BaseDataset):
         self.augment_label = True
 
     def _retrieve_joints_files(labels_dir, file_paths):
-        labels_hm = [join(labels_dir, basename(x).split('.')[0] + '_2dhm.npy') for x in file_paths]
+        labels_hm = [
+            join(labels_dir,
+                 basename(x).split('.')[0] + '_2dhm.npy') for x in file_paths
+        ]
         return labels_hm
 
     def _get_y(self, idx):
@@ -120,8 +140,13 @@ class DHPHeatmapDataset(DHP19BaseDataset):
 
 
 class DHPJointsDataset(DHP19BaseDataset):
-    def __init__(self, file_paths, labels_dir, max_h=MAX_HEIGHT,
-                 max_w=MAX_WIDTH, indexes=None, transform=None,
+    def __init__(self,
+                 file_paths,
+                 labels_dir,
+                 max_h=MAX_CAM_HEIGHT,
+                 max_w=MAX_CAM_WIDTH,
+                 indexes=None,
+                 transform=None,
                  n_joints=N_JOINTS):
 
         labels = DHPJointsDataset._retrieve_2hm_files(file_paths=file_paths,
@@ -131,13 +156,14 @@ class DHPJointsDataset(DHP19BaseDataset):
                                                transform, True)
 
         self.n_joints = n_joints
-        self.augment_label = True
         self.max_h = max_h
         self.max_w = max_w
 
     def _retrieve_2hm_files(labels_dir, file_paths):
-        labels_hm = [join(labels_dir, basename(x).split('.')[0] + '_2dhm.npz')
-                     for x in file_paths]
+        labels_hm = [
+            join(labels_dir,
+                 basename(x).split('.')[0] + '_2dhm.npz') for x in file_paths
+        ]
         return labels_hm
 
     def _get_y(self, idx):
@@ -148,6 +174,60 @@ class DHPJointsDataset(DHP19BaseDataset):
 
         return geometry.normalize_pixel_coordinates(joints, self.max_h,
                                                     self.max_w), mask
+
+    def __getitem__(self, idx):
+        idx = self.x_indexes[idx]
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        x = self._get_x(idx)
+        y, mask = self._get_y(idx)
+
+        if self.transform:
+            augmented = self.transform(image=x)
+            x = augmented['image']
+
+        return x, y, mask
+
+
+class DHP3DJointsDataset(DHP19BaseDataset):
+    def __init__(self,
+                 file_paths,
+                 labels_dir,
+                 max_x=MAX_X,
+                 max_y=MAX_Y,
+                 max_z=MAX_Z,
+                 indexes=None,
+                 transform=None,
+                 n_joints=N_JOINTS):
+
+        labels = DHPJointsDataset._retrieve_2hm_files(file_paths=file_paths,
+                                                      labels_dir=labels_dir)
+
+        super(DHPJointsDataset, self).__init__(file_paths, labels, indexes,
+                                               transform, True)
+
+        self.n_joints = n_joints
+        self.max_x = max_x
+        self.max_y = max_y
+        self.max_z = max_z
+
+    def _retrieve_2hm_files(labels_dir, file_paths):
+        labels_hm = [
+            join(labels_dir,
+                 basename(x).split('.')[0] + '_2dhm.npz') for x in file_paths
+        ]
+        return labels_hm
+
+    def _get_y(self, idx):
+        joints_file = np.load(self.labels[idx])
+
+        joints = torch.tensor(joints_file['xyz'])
+        mask = torch.tensor(joints_file['mask'])
+
+        return geometry.normalize_pixel_coordinates3d(joints, self.max_z,
+                                                      self.max_y,
+                                                      self.max_z), mask
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]

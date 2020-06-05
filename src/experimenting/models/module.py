@@ -9,10 +9,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 from ..dataset import DatasetType, get_data
 from ..utils import average_loss, flatten, get_joints_from_heatmap, unflatten
 from .cnns import get_cnn
-from .hourglass import HourglassModel
+from .hourglass import HourglassModel, MargiPoseModel
 from .metrics import MPJPE
 
-__all__ = ['Classifier', 'PoseEstimator', 'HourglassEstimator']
+__all__ = [
+    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator'
+]
 
 
 class BaseModule(pl.LightningModule):
@@ -257,12 +259,17 @@ class HourglassEstimator(BaseModule):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
 
-    #                   "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
-        params = {'n_channels': self._hparams.dataset['n_channels'], 'n_joints':
-                  self._hparams.dataset['n_joints'],
-                  'backbone_path': join(self._hparams.model_zoo,
-                                        self._hparams.training.backbone),
-                  'n_stages': self._hparams.training['stages'] }
+        #                   "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
+        params = {
+            'n_channels':
+            self._hparams.dataset['n_channels'],
+            'n_joints':
+            self._hparams.dataset['n_joints'],
+            'backbone_path':
+            join(self._hparams.model_zoo, self._hparams.training.backbone),
+            'n_stages':
+            self._hparams.training['stages']
+        }
 
         self.model = HourglassModel(**params)
 
@@ -277,6 +284,103 @@ class HourglassEstimator(BaseModule):
             geometry.spatial_expectation2d(output[-1]),
             self._hparams.dataset.max_h, self._hparams.dataset.max_w)
         return pred_joints
+
+    def _calculate_loss(self, outs, b_y, b_masks):
+        loss = 0
+        for x in outs:
+            loss += self.loss_func(x, b_y, b_masks)
+        return loss / len(outs)
+
+    def _eval(self, batch):
+        b_x, b_y, b_masks = batch
+
+        output = self.forward(b_x)  # cnn output
+
+        loss = self._calculate_loss(output, b_y, b_masks)
+
+        pred_joints = self.predict(output)
+        gt_joints = geometry.denormalize_pixel_coordinates(
+            b_y, self._hparams.dataset.max_h, self._hparams.dataset.max_w)
+
+        results = {
+            metric_name: metric_function(pred_joints, gt_joints, b_masks)
+            for metric_name, metric_function in self.metrics.items()
+        }
+        return loss, results
+
+    def training_step(self, batch, batch_idx):
+        b_x, b_y, b_masks = batch
+
+        outs = self.forward(b_x)  # cnn output
+        loss = self._calculate_loss(outs, b_y, b_masks)
+
+        logs = {"loss": loss}
+        return {"loss": loss, "log": logs}
+
+    def validation_step(self, batch, batch_idx):
+        loss, results = self._eval(batch)
+        return {"batch_val_loss": loss, **results}
+
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'val_mean')
+        logs = {'val_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+
+    def test_step(self, batch, batch_idx):
+        loss, results = self._eval(batch)
+        return {"batch_test_loss": loss, **results}
+
+    def test_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, 'test_mean')
+
+        logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        return {**logs, 'log': logs, 'progress_bar': logs}
+
+
+class MargiposeEstimator(BaseModule):
+    def __init__(self, hparams):
+
+        super(MargiposeEstimator, self).__init__(hparams,
+                                                 DatasetType.JOINTS_3D_DATASET)
+
+    def set_params(self):
+        self.n_channels = self._hparams.dataset.n_channels
+        self.n_joints = self._hparams.dataset.n_joints
+
+        params = {
+            'n_channels':
+            self._hparams.dataset['n_channels'],
+            'n_joints':
+            self._hparams.dataset['n_joints'],
+            'backbone_path':
+            join(self._hparams.model_zoo, self._hparams.training.backbone),
+            'n_stages':
+            self._hparams.training['stages']
+        }
+
+        self.model = MargiPoseModel(**params)
+
+        self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
+
+    def predict(self, output):
+
+        xy_hm, zy_hm, xz_hm = output
+        xy = geometry.spatial_expectation2d(xy_hm)
+        zy = geometry.spatial_expectation2d(zy_hm)
+        xz = geometry.spatial_expectation2d(xz_hm)
+        x, y = xy.split(1, -1)
+        z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
+
+        return geometry.denormalize_pixel_coordinates3d(
+            torch.cat([x, y, z], -1), self.max_z, self.max_y, self.max_x)
 
     def _calculate_loss(self, outs, b_y, b_masks):
         loss = 0

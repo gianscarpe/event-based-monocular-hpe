@@ -11,8 +11,8 @@ import scipy
 from .cv_helpers import decay_heatmap
 
 __all__ = ['get_frame_info', 'load_frame', 'load_heatmap',
-           'get_label_from_filename', 'MOVEMENTS_PER_SESSION', 'MAX_WIDTH',
-           'MAX_HEIGHT', 'N_JOINTS']
+           'get_label_from_filename', 'MOVEMENTS_PER_SESSION', 'MAX_CAM_WIDTH',
+           'MAX_CAM_HEIGHT', 'MAX_X', 'MAX_Y', 'MAX_Z', 'N_JOINTS']
 
 
 def get_frame_info(filename):
@@ -81,6 +81,12 @@ MOVEMENTS_PER_SESSION = {
     4 : 6,
     5 : 7
 }
-MAX_WIDTH = 344
-MAX_HEIGHT = 300
+MAX_CAM_WIDTH = 344
+MAX_CAM_HEIGHT = 300
+
+MAX_X = 2145.0
+MAX_Y = 1933.89
+MAX_Z = 1933.89
+
+
 N_JOINTS = 13
