@@ -270,9 +270,8 @@ class MargiPoseModel(nn.Module):
         for t in range(self.n_stages):
             if t > 0:
                 combined_hm_features = self.hm_combiners[t - 1](
-                    xy_heatmaps[t - 1],
-                    zy_heatmaps[t - 1],
-                    xz_heatmaps[t - 1],
+                    torch.cat([xy_heatmaps[t - 1], zy_heatmaps[t - 1],
+                               xz_heatmaps[t - 1]], -3)
                 )
                 inp = inp + combined_hm_features
             xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))

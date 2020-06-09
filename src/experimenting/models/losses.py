@@ -2,12 +2,13 @@ from functools import reduce
 
 import torch
 import torch.nn as nn
+
 from kornia.geometry import render_gaussian2d, spatial_expectation2d
 
 from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap
 from .metrics import MPJPE
 
-__all__ = ['HeatmapLoss', 'PixelWiseLoss']
+__all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
 
 
 class HeatmapLoss(nn.Module):
@@ -82,7 +83,7 @@ class PixelWiseLoss(nn.Module):
         return self.reduction(loss, gt_mask)
 
 
-class MultiHeatMapPixelWiseLoss(nn.Module):
+class MultiPixelWiseLoss(nn.Module):
     """
     from https://github.com/anibali/margipose
     """
@@ -91,7 +92,7 @@ class MultiHeatMapPixelWiseLoss(nn.Module):
         Args:
          reduction (String, optional): only "mask" methods allowed
         """
-        super(PixelWiseLoss, self).__init__()
+        super(MultiPixelWiseLoss, self).__init__()
         self.divergence = _js
         self.mpjpe = MPJPE()
         self.reduction = _get_reduction(reduction)
@@ -100,8 +101,6 @@ class MultiHeatMapPixelWiseLoss(nn.Module):
     def forward(self, pred_hm, gt_joints, gt_mask=None):
         loss = 0
         ndims = 2
-
-        sigma = torch.tensor([self.sigma, self.sigma], device=pred_hm.device)
         n_joints = pred_hm[0].shape[1]
         hm_dim = (pred_hm[0].shape[2], pred_hm[0].shape[3])
 
@@ -113,9 +112,15 @@ class MultiHeatMapPixelWiseLoss(nn.Module):
             [gt_joints.narrow(-1, 0, 1),
              gt_joints.narrow(-1, 2, 1)], -1)
 
-        gt_xy_hm = render_gaussian2d(target_xy, sigma, hm_dim)
-        gt_zy_hm = render_gaussian2d(target_zy, sigma, hm_dim)
-        gt_xz_hm = render_gaussian2d(target_xz, sigma, hm_dim)
+        device_xy = target_xy.device
+        device_zy = target_zy.device
+        device_xz = target_xz.device
+        dtype = target_xy.dtype
+        sigma = torch.tensor([self.sigma, self.sigma], dtype=dtype)
+        
+        gt_xy_hm = render_gaussian2d(target_xy, sigma.to(device_xy), hm_dim)
+        gt_zy_hm = render_gaussian2d(target_zy, sigma.to(device_zy), hm_dim)
+        gt_xz_hm = render_gaussian2d(target_xz, sigma.to(device_xz), hm_dim)
 
         pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
         xy = spatial_expectation2d(pred_xy_hm)

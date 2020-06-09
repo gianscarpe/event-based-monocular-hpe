@@ -7,8 +7,9 @@ from os.path import basename, join
 
 import numpy as np
 import torch
-from kornia import geometry
 from torch.utils.data import Dataset
+
+from kornia import geometry
 
 from ..utils import (
     MAX_CAM_HEIGHT,
@@ -204,8 +205,8 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         labels = DHPJointsDataset._retrieve_2hm_files(file_paths=file_paths,
                                                       labels_dir=labels_dir)
 
-        super(DHPJointsDataset, self).__init__(file_paths, labels, indexes,
-                                               transform, True)
+        super(DHP3DJointsDataset, self).__init__(file_paths, labels, indexes,
+                                                 transform, True)
 
         self.n_joints = n_joints
         self.max_x = max_x
@@ -222,7 +223,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
     def _get_y(self, idx):
         joints_file = np.load(self.labels[idx])
 
-        joints = torch.tensor(joints_file['xyz'])
+        joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
         mask = torch.tensor(joints_file['mask'])
 
         return geometry.normalize_pixel_coordinates3d(joints, self.max_z,

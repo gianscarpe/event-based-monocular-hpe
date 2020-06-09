@@ -1,10 +1,11 @@
 from os.path import join
 
+import torch
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
 import hydra
 import pytorch_lightning as pl
-import torch
 from kornia import geometry
-from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from ..dataset import DatasetType, get_data
 from ..utils import average_loss, flatten, get_joints_from_heatmap, unflatten
@@ -91,7 +92,7 @@ class BaseModule(pl.LightningModule):
 
 
 class Classifier(BaseModule):
-    def __init__(self, hparams):
+3    def __init__(self, hparams):
         """
         Initialize Classifier model
         """
@@ -259,7 +260,6 @@ class HourglassEstimator(BaseModule):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
 
-        #                   "/data/gscarpellini/model_zoo/timecount/classification/resnet34.pt"
         params = {
             'n_channels':
             self._hparams.dataset['n_channels'],
@@ -362,6 +362,9 @@ class MargiposeEstimator(BaseModule):
             self._hparams.training['stages']
         }
 
+        self.max_x = self._hparams.dataset['max_x']
+        self.max_y = self._hparams.dataset['max_y']
+        self.max_z = self._hparams.dataset['max_z']
         self.model = MargiPoseModel(**params)
 
         self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
@@ -384,20 +387,26 @@ class MargiposeEstimator(BaseModule):
 
     def _calculate_loss(self, outs, b_y, b_masks):
         loss = 0
-        for x in outs:
-            loss += self.loss_func(x, b_y, b_masks)
+
+        xy_hm = outs[0]
+        zy_hm = outs[1]
+        xz_hm = outs[2]
+        for out in zip(xy_hm, zy_hm, xz_hm):
+            loss += self.loss_func(out, b_y, b_masks)
         return loss / len(outs)
 
     def _eval(self, batch):
         b_x, b_y, b_masks = batch
 
-        output = self.forward(b_x)  # cnn output
+        outs = self.forward(b_x)  # cnn output
+        xy_hm = outs[0]
+        zy_hm = outs[1]
+        xz_hm = outs[2]
+        loss = self._calculate_loss(outs, b_y, b_masks)
 
-        loss = self._calculate_loss(output, b_y, b_masks)
-
-        pred_joints = self.predict(output)
-        gt_joints = geometry.denormalize_pixel_coordinates(
-            b_y, self._hparams.dataset.max_h, self._hparams.dataset.max_w)
+        pred_joints = self.predict([xy_hm[-1], zy_hm[-1], xz_hm[-1]])
+        gt_joints = geometry.denormalize_pixel_coordinates3d(
+            b_y, self.max_z, self.max_y, self.max_x)
 
         results = {
             metric_name: metric_function(pred_joints, gt_joints, b_masks)

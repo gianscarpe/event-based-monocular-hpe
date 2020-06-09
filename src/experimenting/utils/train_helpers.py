@@ -46,8 +46,7 @@ def get_training_params(cfg: dict):
     if type(gpus) == list or type(gpus) == ListConfig:
         gpus = [int(x) for x in gpus]
 
-    if debug:
-        torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
 
     trainer_configuration = {
         'gpus': gpus,

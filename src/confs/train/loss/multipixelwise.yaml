@@ -1,0 +1,4 @@
+loss:
+  class: experimenting.models.losses.MultiPixelWiseLoss
+  params:
+    reduction: mask_mean
