@@ -92,7 +92,7 @@ class BaseModule(pl.LightningModule):
 
 
 class Classifier(BaseModule):
-3    def __init__(self, hparams):
+    def __init__(self, hparams):
         """
         Initialize Classifier model
         """
@@ -289,7 +289,7 @@ class HourglassEstimator(BaseModule):
         loss = 0
         for x in outs:
             loss += self.loss_func(x, b_y, b_masks)
-        return loss / len(outs)
+        return loss
 
     def _eval(self, batch):
         b_x, b_y, b_masks = batch
@@ -312,6 +312,7 @@ class HourglassEstimator(BaseModule):
         b_x, b_y, b_masks = batch
 
         outs = self.forward(b_x)  # cnn output
+
         loss = self._calculate_loss(outs, b_y, b_masks)
 
         logs = {"loss": loss}
@@ -388,11 +389,11 @@ class MargiposeEstimator(BaseModule):
     def _calculate_loss(self, outs, b_y, b_masks):
         loss = 0
 
-        xy_hm = outs[0]
-        zy_hm = outs[1]
-        xz_hm = outs[2]
-        for out in zip(xy_hm, zy_hm, xz_hm):
-            loss += self.loss_func(out, b_y, b_masks)
+        xy_hms = outs[0]
+        zy_hms = outs[1]
+        xz_hms = outs[2]
+        for outs in zip(xy_hms, zy_hms, xz_hms):
+            loss += self.loss_func(outs, b_y, b_masks)
         return loss / len(outs)
 
     def _eval(self, batch):
@@ -418,8 +419,10 @@ class MargiposeEstimator(BaseModule):
         b_x, b_y, b_masks = batch
 
         outs = self.forward(b_x)  # cnn output
-        loss = self._calculate_loss(outs, b_y, b_masks)
 
+        loss = self._calculate_loss(outs, b_y, b_masks)
+        if (torch.isnan(loss)):
+            breakpoint()
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
 

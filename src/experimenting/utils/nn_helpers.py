@@ -14,7 +14,6 @@ def average_loss(losses, mask=None):
         mask (Tensor, optional): Mask of points to include in the loss calculation
             (B x L), defaults to including everything
     """
-    
     if mask is not None:
         assert mask.size() == losses.size(), 'mask must be the same size as losses'
         losses = losses * mask
@@ -22,13 +21,14 @@ def average_loss(losses, mask=None):
     else:
         denom = losses.numel()
 
+    denom = denom.type(torch.float64)
     # Prevent division by zero
     if isinstance(denom, int):
         denom = max(denom, 1)
     else:
         denom = denom.clamp(1)
 
-    return losses.sum() / denom
+    return losses[mask].sum() / denom
 
 
 def nanmean(v,  *args, inplace=False, **kwargs):

@@ -224,8 +224,8 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         joints_file = np.load(self.labels[idx])
 
         joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
-        mask = torch.tensor(joints_file['mask'])
-
+        mask = ~torch.isnan(joints[:, 0])
+        joints[~mask] = 0
         return geometry.normalize_pixel_coordinates3d(joints, self.max_z,
                                                       self.max_y,
                                                       self.max_z), mask
@@ -241,5 +241,4 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         if self.transform:
             augmented = self.transform(image=x)
             x = augmented['image']
-
         return x, y, mask

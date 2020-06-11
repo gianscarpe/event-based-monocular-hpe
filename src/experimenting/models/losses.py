@@ -99,6 +99,9 @@ class MultiPixelWiseLoss(nn.Module):
         self.sigma = 0.001
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
+
+        pred_hm = pred_hm
+        gt_joints = gt_joints
         loss = 0
         ndims = 2
         n_joints = pred_hm[0].shape[1]
@@ -117,7 +120,6 @@ class MultiPixelWiseLoss(nn.Module):
         device_xz = target_xz.device
         dtype = target_xy.dtype
         sigma = torch.tensor([self.sigma, self.sigma], dtype=dtype)
-        
         gt_xy_hm = render_gaussian2d(target_xy, sigma.to(device_xy), hm_dim)
         gt_zy_hm = render_gaussian2d(target_zy, sigma.to(device_zy), hm_dim)
         gt_xz_hm = render_gaussian2d(target_xz, sigma.to(device_xz), hm_dim)
@@ -130,7 +132,6 @@ class MultiPixelWiseLoss(nn.Module):
         z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
 
         pred_joints = torch.cat([x, y, z], -1)
-
         if gt_mask is None:
             gt_mask = gt_joints.view(gt_joints.size()[0], -1,
                                      n_joints).sum(1) != 0
@@ -139,8 +140,8 @@ class MultiPixelWiseLoss(nn.Module):
         loss += self.divergence(pred_xz_hm, gt_xz_hm, ndims)
 
         loss += self.mpjpe(pred_joints, gt_joints, gt_mask)
-
-        return self.reduction(loss, gt_mask)
+        result = self.reduction(loss, gt_mask)
+        return result
 
 
 def _kl(p, q, ndims):
