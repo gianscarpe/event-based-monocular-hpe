@@ -63,11 +63,12 @@ class PixelWiseLoss(nn.Module):
         self.divergence = _js
         self.mpjpe = MPJPE()
         self.reduction = _get_reduction(reduction)
-        self.sigma = 0.001
+        self.sigma = 1
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
         ndims = 2
-        sigma = torch.tensor([self.sigma, self.sigma], device=pred_hm.device)
+        sigma = torch.tensor([self.sigma, self.sigma], dtype=gt_joints.dtype,
+                             device=pred_hm.device)
         n_joints = pred_hm.shape[1]
         hm_dim = (pred_hm.shape[2], pred_hm.shape[3])
 
@@ -96,7 +97,7 @@ class MultiPixelWiseLoss(nn.Module):
         self.divergence = _js
         self.mpjpe = MPJPE()
         self.reduction = _get_reduction(reduction)
-        self.sigma = 0.001
+        self.sigma = 1
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
 

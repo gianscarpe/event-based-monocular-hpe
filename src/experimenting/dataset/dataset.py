@@ -144,8 +144,8 @@ class DHPJointsDataset(DHP19BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
-                 max_h=MAX_CAM_HEIGHT,
-                 max_w=MAX_CAM_WIDTH,
+                 max_h=MAX_Y,
+                 max_w=MAX_X,
                  indexes=None,
                  transform=None,
                  n_joints=N_JOINTS):
@@ -170,9 +170,9 @@ class DHPJointsDataset(DHP19BaseDataset):
     def _get_y(self, idx):
         joints_file = np.load(self.labels[idx])
 
-        joints = torch.tensor(joints_file['joints'])
-        mask = torch.tensor(joints_file['mask'])
-
+        joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))[:, 0:2]
+        mask = torch.tensor(joints_file['mask']).type(torch.bool)
+        joints[~mask] = 0
         return geometry.normalize_pixel_coordinates(joints, self.max_h,
                                                     self.max_w), mask
 
