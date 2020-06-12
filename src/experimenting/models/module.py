@@ -280,9 +280,8 @@ class HourglassEstimator(BaseModule):
         return x
 
     def predict(self, output):
-        pred_joints = geometry.denormalize_pixel_coordinates(
-            geometry.spatial_expectation2d(output[-1]),
-            self._hparams.dataset.max_h, self._hparams.dataset.max_w)
+        pred_joints = geometry.spatial_expectation2d(output[-1])
+
         return pred_joints
 
     def _calculate_loss(self, outs, b_y, b_masks):
@@ -299,11 +298,9 @@ class HourglassEstimator(BaseModule):
         loss = self._calculate_loss(output, b_y, b_masks)
 
         pred_joints = self.predict(output)
-        gt_joints = geometry.denormalize_pixel_coordinates(
-            b_y, self._hparams.dataset.max_h, self._hparams.dataset.max_w)
 
         results = {
-            metric_name: metric_function(pred_joints, gt_joints, b_masks)
+            metric_name: metric_function(pred_joints, b_y, b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
         return loss, results

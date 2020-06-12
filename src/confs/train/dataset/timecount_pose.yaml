@@ -14,8 +14,9 @@ dataset:
   cams: [3]
   n_channels: 1
   n_joints: 13
-  max_h: 342
-  max_w: 300
+  max_h: 959.81
+  max_w: 867.40
+  max_d: 2238.23
   max_x: 867.40
   max_y: 959.81
   max_z: 2238.23
