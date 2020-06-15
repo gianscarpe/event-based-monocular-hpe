@@ -3,8 +3,11 @@ import scipy
 import torch
 
 import cv2
+from kornia import geometry
 
-__all__ = ['decay_heatmap', 'get_heatmaps', 'get_joints_from_heatmap']
+__all__ = [
+    'decay_heatmap', 'get_heatmaps', 'get_joints_from_heatmap', 'predict_xyz'
+]
 
 
 def decay_heatmap(heatmap, sigma2=4):
@@ -46,7 +49,7 @@ def get_heatmaps(vicon_xyz, p_mat, width, height):
     # Get xyz w.r.t. camera coord system
     xyz_cam = M.dot(vicon_xyz_homog)
     # Note: cam coord system is left-handed; Z is along the negative axis
-    xyz_cam[2, :] = - xyz_cam[2, :]
+    xyz_cam[2, :] = -xyz_cam[2, :]
     z_ref = xyz_cam[2, 5]
     return xyz_cam, joints, mask, camera, z_ref
 
@@ -93,3 +96,15 @@ def get_joints_from_heatmap(y_pr):
             confidence[b, j] = max_value
 
     return p_coords_max, confidence
+
+
+def predict_xyz(out):
+    xy_hm, zy_hm, xz_hm = out
+
+    xy = geometry.spatial_expectation2d(xy_hm)
+    zy = geometry.spatial_expectation2d(zy_hm)
+    xz = geometry.spatial_expectation2d(xz_hm)
+    x, y = xy.split(1, -1)
+    z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
+
+    return torch.cat([x, y, z], -1)

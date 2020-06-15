@@ -13,17 +13,14 @@ class MPJPE(BaseMetric):
         self.n_joints = n_joints
         self.reduction = reduction
 
-    def forward(self, y_pr, y_gt, gt_mask=None):
+    def forward(self, y_pr, points_gt, gt_mask=None):
         """
 
         y_pr = heatmap obtained with CNN
         y_gt = 2d points of joints, in order
         """
-
-        if gt_mask is None:
-            gt_mask = y_gt.view(y_gt.size()[0], -1, self.n_joints).sum(1) > 0
-
-        dist_2d = torch.norm((y_gt - y_pr), dim=-1)
+        points_gt[~gt_mask] = 0
+        dist_2d = torch.norm((points_gt - y_pr), dim=-1)
 
         if self.reduction:
             # To apply a reduction method (e.g. mean) we need a mask of gt

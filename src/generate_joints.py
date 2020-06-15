@@ -55,5 +55,5 @@ if __name__ == '__main__':
                          joints=joints,
                          mask=mask,
                          xyz=xyz,
-                         x_ref=z_ref,
+                         z_ref=z_ref,
                          camera=camera)

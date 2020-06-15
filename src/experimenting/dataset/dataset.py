@@ -10,6 +10,8 @@ import torch
 from torch.utils.data import Dataset
 
 from kornia import geometry
+from pose3d_utils.camera import CameraIntrinsics
+from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 from ..utils import (
     MAX_CAM_HEIGHT,
@@ -25,7 +27,8 @@ from ..utils import (
 )
 
 __all__ = [
-    'DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset', 'DHP3DJointsDataset'
+    'DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
+    'DHP3DJointsDataset'
 ]
 
 
@@ -208,10 +211,9 @@ class DHP3DJointsDataset(DHP19BaseDataset):
                                                  transform, True)
 
         self.n_joints = n_joints
-        self.max_x = max_x
-        self.max_y = max_y
-        self.max_z = max_z
-        
+        self.normalizer = SkeletonNormaliser()
+        self.height = 260
+        self.width = 346
 
     def _retrieve_2hm_files(labels_dir, file_paths):
         labels_hm = [
@@ -224,14 +226,32 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         joints_file = np.load(self.labels[idx])
 
         joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
-        z_ref = joints_file['z_ref']
-        camera = joints_file['camera']
         mask = ~torch.isnan(joints[:, 0])
         joints[~mask] = 0
+        skeleton = torch.cat(
+            [joints,
+             torch.ones((self.n_joints, 1), dtype=joints.dtype)],
+            axis=1)
 
-        return geometry.normalize_pixel_coordinates3d(joints, self.max_z,
-                                                      self.max_y,
-                                                      self.max_x), mask
+        z_ref = joints_file['z_ref']
+        camera = torch.tensor(joints_file['camera'])
+
+        normalized_skeleton = self.normalizer.normalise_skeleton(
+            skeleton, z_ref, CameraIntrinsics(camera), self.height,
+            self.width).narrow(-1, 0, 3)
+
+        normalized_skeleton[~mask] = 0
+        if torch.isnan(normalized_skeleton).any():
+            breakpoint()
+
+        label = {
+            'skeleton': joints,
+            'normalized_skeleton': normalized_skeleton,
+            'z_ref': z_ref,
+            'camera': camera,
+            'mask': mask
+        }
+        return label
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
@@ -239,9 +259,9 @@ class DHP3DJointsDataset(DHP19BaseDataset):
             idx = idx.tolist()
 
         x = self._get_x(idx)
-        y, mask = self._get_y(idx)
+        y = self._get_y(idx)
 
         if self.transform:
             augmented = self.transform(image=x)
             x = augmented['image']
-        return x, y, mask
+        return x, y

@@ -8,7 +8,13 @@ import pytorch_lightning as pl
 from kornia import geometry
 
 from ..dataset import DatasetType, get_data
-from ..utils import average_loss, flatten, get_joints_from_heatmap, unflatten
+from ..utils import (
+    average_loss,
+    flatten,
+    get_joints_from_heatmap,
+    predict_xyz,
+    unflatten,
+)
 from .cnns import get_cnn
 from .hourglass import HourglassModel, get_margipose_model
 from .metrics import MPJPE
@@ -362,7 +368,7 @@ class MargiposeEstimator(BaseModule):
             'n_stages':
             self._hparams.training['stages'],
             'predict_3d':
-            self.predict_3d
+            True
         }
 
         self.max_x = self._hparams.dataset['max_x']
@@ -372,87 +378,55 @@ class MargiposeEstimator(BaseModule):
 
         self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
 
-        if self.predict_3d:
-            self.loss = self._calculate_loss3d
-        else:
-            self.loss = self._calculate_loss2d
-
     def forward(self, x):
         x = self.model(x)
         return x
 
-    def predict3d(self, output):
+    def predict3d(self, outs):
 
-        xy_hm, zy_hm, xz_hm = output
-        xy = geometry.spatial_expectation2d(xy_hm)
-        zy = geometry.spatial_expectation2d(zy_hm)
-        xz = geometry.spatial_expectation2d(xz_hm)
-        x, y = xy.split(1, -1)
-        z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
+        # Take last output
+        xy_hm = outs[0][-1]
+        zy_hm = outs[1][-1]
+        xz_hm = outs[2][-1]
+        return predict_xyz((xy_hm, zy_hm, xz_hm))
 
-        return geometry.denormalize_pixel_coordinates3d(
-            torch.cat([x, y, z], -1), self.max_z, self.max_y, self.max_x)
-
-    def predict2d(self, xy_hm):
-
-        xy = geometry.spatial_expectation2d(xy_hm)
-
-        x, y = xy.split(1, -1)
-        z = torch.ones_like(x)
-
-        return geometry.denormalize_pixel_coordinates3d(
-            torch.cat([x, y, z], -1), self.max_z, self.max_y,
-            self.max_x).narrow(-1, 0, 2)
-
-    def _calculate_loss3d(self, outs, b_y, b_masks):
+    def _calculate_loss3d(self, outs, b_y):
         loss = 0
 
         xy_hms = outs[0]
         zy_hms = outs[1]
         xz_hms = outs[2]
+        normalized_skeletons = b_y['normalized_skeleton']
+        b_masks = b_y['mask']
+
         for outs in zip(xy_hms, zy_hms, xz_hms):
-            loss += self.loss_func(outs, b_y, b_masks)
-        return loss / len(outs)
-
-    def _calculate_loss2d(self, outs, b_y, b_masks):
-        loss = 0
-
-        for out in zip(outs):
-            loss += self.loss_func(out, b_y, b_masks)
+            loss += self.loss_func(outs, normalized_skeletons, b_masks)
+            
         return loss / len(outs)
 
     def _eval(self, batch):
-        b_x, b_y, b_masks = batch
+        b_x, b_y = batch
 
         outs = self.forward(b_x)  # cnn output
+        loss = self._calculate_loss3d(outs, b_y)
+        pred_joints = self.predict3d(outs)
+        normalized_skeletons = b_y['normalized_skeleton']
+        b_masks = b_y['mask']
 
-        if self.predict_3d:
-            xy_hm = outs[0]
-            zy_hm = outs[1]
-            xz_hm = outs[2]
-            last_out = [xy_hm[-1], zy_hm[-1], xz_hm[-1]]
-            loss = self._calculate_loss3d(outs, b_y, b_masks)
-            pred_joints = self.predict3d(last_out)
-            gt_joints = geometry.denormalize_pixel_coordinates3d(
-                b_y, self.max_z, self.max_y, self.max_x)
-        else:
-            last_out = outs[-1]
-            pred_joints = self.predict2d(last_out)
-            gt_joints = geometry.denormalize_pixel_coordinates3d(
-                b_y, self.max_z, self.max_y, self.max_x).narrow(-1, 0, 2)
-            loss = self._calculate_loss2d(outs, b_y, b_masks)
         results = {
-            metric_name: metric_function(pred_joints, gt_joints, b_masks)
+            metric_name: metric_function(pred_joints, normalized_skeletons,
+                                         b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
+        
         return loss, results
 
     def training_step(self, batch, batch_idx):
-        b_x, b_y, b_masks = batch
+        b_x, b_y = batch
 
         outs = self.forward(b_x)  # cnn output
 
-        loss = self.loss(outs, b_y, b_masks)
+        loss = self._calculate_loss3d(outs, b_y)
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
 

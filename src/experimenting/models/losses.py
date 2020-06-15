@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from kornia.geometry import render_gaussian2d, spatial_expectation2d
 
-from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap
+from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap, predict_xyz
 from .metrics import MPJPE
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
@@ -66,10 +66,9 @@ class PixelWiseLoss(nn.Module):
         self.sigma = 1
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
-        
         if type(pred_hm) == tuple:
             pred_hm = pred_hm[0]
-        gt_joints = gt_joints.narrow(-1, 0, 2)        
+        gt_joints = gt_joints.narrow(-1, 0, 2)
         pred_joints = spatial_expectation2d(pred_hm)
         loss = torch.add(self.mpjpe(pred_joints, gt_joints, gt_mask),
                          self.divergence(pred_hm, gt_joints, self.sigma))
@@ -101,7 +100,7 @@ class MultiPixelWiseLoss(PixelWiseLoss):
             [gt_joints.narrow(-1, 0, 1),
              gt_joints.narrow(-1, 2, 1)], -1)
 
-        pred_joints = self._predict_xyz(pred_hm)
+        pred_joints = predict_xyz(pred_hm)
 
         loss += self.divergence(pred_xy_hm, target_xy, ndims)
         loss += self.divergence(pred_zy_hm, target_zy, ndims)
@@ -109,6 +108,7 @@ class MultiPixelWiseLoss(PixelWiseLoss):
 
         loss += self.mpjpe(pred_joints, gt_joints, gt_mask)
         result = self.reduction(loss, gt_mask)
+
         return result
 
 
@@ -141,15 +141,3 @@ def _get_reduction(reduction_type):
     switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
 
     return switch[reduction_type]
-
-
-def _predict_xyz(pred_hm):
-    pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
-    xy = spatial_expectation2d(pred_xy_hm)
-    zy = spatial_expectation2d(pred_zy_hm)
-    xz = spatial_expectation2d(pred_xz_hm)
-    x, y = xy.split(1, -1)
-    z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
-
-    pred_joints = torch.cat([x, y, z], -1)
-    return pred_joints

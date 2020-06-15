@@ -47,20 +47,20 @@ def get_training_params(cfg: dict):
     if type(gpus) == list or type(gpus) == ListConfig:
         gpus = [int(x) for x in gpus]
 
-    if debug:
-        torch.autograd.set_detect_anomaly(True)
-
     trainer_configuration = {
         'gpus': gpus,
         'benchmark': True,
         'max_epochs': cfg['training']['epochs'],
-        'fast_dev_run': debug,
         'checkpoint_callback': ckpt_cb,
         'track_grad_norm': 2,
         'weights_summary': 'top',
         'logger': logger,
         'profiler': profiler,
     }
+
+    torch.autograd.set_detect_anomaly(debug)
+    if debug:
+        trainer_configuration['overfit_pct'] = 0.01
 
     if cfg.training.early_stopping > 0:
         early_stop_callback = EarlyStopping(
