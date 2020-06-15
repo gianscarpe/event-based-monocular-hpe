@@ -1,8 +1,10 @@
-import cv2
 import numpy as np
+import scipy
 import torch
 
-__all__ = ['decay_heatmap', 'get_heatmap', 'get_joints_from_heatmap']
+import cv2
+
+__all__ = ['decay_heatmap', 'get_heatmaps', 'get_joints_from_heatmap']
 
 
 def decay_heatmap(heatmap, sigma2=4):
@@ -11,7 +13,11 @@ def decay_heatmap(heatmap, sigma2=4):
     return heatmap
 
 
-def get_heatmap(vicon_xyz, p_mat, width, height):
+def get_heatmaps(vicon_xyz, p_mat, width, height):
+    K, R, t = decompose_projection_matrix(p_mat)
+    M = np.concatenate([R, np.expand_dims(t, 1)], axis=1)
+    camera = np.concatenate([K, np.zeros((3, 1))], axis=1)
+
     num_joints = vicon_xyz.shape[-1]
     vicon_xyz_homog = np.concatenate(
         [vicon_xyz, np.ones([1, num_joints])], axis=0)
@@ -35,7 +41,14 @@ def get_heatmap(vicon_xyz, p_mat, width, height):
     u = u.astype(np.int32)
     v = v.astype(np.int32)
     joints = np.stack((v, u), axis=-1)
-    return vicon_xyz, joints, mask
+    #hms = _get_heatmap((u, v), mask, height, width, num_joints)
+
+    # Get xyz w.r.t. camera coord system
+    xyz_cam = M.dot(vicon_xyz_homog)
+    # Note: cam coord system is left-handed; Z is along the negative axis
+    xyz_cam[2, :] = - xyz_cam[2, :]
+    z_ref = xyz_cam[2, 5]
+    return xyz_cam, joints, mask, camera, z_ref
 
 
 def _get_heatmap(joints, mask, heigth, width, num_joints):
@@ -48,6 +61,18 @@ def _get_heatmap(joints, mask, heigth, width, num_joints):
             label_heatmaps[:, :, fmidx] = decay_heatmap(label_heatmaps[:, :,
                                                                        fmidx])
     return label_heatmaps
+
+
+def decompose_projection_matrix(P):
+    Q = P[:3, :3]
+    q = P[:, 3]
+    U, S = scipy.linalg.qr(np.linalg.inv(Q))
+    R = np.linalg.inv(U)
+    K = np.linalg.inv(S)
+    t = S.dot(q)
+    K = K / K[2, 2]
+
+    return K, R, t
 
 
 def get_joints_from_heatmap(y_pr):

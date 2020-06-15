@@ -144,9 +144,8 @@ class DHPJointsDataset(DHP19BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
-                 max_d=MAX_Z,
-                 max_h=MAX_Y,
-                 max_w=MAX_X,
+                 max_h=MAX_CAM_HEIGHT,
+                 max_w=MAX_CAM_WIDTH,
                  indexes=None,
                  transform=None,
                  n_joints=N_JOINTS):
@@ -158,7 +157,6 @@ class DHPJointsDataset(DHP19BaseDataset):
                                                transform, True)
 
         self.n_joints = n_joints
-        self.max_d = max_d
         self.max_h = max_h
         self.max_w = max_w
 
@@ -172,12 +170,10 @@ class DHPJointsDataset(DHP19BaseDataset):
     def _get_y(self, idx):
         joints_file = np.load(self.labels[idx])
 
-        joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
+        joints = torch.tensor(joints_file['joints'])
         mask = torch.tensor(joints_file['mask']).type(torch.bool)
-        joints[~mask] = 0.0
-
-        return geometry.normalize_pixel_coordinates3d(joints, self.max_d,
-                                                      self.max_h, self.max_w)[:, :2], mask
+        return geometry.normalize_pixel_coordinates(joints, self.max_h,
+                                                    self.max_w), mask
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
@@ -215,6 +211,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         self.max_x = max_x
         self.max_y = max_y
         self.max_z = max_z
+        
 
     def _retrieve_2hm_files(labels_dir, file_paths):
         labels_hm = [
@@ -227,11 +224,14 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         joints_file = np.load(self.labels[idx])
 
         joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
+        z_ref = joints_file['z_ref']
+        camera = joints_file['camera']
         mask = ~torch.isnan(joints[:, 0])
         joints[~mask] = 0
+
         return geometry.normalize_pixel_coordinates3d(joints, self.max_z,
                                                       self.max_y,
-                                                      self.max_z), mask
+                                                      self.max_x), mask
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]

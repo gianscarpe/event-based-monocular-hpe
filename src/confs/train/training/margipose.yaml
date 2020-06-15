@@ -6,4 +6,5 @@ training:
   module: MargiposeEstimator
   model: MargiPoseModel
   backbone: classification/resnet34.pt
-  stages: 2  
+  stages: 2
+  predict_3d: true

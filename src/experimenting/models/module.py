@@ -10,7 +10,7 @@ from kornia import geometry
 from ..dataset import DatasetType, get_data
 from ..utils import average_loss, flatten, get_joints_from_heatmap, unflatten
 from .cnns import get_cnn
-from .hourglass import HourglassModel, MargiPoseModel
+from .hourglass import HourglassModel, get_margipose_model
 from .metrics import MPJPE
 
 __all__ = [
@@ -280,8 +280,9 @@ class HourglassEstimator(BaseModule):
         return x
 
     def predict(self, output):
-        pred_joints = geometry.spatial_expectation2d(output[-1])
-
+        pred_joints = geometry.denormalize_pixel_coordinates(
+            geometry.spatial_expectation2d(output[-1]),
+            self._hparams.dataset.max_h, self._hparams.dataset.max_w)
         return pred_joints
 
     def _calculate_loss(self, outs, b_y, b_masks):
@@ -296,11 +297,12 @@ class HourglassEstimator(BaseModule):
         output = self.forward(b_x)  # cnn output
 
         loss = self._calculate_loss(output, b_y, b_masks)
-
+        gt_joints = geometry.denormalize_pixel_coordinates(
+            b_y, self._hparams.dataset.max_h, self._hparams.dataset.max_w)
         pred_joints = self.predict(output)
 
         results = {
-            metric_name: metric_function(pred_joints, b_y, b_masks)
+            metric_name: metric_function(pred_joints, gt_joints, b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
         return loss, results
@@ -348,6 +350,7 @@ class MargiposeEstimator(BaseModule):
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
+        self.predict_3d = self._hparams.training.predict_3d
 
         params = {
             'n_channels':
@@ -357,21 +360,28 @@ class MargiposeEstimator(BaseModule):
             'backbone_path':
             join(self._hparams.model_zoo, self._hparams.training.backbone),
             'n_stages':
-            self._hparams.training['stages']
+            self._hparams.training['stages'],
+            'predict_3d':
+            self.predict_3d
         }
 
         self.max_x = self._hparams.dataset['max_x']
         self.max_y = self._hparams.dataset['max_y']
         self.max_z = self._hparams.dataset['max_z']
-        self.model = MargiPoseModel(**params)
+        self.model = get_margipose_model(params)
 
         self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
+
+        if self.predict_3d:
+            self.loss = self._calculate_loss3d
+        else:
+            self.loss = self._calculate_loss2d
 
     def forward(self, x):
         x = self.model(x)
         return x
 
-    def predict(self, output):
+    def predict3d(self, output):
 
         xy_hm, zy_hm, xz_hm = output
         xy = geometry.spatial_expectation2d(xy_hm)
@@ -383,7 +393,18 @@ class MargiposeEstimator(BaseModule):
         return geometry.denormalize_pixel_coordinates3d(
             torch.cat([x, y, z], -1), self.max_z, self.max_y, self.max_x)
 
-    def _calculate_loss(self, outs, b_y, b_masks):
+    def predict2d(self, xy_hm):
+
+        xy = geometry.spatial_expectation2d(xy_hm)
+
+        x, y = xy.split(1, -1)
+        z = torch.ones_like(x)
+
+        return geometry.denormalize_pixel_coordinates3d(
+            torch.cat([x, y, z], -1), self.max_z, self.max_y,
+            self.max_x).narrow(-1, 0, 2)
+
+    def _calculate_loss3d(self, outs, b_y, b_masks):
         loss = 0
 
         xy_hms = outs[0]
@@ -393,19 +414,33 @@ class MargiposeEstimator(BaseModule):
             loss += self.loss_func(outs, b_y, b_masks)
         return loss / len(outs)
 
+    def _calculate_loss2d(self, outs, b_y, b_masks):
+        loss = 0
+
+        for out in zip(outs):
+            loss += self.loss_func(out, b_y, b_masks)
+        return loss / len(outs)
+
     def _eval(self, batch):
         b_x, b_y, b_masks = batch
 
         outs = self.forward(b_x)  # cnn output
-        xy_hm = outs[0]
-        zy_hm = outs[1]
-        xz_hm = outs[2]
-        loss = self._calculate_loss(outs, b_y, b_masks)
 
-        pred_joints = self.predict([xy_hm[-1], zy_hm[-1], xz_hm[-1]])
-        gt_joints = geometry.denormalize_pixel_coordinates3d(
-            b_y, self.max_z, self.max_y, self.max_x)
-
+        if self.predict_3d:
+            xy_hm = outs[0]
+            zy_hm = outs[1]
+            xz_hm = outs[2]
+            last_out = [xy_hm[-1], zy_hm[-1], xz_hm[-1]]
+            loss = self._calculate_loss3d(outs, b_y, b_masks)
+            pred_joints = self.predict3d(last_out)
+            gt_joints = geometry.denormalize_pixel_coordinates3d(
+                b_y, self.max_z, self.max_y, self.max_x)
+        else:
+            last_out = outs[-1]
+            pred_joints = self.predict2d(last_out)
+            gt_joints = geometry.denormalize_pixel_coordinates3d(
+                b_y, self.max_z, self.max_y, self.max_x).narrow(-1, 0, 2)
+            loss = self._calculate_loss2d(outs, b_y, b_masks)
         results = {
             metric_name: metric_function(pred_joints, gt_joints, b_masks)
             for metric_name, metric_function in self.metrics.items()
@@ -417,9 +452,7 @@ class MargiposeEstimator(BaseModule):
 
         outs = self.forward(b_x)  # cnn output
 
-        loss = self._calculate_loss(outs, b_y, b_masks)
-        if (torch.isnan(loss)):
-            breakpoint()
+        loss = self.loss(outs, b_y, b_masks)
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
 

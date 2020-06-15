@@ -60,31 +60,24 @@ class PixelWiseLoss(nn.Module):
     """
     def __init__(self, reduction='mask_mean'):
         super(PixelWiseLoss, self).__init__()
-        self.divergence = _js
+        self.divergence = _divergence
         self.mpjpe = MPJPE()
         self.reduction = _get_reduction(reduction)
         self.sigma = 1
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
-        ndims = 2
-        sigma = torch.tensor([self.sigma, self.sigma], dtype=gt_joints.dtype,
-                             device=pred_hm.device)
-        n_joints = pred_hm.shape[1]
-        hm_dim = (pred_hm.shape[2], pred_hm.shape[3])
-
-        gt_hm = render_gaussian2d(gt_joints, sigma, hm_dim)
+        
+        if type(pred_hm) == tuple:
+            pred_hm = pred_hm[0]
+        gt_joints = gt_joints.narrow(-1, 0, 2)        
         pred_joints = spatial_expectation2d(pred_hm)
-
-        if gt_mask is None:
-            gt_mask = gt_joints.view(gt_joints.size()[0], -1,
-                                     n_joints).sum(1) != 0
-
         loss = torch.add(self.mpjpe(pred_joints, gt_joints, gt_mask),
-                         self.divergence(pred_hm, gt_hm, ndims))
+                         self.divergence(pred_hm, gt_joints, self.sigma))
+
         return self.reduction(loss, gt_mask)
 
 
-class MultiPixelWiseLoss(nn.Module):
+class MultiPixelWiseLoss(PixelWiseLoss):
     """
     from https://github.com/anibali/margipose
     """
@@ -93,21 +86,13 @@ class MultiPixelWiseLoss(nn.Module):
         Args:
          reduction (String, optional): only "mask" methods allowed
         """
-        super(MultiPixelWiseLoss, self).__init__()
-        self.divergence = _js
-        self.mpjpe = MPJPE()
-        self.reduction = _get_reduction(reduction)
-        self.sigma = 1
+        super(MultiPixelWiseLoss, self).__init__(reduction)
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
-
-        pred_hm = pred_hm
-        gt_joints = gt_joints
         loss = 0
         ndims = 2
-        n_joints = pred_hm[0].shape[1]
-        hm_dim = (pred_hm[0].shape[2], pred_hm[0].shape[3])
 
+        pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
         target_xy = gt_joints.narrow(-1, 0, 2)
         target_zy = torch.cat(
             [gt_joints.narrow(-1, 2, 1),
@@ -116,33 +101,27 @@ class MultiPixelWiseLoss(nn.Module):
             [gt_joints.narrow(-1, 0, 1),
              gt_joints.narrow(-1, 2, 1)], -1)
 
-        device_xy = target_xy.device
-        device_zy = target_zy.device
-        device_xz = target_xz.device
-        dtype = target_xy.dtype
-        sigma = torch.tensor([self.sigma, self.sigma], dtype=dtype)
-        gt_xy_hm = render_gaussian2d(target_xy, sigma.to(device_xy), hm_dim)
-        gt_zy_hm = render_gaussian2d(target_zy, sigma.to(device_zy), hm_dim)
-        gt_xz_hm = render_gaussian2d(target_xz, sigma.to(device_xz), hm_dim)
+        pred_joints = self._predict_xyz(pred_hm)
 
-        pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
-        xy = spatial_expectation2d(pred_xy_hm)
-        zy = spatial_expectation2d(pred_zy_hm)
-        xz = spatial_expectation2d(pred_xz_hm)
-        x, y = xy.split(1, -1)
-        z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
-
-        pred_joints = torch.cat([x, y, z], -1)
-        if gt_mask is None:
-            gt_mask = gt_joints.view(gt_joints.size()[0], -1,
-                                     n_joints).sum(1) != 0
-        loss += self.divergence(pred_xy_hm, gt_xy_hm, ndims)
-        loss += self.divergence(pred_zy_hm, gt_zy_hm, ndims)
-        loss += self.divergence(pred_xz_hm, gt_xz_hm, ndims)
+        loss += self.divergence(pred_xy_hm, target_xy, ndims)
+        loss += self.divergence(pred_zy_hm, target_zy, ndims)
+        loss += self.divergence(pred_xz_hm, target_xz, ndims)
 
         loss += self.mpjpe(pred_joints, gt_joints, gt_mask)
         result = self.reduction(loss, gt_mask)
         return result
+
+
+def _divergence(pred_hm, gt_joints, sigma):
+    ndims = 2
+    sigma = torch.tensor([sigma, sigma],
+                         dtype=gt_joints.dtype,
+                         device=pred_hm.device)
+    hm_dim = (pred_hm.shape[2], pred_hm.shape[3])
+
+    gt_hm = render_gaussian2d(gt_joints, sigma, hm_dim)
+    divergence = _js(pred_hm, gt_hm, ndims)
+    return divergence
 
 
 def _kl(p, q, ndims):
@@ -162,3 +141,15 @@ def _get_reduction(reduction_type):
     switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
 
     return switch[reduction_type]
+
+
+def _predict_xyz(pred_hm):
+    pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
+    xy = spatial_expectation2d(pred_xy_hm)
+    zy = spatial_expectation2d(pred_zy_hm)
+    xz = spatial_expectation2d(pred_xz_hm)
+    x, y = xy.split(1, -1)
+    z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
+
+    pred_joints = torch.cat([x, y, z], -1)
+    return pred_joints

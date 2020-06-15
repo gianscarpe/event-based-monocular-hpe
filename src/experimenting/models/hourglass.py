@@ -224,7 +224,7 @@ class HourglassModel(nn.Module):
         return outs
 
 
-class MargiPoseModel(nn.Module):
+class MargiPoseModel3D(nn.Module):
     def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
         super().__init__()
 
@@ -238,27 +238,26 @@ class MargiPoseModel(nn.Module):
         self.softmax = FlatSoftmax()
         self.n_joints = n_joints
 
-        xy = 'xy'
-        zy = 'zy'
-        xz = 'xz'
+        self._set_stages()
 
+    def _set_stages(self):
         for t in range(self.n_stages):
             if t > 0:
                 self.hm_combiners.append(
-                    HeatmapCombiner(3 * n_joints,
+                    HeatmapCombiner(3 * self.n_joints,
                                     self.mid_feature_dimension))
             self.xy_hm_cnns.append(
-                MargiPoseStage(n_joints,
+                MargiPoseStage(self.n_joints,
                                self.mid_feature_dimension,
-                               heatmap_space=xy))
+                               heatmap_space='xy'))
             self.zy_hm_cnns.append(
-                MargiPoseStage(n_joints,
+                MargiPoseStage(self.n_joints,
                                self.mid_feature_dimension,
-                               heatmap_space=zy))
+                               heatmap_space='zy'))
             self.xz_hm_cnns.append(
-                MargiPoseStage(n_joints,
+                MargiPoseStage(self.n_joints,
                                self.mid_feature_dimension,
-                               heatmap_space=xz))
+                               heatmap_space='xz'))
 
     def forward(self, inputs):
         features = self.in_cnn(inputs)
@@ -269,13 +268,49 @@ class MargiPoseModel(nn.Module):
         inp = features
         for t in range(self.n_stages):
             if t > 0:
-                combined_hm_features = self.hm_combiners[t - 1](
-                    torch.cat([xy_heatmaps[t - 1], zy_heatmaps[t - 1],
-                               xz_heatmaps[t - 1]], -3)
-                )
+                combined_hm_features = self.hm_combiners[t - 1](torch.cat([
+                    xy_heatmaps[t - 1], zy_heatmaps[t - 1], xz_heatmaps[t - 1]
+                ], -3))
                 inp = inp + combined_hm_features
             xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))
             zy_heatmaps.append(self.softmax(self.zy_hm_cnns[t](inp)))
             xz_heatmaps.append(self.softmax(self.xz_hm_cnns[t](inp)))
 
         return xy_heatmaps, zy_heatmaps, xz_heatmaps
+
+
+class MargiPoseModel2D(MargiPoseModel3D):
+    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
+        super().__init__(n_stages, backbone_path, n_joints, n_channels)
+
+    def _set_stages(self):
+        for t in range(self.n_stages):
+            if t > 0:
+                self.hm_combiners.append(
+                    HeatmapCombiner(self.n_joints, self.mid_feature_dimension))
+            self.xy_hm_cnns.append(
+                MargiPoseStage(self.n_joints,
+                               self.mid_feature_dimension,
+                               heatmap_space='xy'))
+
+    def forward(self, inputs):
+        features = self.in_cnn(inputs)
+        xy_heatmaps = []
+
+        inp = features
+        for t in range(self.n_stages):
+            if t > 0:
+                combined_hm_features = self.hm_combiners[t - 1](xy_heatmaps[t -
+                                                                            1])
+                inp = inp + combined_hm_features
+            xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))
+
+        return xy_heatmaps
+
+
+def get_margipose_model(params):
+    predict_3d = params.pop('predict_3d')
+    if predict_3d:
+        return MargiPoseModel3D(**params)
+    else:
+        return MargiPoseModel2D(**params)

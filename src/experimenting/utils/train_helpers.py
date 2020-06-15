@@ -4,8 +4,9 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-import pytorch_lightning as pl
 import torch
+
+import pytorch_lightning as pl
 from hyperopt import hp
 from omegaconf import ListConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -46,7 +47,8 @@ def get_training_params(cfg: dict):
     if type(gpus) == list or type(gpus) == ListConfig:
         gpus = [int(x) for x in gpus]
 
-    torch.autograd.set_detect_anomaly(True)
+    if debug:
+        torch.autograd.set_detect_anomaly(True)
 
     trainer_configuration = {
         'gpus': gpus,

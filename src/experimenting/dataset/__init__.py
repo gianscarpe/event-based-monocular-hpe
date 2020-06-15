@@ -106,17 +106,11 @@ def _get_joints_datasets(hparams):
     train_index = params['train_indexes']
     val_index = params['val_indexes']
     test_index = params['test_indexes']
-    max_h = hparams.dataset.max_h
-    max_w = hparams.dataset.max_w
-    max_d = hparams.dataset.max_d
 
     train_params = {
         'file_paths': file_paths,
         'indexes': train_index,
         'transform': preprocess_train,
-        'max_h': max_h,
-        'max_w': max_w,
-        'max_d': max_d,
         'labels_dir': hparams.dataset.joints_dir,
         'n_joints': n_joints
     }
@@ -124,8 +118,6 @@ def _get_joints_datasets(hparams):
     val_params = {
         'file_paths': file_paths,
         'indexes': val_index,
-        'max_h': max_h,
-        'max_w': max_w,
         'transform': preprocess_val,
         'labels_dir': hparams.dataset.joints_dir
     }
@@ -134,8 +126,6 @@ def _get_joints_datasets(hparams):
         'file_paths': file_paths,
         'indexes': test_index,
         'transform': preprocess_val,
-        'max_h': max_h,
-        'max_w': max_w,
         'labels_dir': hparams.dataset.joints_dir
     }
 

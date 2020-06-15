@@ -45,10 +45,15 @@ if __name__ == '__main__':
         for cam in range(4):
             for ind in list(range(len(frames))):
 
-                xyz, joints, mask = utils.get_heatmap(frames[ind, :],
-                                                      p_mats[cam], width,
-                                                      height)
+                xyz, joints, mask, camera, z_ref = utils.get_heatmaps(
+                    frames[ind, :], p_mats[cam], width, height)
+
                 out_filename = frame_path.format(ind, cam)
                 out_path = os.path.join(out_dir, out_filename)
 
-                np.savez(out_path, joints=joints, mask=mask, xyz=xyz)
+                np.savez(out_path,
+                         joints=joints,
+                         mask=mask,
+                         xyz=xyz,
+                         x_ref=z_ref,
+                         camera=camera)
