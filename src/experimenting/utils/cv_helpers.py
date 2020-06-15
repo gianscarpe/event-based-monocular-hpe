@@ -1,13 +1,17 @@
 import numpy as np
 import scipy
 import torch
-
+from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
+from pose3d_utils.camera import CameraIntrinsics
+from .dsntnn import dsnt
 import cv2
-from kornia import geometry
+
 
 __all__ = [
     'decay_heatmap', 'get_heatmaps', 'get_joints_from_heatmap', 'predict_xyz'
 ]
+
+_normalizer = SkeletonNormaliser()
 
 
 def decay_heatmap(heatmap, sigma2=4):
@@ -101,10 +105,43 @@ def get_joints_from_heatmap(y_pr):
 def predict_xyz(out):
     xy_hm, zy_hm, xz_hm = out
 
-    xy = geometry.spatial_expectation2d(xy_hm)
-    zy = geometry.spatial_expectation2d(zy_hm)
-    xz = geometry.spatial_expectation2d(xz_hm)
+    xy = dsnt(xy_hm)
+    zy = dsnt(zy_hm)
+    xz = dsnt(xz_hm)
     x, y = xy.split(1, -1)
     z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
 
     return torch.cat([x, y, z], -1)
+
+
+def denormalize_skeleton(self, normalized_skeleton, camera, z_ref, height,
+                         width):
+    homog = torch.cat([
+        normalized_skeleton,
+        torch.ones((13, 1),
+                   dtype=normalized_skeleton.dtype,
+                   device=normalized_skeleton.device)
+    ],
+                      axis=1)
+
+    skeleton = self.normalizer.denormalise_skeleton(homog, z_ref,
+                                                    CameraIntrinsics(camera),
+                                                    self.height,
+                                                    self.width).narrow(
+                                                        -1, 0, 3)
+
+    skeleton[:, -1] *= -1  # Recover axis in the original direction
+
+    skeleton = skeleton.permute(1, 0)
+    homog = torch.cat(
+        [skeleton, torch.ones((1, 13), dtype=skeleton.dtype)], axis=0)
+    coords = torch.matmul(camera, homog)  # Project onto image plane
+    coords = coords / coords[-1]
+    coords[1, :] = height - coords[1, :]
+    coords = coords[:2, :].permute(1, 0)
+
+    # Joints must be (u, v)
+    joints = torch.zeros_like(coords)
+    joints[:, 0] = coords[:, 1]
+    joints[:, 1] = coords[:, 0]
+    return joints

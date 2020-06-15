@@ -80,8 +80,8 @@ def load_heatmap(path, n_joints):
 
 
 MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
-MAX_CAM_WIDTH = 344
-MAX_CAM_HEIGHT = 300
+MAX_CAM_WIDTH = 346
+MAX_CAM_HEIGHT = 260
 
 MAX_X = 567.88
 MAX_Y = 323.392

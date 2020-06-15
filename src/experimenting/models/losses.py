@@ -8,6 +8,7 @@ from kornia.geometry import render_gaussian2d, spatial_expectation2d
 from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap, predict_xyz
 from .metrics import MPJPE
 
+
 __all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
 
 
@@ -62,8 +63,8 @@ class PixelWiseLoss(nn.Module):
         super(PixelWiseLoss, self).__init__()
         self.divergence = _divergence
         self.mpjpe = MPJPE()
-        self.reduction = _get_reduction(reduction)
         self.sigma = 1
+        self.reduction = _get_reduction(reduction)
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
         if type(pred_hm) == tuple:
@@ -85,13 +86,14 @@ class MultiPixelWiseLoss(PixelWiseLoss):
         Args:
          reduction (String, optional): only "mask" methods allowed
         """
+
         super(MultiPixelWiseLoss, self).__init__(reduction)
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
         loss = 0
-        ndims = 2
 
         pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
+
         target_xy = gt_joints.narrow(-1, 0, 2)
         target_zy = torch.cat(
             [gt_joints.narrow(-1, 2, 1),
@@ -102,10 +104,9 @@ class MultiPixelWiseLoss(PixelWiseLoss):
 
         pred_joints = predict_xyz(pred_hm)
 
-        loss += self.divergence(pred_xy_hm, target_xy, ndims)
-        loss += self.divergence(pred_zy_hm, target_zy, ndims)
-        loss += self.divergence(pred_xz_hm, target_xz, ndims)
-
+        loss += self.divergence(pred_xy_hm, target_xy, self.sigma)
+        loss += self.divergence(pred_zy_hm, target_zy, self.sigma)
+        loss += self.divergence(pred_xz_hm, target_xz, self.sigma)
         loss += self.mpjpe(pred_joints, gt_joints, gt_mask)
         result = self.reduction(loss, gt_mask)
 

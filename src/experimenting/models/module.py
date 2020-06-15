@@ -401,8 +401,8 @@ class MargiposeEstimator(BaseModule):
 
         for outs in zip(xy_hms, zy_hms, xz_hms):
             loss += self.loss_func(outs, normalized_skeletons, b_masks)
-            
-        return loss / len(outs)
+
+        return loss
 
     def _eval(self, batch):
         b_x, b_y = batch
@@ -418,7 +418,7 @@ class MargiposeEstimator(BaseModule):
                                          b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
-        
+
         return loss, results
 
     def training_step(self, batch, batch_idx):
