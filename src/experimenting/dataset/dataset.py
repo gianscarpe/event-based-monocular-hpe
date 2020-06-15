@@ -235,6 +235,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
 
         z_ref = joints_file['z_ref']
         camera = torch.tensor(joints_file['camera'])
+        # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
             skeleton, z_ref, CameraIntrinsics(camera), self.height,
