@@ -8,6 +8,8 @@ from operator import mul
 import torch
 import torch.nn.functional
 
+__all__ = ['js_reg_losses', 'dsnt']
+
 
 def _normalized_linspace(length, dtype=None, device=None):
     """Generate a vector with values ranging from -1 to 1.

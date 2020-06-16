@@ -233,7 +233,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
              torch.ones((self.n_joints, 1), dtype=joints.dtype)],
             axis=1)
 
-        z_ref = joints_file['z_ref']
+        z_ref = joints[4][2]
         camera = torch.tensor(joints_file['camera'])
         # TODO: select a standard format for joints (better 3xnum_joints)
 
