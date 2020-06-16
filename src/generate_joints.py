@@ -45,7 +45,7 @@ if __name__ == '__main__':
         for cam in range(4):
             for ind in list(range(len(frames))):
 
-                xyz, joints, mask, camera, z_ref = utils.get_heatmaps(
+                xyz, joints, mask, camera, M = utils.get_heatmaps(
                     frames[ind, :], p_mats[cam], width, height)
 
                 out_filename = frame_path.format(ind, cam)
@@ -55,5 +55,5 @@ if __name__ == '__main__':
                          joints=joints,
                          mask=mask,
                          xyz=xyz,
-                         z_ref=z_ref,
+                         M=M,
                          camera=camera)
