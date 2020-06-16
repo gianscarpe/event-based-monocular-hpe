@@ -39,13 +39,13 @@ def _up_stride_block(in_chans, out_chans):
                            kernel_size=3,
                            padding=1,
                            stride=2,
-                           output_padding=(0, 1),
+                           output_padding=(1, 1),
                            bias=False),
         nn.ConvTranspose2d(in_chans,
                            out_chans,
                            kernel_size=1,
                            stride=2,
-                           output_padding=(0, 1),
+                           output_padding=(1, 1),
                            bias=False))
 
 
@@ -168,20 +168,6 @@ class HourglassStage(nn.Module):
         super().__init__()
 
         self.softmax = FlatSoftmax()
-        self.hm_predictor = HeatmapPredictor(n_joints, mid_feature_dimension)
-
-    def forward(self, x):
-        out = self.softmax(self.hm_predictor(x))
-
-        return out
-
-
-class MargiPoseStage(nn.Module):
-    def __init__(self, n_joints, mid_feature_dimension, heatmap_space):
-        super().__init__()
-
-        self.softmax = FlatSoftmax()
-        self.hm_predictor = HeatmapPredictor(n_joints, mid_feature_dimension)
 
     def forward(self, x):
         out = self.softmax(self.hm_predictor(x))
@@ -222,6 +208,45 @@ class HourglassModel(nn.Module):
             outs.append(self.hg_stages[t](inp))
 
         return outs
+
+
+class MargiPoseStage(nn.Module):
+    def __init__(self, n_joints, mid_feature_dimension, heatmap_space):
+        super().__init__()
+
+        self.n_joints = n_joints
+        self.softmax = FlatSoftmax()
+        self.heatmap_space = heatmap_space
+        self.down_layers = nn.Sequential(
+            _regular_block(128, 128),
+            _regular_block(128, 128),
+            _down_stride_block(128, 192),
+            _regular_block(192, 192),
+            _regular_block(192, 192),
+        )
+        self.up_layers = nn.Sequential(
+            _regular_block(192, 192),
+            _regular_block(192, 192),
+            _up_stride_block(192, 128),
+            _regular_block(128, 128),
+            _regular_block(128, self.n_joints),
+        )
+
+    def forward(self, *inputs):
+        mid_in = self.down_layers(inputs[0])
+
+        size = mid_in.shape[-1]
+        if self.heatmap_space == 'xy':
+            mid_out = mid_in
+        elif self.heatmap_space == 'zy':
+            mid_out = torch.cat(
+                [t.permute(0, 3, 2, 1) for t in mid_in.split(size, -3)], -3)
+        elif self.heatmap_space == 'xz':
+            mid_out = torch.cat(
+                [t.permute(0, 2, 1, 3) for t in mid_in.split(size, -3)], -3)
+        else:
+            raise Exception()
+        return self.up_layers(mid_out)
 
 
 class MargiPoseModel3D(nn.Module):

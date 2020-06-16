@@ -212,8 +212,8 @@ class DHP3DJointsDataset(DHP19BaseDataset):
 
         self.n_joints = n_joints
         self.normalizer = SkeletonNormaliser()
-        self.height = 260
-        self.width = 346
+        self.height = 256
+        self.width = 256
 
     def _retrieve_2hm_files(labels_dir, file_paths):
         labels_hm = [

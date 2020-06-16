@@ -5,9 +5,14 @@ import torch.nn as nn
 
 from kornia.geometry import render_gaussian2d, spatial_expectation2d
 
-from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap, predict_xyz
+from ..utils import (
+    SoftArgmax2D,
+    average_loss,
+    get_joints_from_heatmap,
+    js_reg_losses,
+    predict_xyz,
+)
 from .metrics import MPJPE
-from .utils import js_reg_losses
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
 

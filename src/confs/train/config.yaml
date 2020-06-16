@@ -3,7 +3,7 @@ defaults:
   - lr_scheduler: step_lr
   - dataset: timecount_pose
   - loss: pixelwiseloss
-  - augmentation: no_aug
+  - augmentation: center_crop
   - training: hourglass
   - hydra: standard
 
