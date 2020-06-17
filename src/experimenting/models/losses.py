@@ -64,21 +64,22 @@ class PixelWiseLoss(nn.Module):
     """
     from https://github.com/anibali/margipose/
     """
-    def __init__(self, reduction='mask_mean'):
+    def __init__(self, reduction='mask_mean', divergence=True):
         super(PixelWiseLoss, self).__init__()
-        self.divergence = js_reg_losses
+        self.divergence = divergence
         self.mpjpe = MPJPE()
         self.sigma = 1
         self.reduction = _get_reduction(reduction)
+        self.divergence = divergence
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
         if type(pred_hm) == tuple:
             pred_hm = pred_hm[0]
         gt_joints = gt_joints.narrow(-1, 0, 2)
         pred_joints = spatial_expectation2d(pred_hm)
-        loss = torch.add(self.mpjpe(pred_joints, gt_joints, gt_mask),
-                         self.divergence(pred_hm, gt_joints, self.sigma))
-
+        loss = self.mpjpe(pred_joints, gt_joints, gt_mask)
+        if self.divergence:
+            loss += js_reg_losses(pred_hm, gt_joints, self.sigma)
         return self.reduction(loss, gt_mask)
 
 
@@ -86,16 +87,15 @@ class MultiPixelWiseLoss(PixelWiseLoss):
     """
     from https://github.com/anibali/margipose
     """
-    def __init__(self, reduction='mask_mean'):
+    def __init__(self, reduction='mask_mean', divergence=True):
         """
         Args:
          reduction (String, optional): only "mask" methods allowed
         """
 
-        super(MultiPixelWiseLoss, self).__init__(reduction)
+        super(MultiPixelWiseLoss, self).__init__(reduction, divergence)
 
     def forward(self, pred_hm, gt_joints, gt_mask=None):
-        loss = 0
 
         pred_xy_hm, pred_zy_hm, pred_xz_hm = pred_hm
 
@@ -109,10 +109,12 @@ class MultiPixelWiseLoss(PixelWiseLoss):
 
         pred_joints = predict_xyz(pred_hm)
 
-        #loss += self.divergence(pred_xy_hm, target_xy, self.sigma)
-        #loss += self.divergence(pred_zy_hm, target_zy, self.sigma)
-        #loss += self.divergence(pred_xz_hm, target_xz, self.sigma)
-        loss += self.mpjpe(pred_joints, gt_joints, gt_mask)
+        loss = self.mpjpe(pred_joints, gt_joints, gt_mask)
+        if self.divergence:
+            loss = loss + js_reg_losses(pred_xy_hm, target_xy, self.sigma)
+            loss = loss + js_reg_losses(pred_zy_hm, target_zy, self.sigma)
+            loss = loss +  js_reg_losses(pred_xz_hm, target_xz, self.sigma)
+
         result = self.reduction(loss, gt_mask)
 
         return result
@@ -147,5 +149,3 @@ def _get_reduction(reduction_type):
     switch = {'mean': torch.mean, 'mask_mean': average_loss, 'sum': torch.sum}
 
     return switch[reduction_type]
-
-# check '/data/dhp19/time_count_dataset/labels_full_joints/S11_session_2_mov_3_frame_386_cam_3_2dhm.npz'
