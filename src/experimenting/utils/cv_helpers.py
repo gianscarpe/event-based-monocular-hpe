@@ -12,13 +12,13 @@ from .dsntnn import dsnt
 __all__ = [
     'decay_heatmap', 'get_heatmaps_steps', 'get_joints_from_heatmap', 'predict_xyz',
     'plot_skeleton_2d', 'plot_skeleton_3d', 'plot_heatmap',
-    'decompose_projection_matrix', 'denormalize_predict',
+    'decompose_projection_matrix', 'denormalize_predict', 'reproject_skeleton', 'plot_3d'
 ]
 
 _normalizer = SkeletonNormaliser()
 
 
-def decay_heatmap(heatmap, sigma2=1):
+def decay_heatmap(heatmap, sigma2=10):
     """
 
     Parameters
@@ -124,13 +124,14 @@ def get_heatmaps_steps(xyz, p_mat, width, height):
 
     u, v, mask = _project_xyz_onto_image(xyz, p_mat, height, width)
     joints = np.stack((v, u), axis=-1)
-    #    hms = _get_heatmap((u, v), mask, height, width, num_joints)
+    num_joints = len(joints)
+    hms = get_heatmap((u, v), mask, height, width, num_joints)
     xyz_cam = _project_xyz_onto_camera_coord(xyz, M)
 
-    return xyz_cam, joints, mask
+    return xyz_cam, joints, mask, hms
 
 
-def _get_heatmap(joints, mask, heigth, width, num_joints):
+def get_heatmap(joints, mask, heigth, width, num_joints=13):
     u, v = joints
     # initialize, fill and smooth the heatmaps
     label_heatmaps = np.zeros((heigth, width, num_joints))
@@ -213,7 +214,7 @@ def predict_xyz(out):
 
 
 def _skeleton_z_ref(skeleton):
-    return skeleton[5, 2]
+    return skeleton[0, 2] - skeleton[-1, 2]
 
 
 def denormalize_predict(pred, height, width, camera):
@@ -276,6 +277,7 @@ def plot_heatmap(img):
     for i in range(img.shape[0]):
         ax[i].imshow(img[i])
         ax[i].axis('off')
+        
     plt.show()
 
 
@@ -402,7 +404,6 @@ def plot_3d(ax,
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
-
     x_limits = limits[0]
     y_limits = limits[1]
     z_limits = limits[2]

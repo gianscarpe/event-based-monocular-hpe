@@ -65,8 +65,8 @@ def _get_datasets(hparams, dataset_type):
 
 
 def _get_classification_datasets(hparams):
-    preprocess_train = get_augmentation(hparams.augmentation_train)
-    preprocess_val = get_augmentation(hparams.augmentation_test)
+    preprocess_train, _ = get_augmentation(hparams.augmentation_train)
+    preprocess_val, _ = get_augmentation(hparams.augmentation_test)
 
     params = get_dataset_params(hparams.dataset)
     file_paths = params['file_paths']
@@ -97,8 +97,8 @@ def _get_classification_datasets(hparams):
 
 
 def _get_joints_datasets(hparams):
-    preprocess_train = get_augmentation(hparams.augmentation_train)
-    preprocess_val = get_augmentation(hparams.augmentation_test)
+    preprocess_train, _ = get_augmentation(hparams.augmentation_train)
+    preprocess_val, _ = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints
     params = get_dataset_params(hparams.dataset)
 
@@ -134,8 +134,8 @@ def _get_joints_datasets(hparams):
 
 
 def _get_3d_joints_datasets(hparams):
-    preprocess_train = get_augmentation(hparams.augmentation_train)
-    preprocess_val = get_augmentation(hparams.augmentation_test)
+    preprocess_train, train_info = get_augmentation(hparams.augmentation_train)
+    preprocess_val, test_info = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints
     params = get_dataset_params(hparams.dataset)
 
@@ -148,21 +148,27 @@ def _get_3d_joints_datasets(hparams):
         'indexes': train_index,
         'transform': preprocess_train,
         'labels_dir': hparams.dataset.joints_dir,
-        'n_joints': n_joints
+        'n_joints': n_joints,
+        'height': train_info.heigth,
+        'width': train_info.width
     }
 
     val_params = {
         'file_paths': file_paths,
         'indexes': val_index,
         'transform': preprocess_val,
-        'labels_dir': hparams.dataset.joints_dir
+        'labels_dir': hparams.dataset.joints_dir,
+        'height': test_info.heigth,
+        'width': test_info.width
     }
 
     test_params = {
         'file_paths': file_paths,
         'indexes': test_index,
         'transform': preprocess_val,
-        'labels_dir': hparams.dataset.joints_dir
+        'labels_dir': hparams.dataset.joints_dir,
+        'height': test_info.heigth,
+        'width': test_info.width
     }
 
     return DHP3DJointsDataset(**train_params), DHP3DJointsDataset(
@@ -170,8 +176,8 @@ def _get_3d_joints_datasets(hparams):
 
 
 def _get_hm_datasets(hparams):
-    preprocess_train = get_augmentation(hparams.augmentation_train)
-    preprocess_val = get_augmentation(hparams.augmentation_test)
+    preprocess_train, _ = get_augmentation(hparams.augmentation_train)
+    preprocess_val, _ = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints
     params = get_dataset_params(hparams.dataset)
 

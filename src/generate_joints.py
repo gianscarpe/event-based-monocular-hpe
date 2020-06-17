@@ -43,10 +43,12 @@ if __name__ == '__main__':
 
         frames = x_h5['XYZ']
         for cam in range(4):
+            M, K = utils.decompose_projection_matrix(p_mats[cam])
             for ind in list(range(len(frames))):
-
-                xyz, joints, mask, camera, M = utils.get_heatmaps(
-                    frames[ind, :], p_mats[cam], width, height)
+                xyz = frames[ind, :]
+                xyz_cam, joints, mask = utils.get_heatmaps(xyz, p_mats[cam],
+                                                           width,
+                                                           height)
 
                 out_filename = frame_path.format(ind, cam)
                 out_path = os.path.join(out_dir, out_filename)
@@ -54,6 +56,7 @@ if __name__ == '__main__':
                 np.savez(out_path,
                          joints=joints,
                          mask=mask,
+                         xyz_cam=xyz_cam,
                          xyz=xyz,
                          M=M,
-                         camera=camera)
+                         camera=K)

@@ -8,6 +8,18 @@ from ..utils import get_file_paths, get_frame_info
 
 
 def get_dataset_params(hparams_dataset):
+    """
+    Get dataset base parameters
+
+    Parameters
+    ----------
+    hparams_dataset :
+        Hydra object from config/dataset
+
+    Returns
+    -------
+    Base params dict for dataset initialization
+    """
     split_at = hparams_dataset.split_at
     save_split = hparams_dataset.save_split
 
@@ -134,10 +146,9 @@ if __name__ == "__main__":
         'labels_dir': args.labels_dir,
         'preload_dir': args.preload_dir,
         'test_subjects': args.test_subjects,
-        'cams': args.cams
+        'cams': args.cams,
+        'split_at': args.split
     })
 
-    PATH = args.dataset_path
-    SPLIT_AT = args.split
-
+    get_dataset_params(hparams)
     print("DONE!")

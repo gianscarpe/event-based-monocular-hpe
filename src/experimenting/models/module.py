@@ -1,11 +1,10 @@
 from os.path import join
 
-import torch
-from sklearn.metrics import accuracy_score, precision_score, recall_score
-
 import hydra
 import pytorch_lightning as pl
+import torch
 from kornia import geometry
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from ..dataset import DatasetType, get_data
 from ..utils import (
@@ -16,12 +15,12 @@ from ..utils import (
     unflatten,
 )
 from .cnns import get_cnn
-from .hourglass import HourglassModel, get_margipose_model
+from .hourglass import HourglassModel
+from .margipose import get_margipose_model
 from .metrics import MPJPE
 
 __all__ = [
-    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator'
-]
+    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator']
 
 
 class BaseModule(pl.LightningModule):
@@ -402,7 +401,7 @@ class MargiposeEstimator(BaseModule):
         for outs in zip(xy_hms, zy_hms, xz_hms):
             loss += self.loss_func(outs, normalized_skeletons, b_masks)
 
-        return loss
+        return loss / len(outs)
 
     def _eval(self, batch):
         b_x, b_y = batch

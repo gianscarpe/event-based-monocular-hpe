@@ -1,5 +1,8 @@
 augmentation_train:
   type: center_crop
+  info:
+    height: 256
+    width: 256
   apply:
     aug1:
         class: albumentations.CenterCrop
@@ -12,6 +15,8 @@ augmentation_train:
 
 augmentation_test:
   type: center_crop
+  height: 256
+  width: 256
   apply:
     aug1:
         class: albumentations.CenterCrop

@@ -1,9 +1,7 @@
-from functools import reduce
 
 import torch
 import torch.nn as nn
-
-from kornia.geometry import render_gaussian2d, spatial_expectation2d
+from kornia.geometry import spatial_expectation2d
 
 from ..utils import (
     SoftArgmax2D,
@@ -27,7 +25,7 @@ class HeatmapLoss(nn.Module):
          reduction (String, optional): only "mask" methods allowed
         """
         super(HeatmapLoss, self).__init__()
-        self.divergence = _js
+        self.divergence = js_reg_losses
         self.reduction = _get_reduction(reduction)
         self.soft_argmax = SoftArgmax2D(window_fn="Uniform")
         self.n_joints = n_joints
@@ -113,36 +111,11 @@ class MultiPixelWiseLoss(PixelWiseLoss):
         if self.divergence:
             loss = loss + js_reg_losses(pred_xy_hm, target_xy, self.sigma)
             loss = loss + js_reg_losses(pred_zy_hm, target_zy, self.sigma)
-            loss = loss +  js_reg_losses(pred_xz_hm, target_xz, self.sigma)
+            loss = loss + js_reg_losses(pred_xz_hm, target_xz, self.sigma)
 
         result = self.reduction(loss, gt_mask)
 
         return result
-
-
-def _divergence(pred_hm, gt_joints, sigma):
-    ndims = 2
-    sigma = torch.tensor([sigma, sigma],
-                         dtype=gt_joints.dtype,
-                         device=pred_hm.device)
-    hm_dim = (pred_hm.shape[2], pred_hm.shape[3])
-
-    gt_hm = render_gaussian2d(gt_joints, sigma, hm_dim)
-    divergence = _js(pred_hm, gt_hm, ndims)
-    return divergence
-
-
-def _kl(p, q, ndims):
-    eps = 1e-24
-    unsummed_kl = p * ((p + eps).log() - (q + eps).log())
-    kl_values = reduce(lambda t, _: t.sum(-1, keepdim=False), range(ndims),
-                       unsummed_kl)
-    return kl_values
-
-
-def _js(p, q, ndims):
-    m = 0.5 * (p + q)
-    return 0.5 * _kl(p, m, ndims) + 0.5 * _kl(q, m, ndims)
 
 
 def _get_reduction(reduction_type):

@@ -12,8 +12,8 @@ from .cv_helpers import decay_heatmap
 
 __all__ = [
     'get_frame_info', 'load_frame', 'load_heatmap', 'get_label_from_filename',
-    'MOVEMENTS_PER_SESSION', 'MAX_CAM_WIDTH', 'MAX_CAM_HEIGHT', 'MAX_X',
-    'MAX_Y', 'MAX_Z', 'N_JOINTS'
+    'MOVEMENTS_PER_SESSION', 'MAX_CAM_WIDTH', 'MAX_CAM_HEIGHT',
+    '_retrieve_2hm_files', 'N_JOINTS'
 ]
 
 
@@ -79,12 +79,17 @@ def load_heatmap(path, n_joints):
     return y
 
 
+def _retrieve_2hm_files(labels_dir, file_paths):
+    labels_hm = [
+        os.path.join(labels_dir,
+                     os.path.basename(x).split('.')[0] + '_2dhm.npz')
+        for x in file_paths
+    ]
+    return labels_hm
+
+
 MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
 MAX_CAM_WIDTH = 346
 MAX_CAM_HEIGHT = 260
-
-MAX_X = 567.88
-MAX_Y = 323.392
-MAX_Z = 2065.62
 
 N_JOINTS = 13

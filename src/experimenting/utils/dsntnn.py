@@ -8,7 +8,7 @@ from operator import mul
 import torch
 import torch.nn.functional
 
-__all__ = ['js_reg_losses', 'dsnt']
+__all__ = ['js_reg_losses', 'dsnt', 'average_loss']
 
 
 def _normalized_linspace(length, dtype=None, device=None):
@@ -96,7 +96,6 @@ def dsnt(heatmaps):
     mu = torch.cat([_coord_expectation(heatmaps, dim).unsqueeze(-1) for dim in dim_range], -1)
     return mu
 
-
 def average_loss(losses, mask=None):
     """Calculate the average of per-location losses.
 
@@ -105,14 +104,14 @@ def average_loss(losses, mask=None):
         mask (Tensor, optional): Mask of points to include in the loss calculation
             (B x L), defaults to including everything
     """
-
     if mask is not None:
         assert mask.size() == losses.size(), 'mask must be the same size as losses'
-        losses = losses * mask
+        losses = losses[mask]
         denom = mask.sum()
     else:
         denom = losses.numel()
 
+    denom = denom.type(torch.float64)
     # Prevent division by zero
     if isinstance(denom, int):
         denom = max(denom, 1)
@@ -120,7 +119,6 @@ def average_loss(losses, mask=None):
         denom = denom.clamp(1)
 
     return losses.sum() / denom
-
 
 def flat_softmax(inp):
     """Compute the softmax with all but the first two tensor dimensions combined."""
