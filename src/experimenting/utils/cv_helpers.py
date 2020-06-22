@@ -1,9 +1,10 @@
-import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+import cv2
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
@@ -125,10 +126,10 @@ def get_heatmaps_steps(xyz, p_mat, width, height):
     u, v, mask = _project_xyz_onto_image(xyz, p_mat, height, width)
     joints = np.stack((v, u), axis=-1)
     num_joints = len(joints)
-    hms = get_heatmap((u, v), mask, height, width, num_joints)
+    #hms = get_heatmap((u, v), mask, height, width, num_joints)
     xyz_cam = _project_xyz_onto_camera_coord(xyz, M)
 
-    return xyz_cam, joints, mask, hms
+    return xyz_cam, joints, mask#, hms
 
 
 def get_heatmap(joints, mask, heigth, width, num_joints=13):

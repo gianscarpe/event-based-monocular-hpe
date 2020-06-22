@@ -7,10 +7,11 @@ from os.path import basename, join
 
 import numpy as np
 import torch
+from torch.utils.data import Dataset
+
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
-from torch.utils.data import Dataset
 
 from ..utils import (
     MAX_CAM_HEIGHT,
@@ -174,7 +175,8 @@ class DHP3DJointsDataset(DHP19BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
-                 height, width,
+                 height,
+                 width,
                  indexes=None,
                  transform=None,
                  n_joints=N_JOINTS):
@@ -188,7 +190,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         self.n_joints = n_joints
         self.normalizer = SkeletonNormaliser()
         self.height = height
-        self.width = height
+        self.width = width
 
     def _get_y(self, idx):
         joints_file = np.load(self.labels[idx])

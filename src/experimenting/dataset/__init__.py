@@ -143,13 +143,14 @@ def _get_3d_joints_datasets(hparams):
     train_index = params['train_indexes']
     val_index = params['val_indexes']
     test_index = params['test_indexes']
+    
     train_params = {
         'file_paths': file_paths,
         'indexes': train_index,
         'transform': preprocess_train,
         'labels_dir': hparams.dataset.joints_dir,
         'n_joints': n_joints,
-        'height': train_info.heigth,
+        'height': train_info.height,
         'width': train_info.width
     }
 
@@ -158,7 +159,7 @@ def _get_3d_joints_datasets(hparams):
         'indexes': val_index,
         'transform': preprocess_val,
         'labels_dir': hparams.dataset.joints_dir,
-        'height': test_info.heigth,
+        'height': test_info.height,
         'width': test_info.width
     }
 
@@ -167,7 +168,7 @@ def _get_3d_joints_datasets(hparams):
         'indexes': test_index,
         'transform': preprocess_val,
         'labels_dir': hparams.dataset.joints_dir,
-        'height': test_info.heigth,
+        'height': test_info.height,
         'width': test_info.width
     }
 

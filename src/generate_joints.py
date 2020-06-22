@@ -46,9 +46,8 @@ if __name__ == '__main__':
             M, K = utils.decompose_projection_matrix(p_mats[cam])
             for ind in list(range(len(frames))):
                 xyz = frames[ind, :]
-                xyz_cam, joints, mask = utils.get_heatmaps(xyz, p_mats[cam],
-                                                           width,
-                                                           height)
+                xyz_cam, joints, mask = utils.get_heatmaps_steps(
+                    xyz, p_mats[cam], width, height)
 
                 out_filename = frame_path.format(ind, cam)
                 out_path = os.path.join(out_dir, out_filename)

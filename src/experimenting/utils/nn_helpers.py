@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import torch
-from kornia.geometry import spatial_softmax2d
 from torch import nn
 from torch.nn import init
 from torch.nn.modules.conv import _ConvNd
+
+from kornia.geometry import spatial_softmax2d
 
 __all__ = ['FlatSoftmax', 'get_feature_extractor', '_regular_block',
            '_up_stride_block', 'init_parameters', '_down_stride_block']
