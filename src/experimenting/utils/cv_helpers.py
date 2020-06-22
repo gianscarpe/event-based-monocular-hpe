@@ -224,7 +224,7 @@ def denormalize_predict(pred, height, width, camera):
     Parameters
     ----------
     pred :
-        joints coordinates as NUM_JOINTSx3
+        joints coordinates as 3xNUM_JOINTS
     height :
         height of frame
     width :
@@ -237,14 +237,13 @@ def denormalize_predict(pred, height, width, camera):
     Denormalized skeleton joints as NUM_JOINTSx3
     """
 
-    # skeelton
-    homog = torch.cat([pred, torch.ones((13, 1), dtype=pred.dtype)], axis=-1)
+    # skeleton
+    homog = torch.cat([pred, torch.ones((13, 1), device=pred.device, dtype=pred.dtype)], axis=-1)
     camera = CameraIntrinsics(camera)
-    z_ref = _normalizer.infer_depth(homog, _skeleton_z_ref, camera, height,
-                                    width)
+    z_ref = _normalizer.infer_depth(homog, _skeleton_z_ref, camera, height,                                    width)
     pred_skeleton = _normalizer.denormalise_skeleton(homog, z_ref, camera,
                                                      height, width)
-    pred_skeleton = pred_skeleton.narrow(-1, 0, 3).numpy().swapaxes(0, 1)
+    pred_skeleton = pred_skeleton.narrow(-1, 0, 3).transpose(0, 1)
     return pred_skeleton
 
 

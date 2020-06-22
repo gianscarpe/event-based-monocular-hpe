@@ -143,7 +143,6 @@ def _get_3d_joints_datasets(hparams):
     train_index = params['train_indexes']
     val_index = params['val_indexes']
     test_index = params['test_indexes']
-    
     train_params = {
         'file_paths': file_paths,
         'indexes': train_index,

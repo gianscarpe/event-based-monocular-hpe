@@ -61,6 +61,7 @@ def get_training_params(cfg: dict):
     torch.autograd.set_detect_anomaly(debug)
     if debug:
         trainer_configuration['overfit_pct'] = 0.01
+        trainer_configuration['']
 
     if cfg.training.early_stopping > 0:
         early_stop_callback = EarlyStopping(

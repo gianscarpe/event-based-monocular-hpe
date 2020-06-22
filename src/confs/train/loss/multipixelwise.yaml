@@ -1,5 +1,5 @@
 loss:
-  class: experimenting.models.losses.MultiPixelWiseLoss
+  cls: experimenting.models.losses.MultiPixelWiseLoss
   params:
     reduction: mask_mean
     divergence: True

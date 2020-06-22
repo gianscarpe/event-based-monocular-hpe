@@ -1,14 +1,16 @@
 from os.path import join
 
+import torch
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
 import hydra
 import pytorch_lightning as pl
-import torch
 from kornia import geometry
-from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from ..dataset import DatasetType, get_data
 from ..utils import (
     average_loss,
+    denormalize_predict,
     flatten,
     get_joints_from_heatmap,
     predict_xyz,
@@ -20,7 +22,8 @@ from .margipose import get_margipose_model
 from .metrics import MPJPE
 
 __all__ = [
-    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator']
+    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator'
+]
 
 
 class BaseModule(pl.LightningModule):
@@ -389,6 +392,26 @@ class MargiposeEstimator(BaseModule):
         xz_hm = outs[2][-1]
         return predict_xyz((xy_hm, zy_hm, xz_hm))
 
+    def get_pred_gt_skeletons(self, outs, b_y):
+        width, height = outs[-1][-1].shape[-2:]
+        normalized_skeletons = self.predict3d(outs)
+
+        gt_skeletons = b_y['skeleton']
+
+        # TODO: normalization is currently CPU only
+        cameras = b_y['camera'].cpu()
+        normalized_skeletons = normalized_skeletons.cpu()
+        pred_skeletons = []
+
+        for i in range(len(normalized_skeletons)):
+            camera = cameras[i]
+            pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
+            pred_skeleton = denormalize_predict(pred_skeleton, width, height,
+                                                camera).transpose(1, 0)
+            pred_skeletons.append(pred_skeleton)
+        return gt_skeletons, torch.stack(pred_skeletons).to(
+            gt_skeletons.device)
+
     def _calculate_loss3d(self, outs, b_y):
         loss = 0
 
@@ -403,18 +426,20 @@ class MargiposeEstimator(BaseModule):
 
         return loss / len(outs)
 
-    def _eval(self, batch):
+    def _eval(self, batch, denormalize=False):
         b_x, b_y = batch
 
         outs = self.forward(b_x)  # cnn output
         loss = self._calculate_loss3d(outs, b_y)
-        pred_joints = self.predict3d(outs)
-        normalized_skeletons = b_y['normalized_skeleton']
         b_masks = b_y['mask']
+        if not denormalize:  # Evaluate normalized and projected preds
+            pred_joints = self.predict3d(outs)
+            gt_joints = b_y['normalized_skeleton']
+        else:  # Evaluate with actual skeletons
+            pred_joints, gt_joints = self.get_pred_gt_skeletons(outs, b_y)
 
         results = {
-            metric_name: metric_function(pred_joints, normalized_skeletons,
-                                         b_masks)
+            metric_name: metric_function(pred_joints, gt_joints, b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
 
@@ -430,7 +455,8 @@ class MargiposeEstimator(BaseModule):
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
-        loss, results = self._eval(batch)
+        loss, results = self._eval(batch,
+                                   denormalize=True)  # Normalized results
         return {"batch_val_loss": loss, **results}
 
     def validation_epoch_end(self, outputs):
@@ -441,7 +467,7 @@ class MargiposeEstimator(BaseModule):
         return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
     def test_step(self, batch, batch_idx):
-        loss, results = self._eval(batch)
+        loss, results = self._eval(batch, denormalize=True)
         return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):

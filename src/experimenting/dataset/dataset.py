@@ -195,7 +195,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
     def _get_y(self, idx):
         joints_file = np.load(self.labels[idx])
 
-        joints = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
+        joints = torch.tensor(joints_file['xyz_cam'].swapaxes(0, 1))
         mask = ~torch.isnan(joints[:, 0])
         joints[~mask] = 0
         skeleton = torch.cat(
