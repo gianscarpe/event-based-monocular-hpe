@@ -5,6 +5,7 @@ training:
   num_workers: 6
   use_lr_scheduler: false
   load_training: false
+  pretrained: false
   module: Classifier
   model: resnet34
   load_path:

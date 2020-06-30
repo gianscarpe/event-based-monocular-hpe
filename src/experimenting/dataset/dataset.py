@@ -85,8 +85,7 @@ class DHP19ClassificationDataset(DHP19BaseDataset):
         self.movements_per_session = movements_per_session
         labels = labels if labels is not None else [
             get_label_from_filename(x_path, movements_per_session)
-            for x_path in file_paths
-        ]
+            for x_path in file_paths]
 
         super(DHP19ClassificationDataset,
               self).__init__(file_paths, labels, x_indexes, transform, False)
@@ -196,8 +195,10 @@ class DHP3DJointsDataset(DHP19BaseDataset):
         joints_file = np.load(self.labels[idx])
 
         joints = torch.tensor(joints_file['xyz_cam'].swapaxes(0, 1))
+        xyz = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
         mask = ~torch.isnan(joints[:, 0])
         joints[~mask] = 0
+        xyz[~mask] = 0
         skeleton = torch.cat(
             [joints,
              torch.ones((self.n_joints, 1), dtype=joints.dtype)],
@@ -205,6 +206,7 @@ class DHP3DJointsDataset(DHP19BaseDataset):
 
         z_ref = joints[4][2]
         camera = torch.tensor(joints_file['camera'])
+        M = torch.tensor(joints_file['M'])
         # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
@@ -216,9 +218,11 @@ class DHP3DJointsDataset(DHP19BaseDataset):
             breakpoint()
 
         label = {
+            'xyz': xyz,
             'skeleton': joints,
             'normalized_skeleton': normalized_skeleton,
             'z_ref': z_ref,
+            'M': M,
             'camera': camera,
             'mask': mask
         }

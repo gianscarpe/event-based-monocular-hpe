@@ -12,4 +12,4 @@ debug: false
 root_dir: /home/gianscarpe/dev
 model_zoo: /data/gscarpellini/model_zoo/timecount/
 resume: false
-load_path: 
+load_path:

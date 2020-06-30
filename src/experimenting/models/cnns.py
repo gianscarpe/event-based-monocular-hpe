@@ -1,7 +1,6 @@
+wimport segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
-
-import segmentation_models_pytorch as smp
 from torchvision import models
 
 from ..utils import FlatSoftmax

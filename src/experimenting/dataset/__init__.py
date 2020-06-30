@@ -24,7 +24,7 @@ def get_data(hparams, dataset_type):
     num_workers = hparams.training.num_workers
 
     train_dataset, val_dataset, test_dataset = _get_datasets(
-        hparams, dataset_type)
+        hparams, dataset_type)    
 
     train_loader = get_dataloader(train_dataset,
                                   batch_size=batch_size,

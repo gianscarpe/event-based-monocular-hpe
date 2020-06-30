@@ -1,19 +1,19 @@
+import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
-import cv2
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 from .dsntnn import dsnt
 
 __all__ = [
-    'decay_heatmap', 'get_heatmaps_steps', 'get_joints_from_heatmap', 'predict_xyz',
-    'plot_skeleton_2d', 'plot_skeleton_3d', 'plot_heatmap',
-    'decompose_projection_matrix', 'denormalize_predict', 'reproject_skeleton', 'plot_3d'
+    'decay_heatmap', 'get_heatmaps_steps', 'get_joints_from_heatmap',
+    'predict_xyz', 'plot_skeleton_2d', 'plot_skeleton_3d', 'plot_heatmap',
+    'decompose_projection_matrix', 'denormalize_predict', 'reproject_skeleton',
+    'plot_3d'
 ]
 
 _normalizer = SkeletonNormaliser()
@@ -125,11 +125,11 @@ def get_heatmaps_steps(xyz, p_mat, width, height):
 
     u, v, mask = _project_xyz_onto_image(xyz, p_mat, height, width)
     joints = np.stack((v, u), axis=-1)
-    num_joints = len(joints)
-    #hms = get_heatmap((u, v), mask, height, width, num_joints)
+
+    # hms = get_heatmap((u, v), mask, height, width, num_joints)
     xyz_cam = _project_xyz_onto_camera_coord(xyz, M)
 
-    return xyz_cam, joints, mask#, hms
+    return xyz_cam, joints, mask  # , hms
 
 
 def get_heatmap(joints, mask, heigth, width, num_joints=13):
@@ -218,13 +218,13 @@ def _skeleton_z_ref(skeleton):
     return skeleton[0, 2] - skeleton[-1, 2]
 
 
-def denormalize_predict(pred, height, width, camera):
+def denormalize_predict(pred, height, width, camera, z_ref=None):
     """
 
     Parameters
     ----------
     pred :
-        joints coordinates as 3xNUM_JOINTS
+        joints coordinates as NUM_JOINTSx3
     height :
         height of frame
     width :
@@ -238,16 +238,20 @@ def denormalize_predict(pred, height, width, camera):
     """
 
     # skeleton
-    homog = torch.cat([pred, torch.ones((13, 1), device=pred.device, dtype=pred.dtype)], axis=-1)
+    homog = torch.cat(
+        [pred, torch.ones((13, 1), device=pred.device, dtype=pred.dtype)],
+        axis=-1)
     camera = CameraIntrinsics(camera)
-    z_ref = _normalizer.infer_depth(homog, _skeleton_z_ref, camera, height,                                    width)
+    if z_ref is None:
+        z_ref = _normalizer.infer_depth(homog, _skeleton_z_ref, camera, height,
+                                        width)
     pred_skeleton = _normalizer.denormalise_skeleton(homog, z_ref, camera,
                                                      height, width)
     pred_skeleton = pred_skeleton.narrow(-1, 0, 3).transpose(0, 1)
     return pred_skeleton
 
 
-def reproject_skeleton(M, joints, inv=-1):
+def reproject_skeleton(M, joints, inv=-1, copy=False):
     """
 
     Parameters
@@ -263,10 +267,11 @@ def reproject_skeleton(M, joints, inv=-1):
     -------
     Skeleton joints reprojected in world coord system
     """
-    j = joints.copy()
-    j[2, :] *= inv
+    if copy:
+        joints = joints.copy()
+    joints[2, :] *= inv
 
-    gt = np.matmul(np.linalg.pinv(M), j)
+    gt = np.matmul(np.linalg.pinv(M), joints)
     gt = gt / gt[3, :]
     gt = gt[:3, :].swapaxes(0, 1)
     return gt
@@ -277,13 +282,12 @@ def plot_heatmap(img):
     for i in range(img.shape[0]):
         ax[i].imshow(img[i])
         ax[i].axis('off')
-        
     plt.show()
 
 
 def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
     """
-    To plot image and 2D ground truth and prediction 
+    To plot image and 2D ground truth and prediction
     Parameters
     ----------
     dvs_frame :
@@ -297,7 +301,6 @@ def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
     -------
 
     """
-    
     plt.figure()
     plt.imshow(dvs_frame, cmap='gray')
     plt.plot(sample_gt[:, 1], sample_gt[:, 0], '.', c='red', label='gt')

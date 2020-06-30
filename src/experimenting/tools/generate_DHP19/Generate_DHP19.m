@@ -4,16 +4,16 @@
 % of constant count frames.
 % Currently, only constant count frame generation is implemented/tested.
 %
-% To import the aedat files here we use a modified version of 
-% ImportAedatDataVersion1or2, to account for the camera index originating 
+% To import the aedat files here we use a modified version of
+% ImportAedatDataVersion1or2, to account for the camera index originating
 % each event.
 %--------------------------------------------------------------------------
 
-% Set the paths of code repository folder, data folder and output folder 
+% Set the paths of code repository folder, data folder and output folder
 % where to generate files of accumulated events.
-rootCodeFolder = '/home/gianscarpe/dev/event-camera/tools'; % root directory of the git repo.
-rootDataFolder = '/home/rslsync/Resilio Sync/DHP19'; % root directory of the data downloaded from resiliosync.
-outDatasetFolder = '/home/gianscarpe/dev/data/dataset';
+rootCodeFolder = '/home/gianscarpe/dev/event-camera/src/experimenting/tools'; % root directory of the git repo.
+rootDataFolder = '/data/rslsync/Resilio Sync/DHP19'; % root directory of the data downloaded from resiliosync.
+outDatasetFolder = '/data/gscarpellini/dataset';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -25,9 +25,9 @@ sy = 260;
 %%%%%%%%%%% PARAMETERS: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Average num of events per camera, for constant count frames.
-eventsPerFrame = 7500; 
+eventsPerFrame = 7500;
 
-% Flag and sizes for subsampling the original DVS resolution.
+% ca% Flag and sizes for subsampling the original DVS resolution.
 % If no subsample, keep (sx,sy) original img size.
 do_subsampling = false;
 reshapex = sx;
@@ -102,13 +102,13 @@ numSessions = 5;
 fileIdx = 0;
 
 display('Start');
-for subj = 8: 8%numSubjects 
+for subj = 1: numSubjects
     subj_string = sprintf('S%d',subj);
     sessionsPath = fullfile(DVSrecFolder, subj_string);
     
-    for sess = 5:numSessions
+    for sess = 1:numSessions
         sessString = sprintf('session%d',sess);
-
+        
         movementsPath = fullfile(sessionsPath, sessString);
         
         if     sess == 1, numMovements = 8;
@@ -118,11 +118,11 @@ for subj = 8: 8%numSubjects
         elseif sess == 5, numMovements = 7;
         end
         
-        for mov = 2:2%1:numMovements
+        for mov = 1:numMovements
             fileIdx = fileIdx+1;
             
-movString = sprintf('mov%d',mov);
-
+            movString = sprintf('mov%d',mov);
+            
             aedatPath = fullfile(movementsPath, strcat(movString, '.aedat'));
             
             % skip iteration if recording is missing.
@@ -134,15 +134,15 @@ movString = sprintf('mov%d',mov);
             
             labelPath = fullfile(viconFolder, strcat(subj_string,'_',num2str(sess),'_',num2str(mov), '.mat'));
             assert(isfile(labelPath)==1);
-
+            
             % name of .h5 output file
             outDVSfile = strcat(subj_string,'_',sessString,'_',movString,'_',num2str(eventsPerFrame),'events');
             
-out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
-					  subj, sess, mov, eventsPerFrame));            
+            out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
+                subj, sess, mov, eventsPerFrame));
             
             
-            % extract and accumulate if the output file is not already 
+            % extract and accumulate if the output file is not already
             % generated and if the input aedat file exists.
             if (not(exist(strcat(out_file,'.h5'), 'file') == 2)) && (exist(aedatPath, 'file') == 2)
                 
@@ -162,7 +162,7 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                         for k = 1:numel(specialEvents)
                             specials_ = [specials_ ' ' num2str(specialEvents(k))];
                         end
-                        fprintf(fileID_specials, '%s \t %s\n', aedatPath, specials_); 
+                        fprintf(fileID_specials, '%s \t %s\n', aedatPath, specials_);
                     end % log_special_events
                     
                     %%% Special events cases: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,10 +170,10 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                     % a) 1 without special event field (S14/session5/mov3)
                     %
                     % b) 2 with just 1 special event:
-                    %    S5/session4/mov2: 
+                    %    S5/session4/mov2:
                     %                     special     1075788910
                     %                     min(events) 1055513693
-                    %                     max(events) 1076195668 
+                    %                     max(events) 1076195668
                     %    S16/session2/mov4:
                     %                     special     278928206
                     %                     min(events) 258344886
@@ -188,10 +188,10 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                     % d) 225 with 3 special events: first two are
                     %    consecutive, the 3rd is the stop special event.
                     %
-                    % e) 2 with 4 special events: 
+                    % e) 2 with 4 special events:
                     %    first 3 are equal, 4th is 1 timestep after the first.
                     %    Same as c)
-                    %    S4/session5/mov7: 
+                    %    S4/session5/mov7:
                     %                     special     149892732(x3), 149892733
                     %                     min(events) 146087513
                     %                     max(events) 170713237
@@ -200,10 +200,10 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                     %                     min(events) 408458645
                     %                     max(events) 429666644
                     %    in both cases the special events are closer to the
-                    %    start of the recording, hence we assume the final 
+                    %    start of the recording, hence we assume the final
                     %    special is missing.
-                    % 
-                    % f) 3 with 5 special events: first 3 (or 4) are equal, 
+                    %
+                    % f) 3 with 5 special events: first 3 (or 4) are equal,
                     %    1 (or 0) right after the first, the last event is the final
                     %    Same as d)
                     %    (S5/session1/mov4, S5/session2/mov4, S5/session3/mov3).
@@ -214,10 +214,10 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                     
                     % use head joint to calculate total number of timesteps
                     % when information is missing from special events.
-                    % 1e4 factor is to go from 100Hz Vicon sampling freq to 
+                    % 1e4 factor is to go from 100Hz Vicon sampling freq to
                     % us DVS temporal resolution.
                     n = length(XYZPOS.XYZPOS.head)*10000;
-
+                    
                     if numSpecialEvents == 0
                         % the field aedat.data.special does not exist
                         % for S14_5_3. There are no other cases.
@@ -246,9 +246,9 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                         if events(end) < events(1)
                             startTime = special;
                             stopTime = max(events);
-                        
-                        
-                        %%% regular case %%%
+                            
+                            
+                            %%% regular case %%%
                         else
                             if (special-events(1)) > (events(end)-special)
                                 % The only event is closer to the end of the recording.
@@ -258,7 +258,7 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                                 startTime = special;
                                 stopTime = floor(startTime + n);
                             end
-                        end 
+                        end
                         
                     elseif (numSpecialEvents == 3) || (numSpecialEvents == 5)
                         % in this case we have at least 2 distant special
@@ -269,14 +269,14 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                     elseif numSpecialEvents > 5
                         % Two recordings with large number of special events.
                         % Corrupted recordings, skipped.
-                        continue 
+                        continue
                     end
-                  
-                catch 
+                    
+                catch
                     % if no special field exists, get first/last regular
                     % events (not tested).
-                    startTime = events(1); 
-                    stopTime = events(end); 
+                    startTime = events(1);
+                    stopTime = events(end);
                     
                     if save_log_special_events
                         disp(strcat("** Field 'special' does not exist: ", aedatPath));
@@ -287,32 +287,31 @@ out_file = fullfile(outputFolder, sprintf('S%d_session_%d_mov_%d_%d_events', ...
                 disp(strcat('Processing file: ',outDVSfile));
                 disp(strcat('Tot num of events in all cameras: ', num2str(eventsPerFrame*nbcam)));
                 %ExtractEventsToFramesAndMeanLabels( ...
-                %ExtractEventsToVoxelAndMeanLabels( ...
-		ExtractLabels( ...
-                        fileID, ...
-                        aedat, ...
-                        events, ...
-                        eventsPerFrame*nbcam, ...
-                        startTime, ...
-                        stopTime, ...
-                        out_file, ...
-                        XYZPOS, ...
-                        sx, ...
-                        sy, ...
-                        nbcam, ...
-                        thrEventHotPixel, ...
-                        dt, ...
-                        xmin_mask1, xmax_mask1, ymin_mask1, ymax_mask1, ...
-                        xmin_mask2, xmax_mask2, ymin_mask2, ymax_mask2, ...
-                        do_subsampling, ...
-                        reshapex, ...
-                        reshapey, ...
-                        saveHDF5, ...
-                        convert_labels)
+                ExtractEventsToVoxelAndMeanLabels( ...
+                    fileID, ...
+                    aedat, ...
+                    events, ...
+                    eventsPerFrame*nbcam, ...
+                    startTime, ...
+                    stopTime, ...
+                    out_file, ...
+                    XYZPOS, ...
+                    sx, ...
+                    sy, ...
+                    nbcam, ...
+                    thrEventHotPixel, ...
+                    dt, ...
+                    xmin_mask1, xmax_mask1, ymin_mask1, ymax_mask1, ...
+                    xmin_mask2, xmax_mask2, ymin_mask2, ymax_mask2, ...
+                    do_subsampling, ...
+                    reshapex, ...
+                    reshapey, ...
+                    saveHDF5, ...
+                    convert_labels)
             else
-                fprintf('%d, File already esists: %s\n', numConvertedFiles, out_file); 
-                numConvertedFiles = numConvertedFiles +1; 
-                 
+                fprintf('%d, File already esists: %s\n', numConvertedFiles, out_file);
+                numConvertedFiles = numConvertedFiles +1;
+                
             end % if file not exist yet condition
         end % loop over movements
     end % loop over sessions

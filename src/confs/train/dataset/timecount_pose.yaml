@@ -1,6 +1,6 @@
 dataset:
   name: timecount_pose
-  base_path: /data/dhp19/time_count_dataset
+  base_path: /data/gscarpellini/dhp19/time_count_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
   hm_dir: ${dataset.base_path}/labels
   joints_dir: ${dataset.base_path}/labels_full_joints
@@ -9,7 +9,8 @@ dataset:
   save_split: false
   split_at: 0.8
   preload_dir : ${dataset.base_path}/preload
-  
+
+  n_classes: 33
   test_subjects: [1, 2, 3, 4, 5]
   cams: [3]
   n_channels: 1

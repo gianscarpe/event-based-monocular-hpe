@@ -6,7 +6,7 @@ Gianluca Scarpellini - gianluca.scarpellini@iit.it
 import os
 
 import numpy as np
-import scipy
+from scipy import io
 
 from .cv_helpers import decay_heatmap
 
@@ -43,8 +43,10 @@ def _get_info_from_string(filename, info, split_symbol='_'):
 
 def load_frame(path):
     ext = os.path.splitext(path)[1]
+
     if ext == '.mat':
-        x = np.swapaxes(scipy.io.loadmat(path)['V3n'], 0, 1)
+        info = get_frame_info(path)
+        x = np.swapaxes(io.loadmat(path)[f'V{info["cam"]+1}n'], 0, 1)
     elif ext == '.npy':
         x = np.load(path) / 255.
         if len(x.shape) == 2:
@@ -52,7 +54,7 @@ def load_frame(path):
     return x
 
 
-def get_label_from_filename(self, filepath, movements_per_session):
+def get_label_from_filename(filepath, movements_per_session):
     """Given the filepath, return the correspondent label E.g. n
     S1_session_2_mov_1_frame_249_cam_2.npy
     """

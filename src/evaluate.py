@@ -5,7 +5,7 @@ import hydra
 import pytorch_lightning as pl
 from omegaconf import DictConfig
 
-from experimenting import Model
+from experimenting import MargiposeEstimator as Model
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,12 +15,13 @@ def main(cfg: DictConfig) -> None:
 
     print(cfg.pretty())
 
-    load_path = cfg.training.load_path
+    load_path = cfg.load_path
     print("Loading from ... ", load_path)
     if (os.path.exists(load_path)):
-        model = Model.load_from_checkpoint(load_path)
+        model = Model
+        .load_from_checkpoint(load_path)
         trainer = pl.Trainer(gpus=1, benchmark=True, weights_summary='top')
-        trainer.fit(model)
+        trainer.test(model)
         print("Model loaded")
 
     else:
