@@ -17,12 +17,14 @@ from ..utils import (
     predict_xyz,
     unflatten,
 )
+from .autoencoder import AutoEncoder
 from .hourglass import HourglassModel
 from .margipose import get_margipose_model
 from .metrics import MPJPE
 
 __all__ = [
-    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator'
+    'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator',
+    'AutoEncoder'
 ]
 
 
@@ -397,11 +399,10 @@ class MargiposeEstimator(BaseModule):
         width, height = outs[-1][-1].shape[-2:]
         normalized_skeletons = self.predict3d(outs)
 
-        gt_skeletons = b_y['xyz']
+        gt_skeletons = b_y['skeleton']
 
-        # TODO: normalization is currently CPU only
+        # TODO: denormalization is currently CPU only
         cameras = b_y['camera'].cpu()
-        # Ms = b_y['M'].cpu().numpy()
         z_refs = b_y['z_ref'].cpu()
         normalized_skeletons = normalized_skeletons.cpu()
         pred_skeletons = []
@@ -413,13 +414,8 @@ class MargiposeEstimator(BaseModule):
             pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
             pred_skeleton = denormalize_predict(pred_skeleton, width, height,
                                                 camera, z_ref)
-            # M = Ms[i]
-            # pred_skeleton = reproject_skeleton(M, pred_skeleton.numpy())
-
             pred_skeletons.append(pred_skeleton)
         pred_skeletons = torch.stack(pred_skeletons).to(gt_skeletons.device)
-        # pred_skeletons =
-        # torch.from_numpy(np.stack(pred_skeletons)).to(gt_skeletons.device)
 
         return gt_skeletons, pred_skeletons
 
@@ -486,5 +482,58 @@ class MargiposeEstimator(BaseModule):
         results = self._get_aggregated_results(outputs, 'test_mean')
 
         logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        return {**logs, 'log': logs, 'progress_bar': logs}
+
+
+class AutoEncoderEstimator(BaseModule):
+    def __init__(self, hparams):
+
+        super(AutoEncoder, self).__init__(hparams,
+                                          DatasetType.AUTOENCODER_DATASET)
+
+    def set_params(self):
+        params = {
+            'n_channels': self._hparams.dataset['n_channels'],
+            'n_classes': self._hparams.dataset['n_classes'],
+            'pretrained': self._hparams.training['pretrained']
+        }
+        self.model = AutoEncoder(self._hparams.training.model, params)
+
+    def training_step(self, batch, batch_idx):
+        b_x = batch
+
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_x)
+
+        logs = {"loss": loss}
+        return {"loss": loss, "log": logs}
+
+    def validation_step(self, batch, batch_idx):
+        b_x = batch
+
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_x)  # cross entropy loss
+
+        return {"batch_val_loss": loss}
+
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
+
+        logs = {'val_loss': avg_loss, 'step': self.current_epoch}
+
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+
+    def test_step(self, batch, batch_idx):
+        b_x = batch
+        output = self.forward(b_x)  # cnn output
+        loss = self.loss_func(output, b_x)  # cross entropy loss
+
+        return {"batch_test_loss": loss}
+
+    def test_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
+
+        logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
         return {**logs, 'log': logs, 'progress_bar': logs}

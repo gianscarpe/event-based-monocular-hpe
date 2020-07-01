@@ -5,6 +5,6 @@ training:
   num_workers: 12
   module: MargiposeEstimator
   model: MargiPoseModel
-  backbone: classification/resnet34.pt
+  backbone:  timecount/classification/resnet34.pt
   stages: 2
   predict_3d: true

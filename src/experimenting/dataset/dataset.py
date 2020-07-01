@@ -26,7 +26,7 @@ from ..utils import (
 
 __all__ = [
     'DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
-    'DHP3DJointsDataset'
+    'DHP3DJointsDataset', 'DHP19AutoEncoderDataset'
 ]
 
 
@@ -85,13 +85,35 @@ class DHP19ClassificationDataset(DHP19BaseDataset):
         self.movements_per_session = movements_per_session
         labels = labels if labels is not None else [
             get_label_from_filename(x_path, movements_per_session)
-            for x_path in file_paths]
+            for x_path in file_paths
+        ]
 
         super(DHP19ClassificationDataset,
               self).__init__(file_paths, labels, x_indexes, transform, False)
 
     def _get_y(self, idx):
         return self.labels[idx]
+
+
+class DHP19AutoEncoderDataset(DHP19BaseDataset):
+    def __init__(self, file_paths, labels=None, indexes=None, transform=None):
+
+        x_indexes = indexes if indexes is not None else np.arange(
+            len(self.x_paths))
+        super(DHP19ClassificationDataset,
+              self).__init__(file_paths, None, x_indexes, transform, False)
+
+    def __getitem__(self, idx):
+        idx = self.x_indexes[idx]
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        x = self._get_x(idx)
+
+        if self.transform:
+            augmented = self.transform(image=x)
+            x = augmented['image']
+        return x
 
 
 class DHPHeatmapDataset(DHP19BaseDataset):

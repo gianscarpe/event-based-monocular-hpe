@@ -10,6 +10,6 @@ defaults:
 gpus: [0]
 debug: false
 root_dir: /home/gianscarpe/dev
-model_zoo: /data/gscarpellini/model_zoo/timecount/
+model_zoo: /data/gscarpellini/model_zoo
 resume: false
 load_path:

@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from ..utils import get_augmentation
 from .dataset import (
     DHP3DJointsDataset,
+    DHP19AutoEncoderDataset,
     DHP19ClassificationDataset,
     DHPHeatmapDataset,
     DHPJointsDataset,
@@ -17,6 +18,7 @@ class DatasetType(Enum):
     HM_DATASET = 1
     JOINTS_DATASET = 2
     JOINTS_3D_DATASET = 3
+    AUTOENCODER_DATASET = 4
 
 
 def get_data(hparams, dataset_type):
@@ -24,7 +26,7 @@ def get_data(hparams, dataset_type):
     num_workers = hparams.training.num_workers
 
     train_dataset, val_dataset, test_dataset = _get_datasets(
-        hparams, dataset_type)    
+        hparams, dataset_type)
 
     train_loader = get_dataloader(train_dataset,
                                   batch_size=batch_size,
@@ -58,7 +60,8 @@ def _get_datasets(hparams, dataset_type):
         DatasetType.CLASSIFICATION_DATASET: _get_classification_datasets,
         DatasetType.HM_DATASET: _get_hm_datasets,
         DatasetType.JOINTS_DATASET: _get_joints_datasets,
-        DatasetType.JOINTS_3D_DATASET: _get_3d_joints_datasets
+        DatasetType.JOINTS_3D_DATASET: _get_3d_joints_datasets,
+        DatasetType.AUTOENCODER_DATASET: _get_ae_datasets
     }
 
     return switch[dataset_type](hparams)
@@ -210,3 +213,35 @@ def _get_hm_datasets(hparams):
 
     return DHPHeatmapDataset(**train_params), DHPHeatmapDataset(
         **val_params), DHPHeatmapDataset(**test_params)
+
+
+def _get_ae_datasets(hparams):
+    preprocess_train, _ = get_augmentation(hparams.augmentation_train)
+    preprocess_val, _ = get_augmentation(hparams.augmentation_test)
+    params = get_dataset_params(hparams.dataset)
+
+    file_paths = params['file_paths']
+    train_index = params['train_indexes']
+    val_index = params['val_indexes']
+    test_index = params['test_indexes']
+
+    train_params = {
+        'file_paths': file_paths,
+        'indexes': train_index,
+        'transform': preprocess_train,
+    }
+
+    val_params = {
+        'file_paths': file_paths,
+        'indexes': val_index,
+        'transform': preprocess_val,
+    }
+
+    test_params = {
+        'file_paths': file_paths,
+        'indexes': test_index,
+        'transform': preprocess_val,
+    }
+
+    return DHP19AutoEncoderDataset(**train_params), DHP19AutoEncoderDataset(
+        **val_params), DHP19AutoEncoderDataset(**test_params)

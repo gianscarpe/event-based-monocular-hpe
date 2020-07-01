@@ -12,8 +12,11 @@ from torchvision import models
 
 __all__ = [
     'FlatSoftmax', 'get_feature_extractor', '_regular_block',
-    '_up_stride_block', 'init_parameters', '_down_stride_block',
-    'get_cnn']
+    '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn'
+]
+
+RESNET34_MID_FEATURES = 128
+RESNET50_MID_FEATURES = 512
 
 
 class FlatSoftmax(nn.Module):
@@ -22,10 +25,6 @@ class FlatSoftmax(nn.Module):
 
     def forward(self, inp):
         return spatial_softmax2d(inp)
-
-
-RESNET34_MID_FEATURES = 128
-RESNET50_MID_FEATURES = 512
 
 
 def _regular_block(in_chans, out_chans):
