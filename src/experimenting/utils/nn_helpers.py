@@ -188,12 +188,10 @@ def _get_unet_resnet(resnet,
     encoder_depth = 3
     decoder_channels = tuple(
         [16 * (2**i) for i in reversed(range(0, int(encoder_depth)))])
-    model: smp.Unet = smp.Unet(resnet,
-                               encoder_weights=encoder_weights,
-                               encoder_depth=encoder_depth,
-                               decoder_channels=decoder_channels,
-                               classes=n_classes,
-                               activation=None)
+    model = smp.Unet(resnet, encoder_weights=encoder_weights,
+                     encoder_depth=encoder_depth,
+                     decoder_channels=decoder_channels,
+                     classes=n_classes, activation=None)
 
     model.encoder.conv1 = nn.Conv2d(n_channels,
                                     64,

@@ -1,0 +1,10 @@
+training:
+  epochs: 100
+  early_stopping: 10
+  batch_size: 32
+  num_workers: 12
+  module: AutoEncoderEstimator
+  model:  resnet34.pt
+  pretrained: true
+  stages: 2
+  latent_size: 128

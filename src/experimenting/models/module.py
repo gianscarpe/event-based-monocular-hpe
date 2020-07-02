@@ -24,7 +24,7 @@ from .metrics import MPJPE
 
 __all__ = [
     'Classifier', 'PoseEstimator', 'HourglassEstimator', 'MargiposeEstimator',
-    'AutoEncoder'
+    'AutoEncoderEstimator'
 ]
 
 
@@ -489,16 +489,16 @@ class MargiposeEstimator(BaseModule):
 class AutoEncoderEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(AutoEncoder, self).__init__(hparams,
-                                          DatasetType.AUTOENCODER_DATASET)
+        super(AutoEncoderEstimator, self).__init__(hparams,
+                                                   DatasetType.AUTOENCODER_DATASET)
 
     def set_params(self):
         params = {
-            'n_channels': self._hparams.dataset['n_channels'],
-            'n_classes': self._hparams.dataset['n_classes'],
-            'pretrained': self._hparams.training['pretrained']
+            'in_channels': self._hparams.dataset['n_channels'],
+            'pretrained': self._hparams.training['pretrained'],
+            'latent_size': self._hparams.training['latent_size'],            
         }
-        self.model = AutoEncoder(self._hparams.training.model, params)
+        self.model = AutoEncoder(**params)
 
     def training_step(self, batch, batch_idx):
         b_x = batch
@@ -537,3 +537,4 @@ class AutoEncoderEstimator(BaseModule):
         logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
         return {**logs, 'log': logs, 'progress_bar': logs}
+<

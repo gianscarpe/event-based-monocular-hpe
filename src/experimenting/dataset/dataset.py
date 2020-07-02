@@ -100,8 +100,9 @@ class DHP19AutoEncoderDataset(DHP19BaseDataset):
 
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
-        super(DHP19ClassificationDataset,
-              self).__init__(file_paths, None, x_indexes, transform, False)
+        super(DHP19AutoEncoderDataset, self).__init__(file_paths, None,
+                                                      x_indexes, transform,
+                                                      False)
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
