@@ -1,3 +1,4 @@
+import os
 from os.path import join
 
 import torch
@@ -13,6 +14,7 @@ from ..utils import (
     denormalize_predict,
     flatten,
     get_cnn,
+    get_feature_extractor,
     get_joints_from_heatmap,
     predict_xyz,
     unflatten,
@@ -58,6 +60,23 @@ class BaseModule(pl.LightningModule):
     def prepare_data(self):
         self.train_loader, self.val_loader, self.test_loader = get_data(
             unflatten(self._hparams), dataset_type=self.dataset_type)
+
+    def _get_feature_extractor(self, model, n_channels, backbone_path,
+                               pretrained):
+        extractor_params = {'n_channels': n_channels, 'model': model}
+
+        if backbone_path is not None and os.path.exists(backbone_path):
+            extractor_params['custom_model_path'] = backbone_path
+        else:
+            if pretrained is not None:
+                extractor_params['pretrained'] = pretrained
+            else:
+                extractor_params['pretrained'] = True
+
+        feature_extractor, mid_dimension = get_feature_extractor(
+            extractor_params)
+
+        return feature_extractor, mid_dimension
 
     def forward(self, x):
         x = self.model(x)
@@ -359,22 +378,23 @@ class MargiposeEstimator(BaseModule):
                                                  DatasetType.JOINTS_3D_DATASET)
 
     def set_params(self):
+
+        in_cnn, mid_dimension = self._get_feature_extractor(
+            self._hparams.training['model'],
+            self._hparams.dataset['n_channels'],
+            join(self._hparams.model_zoo, self._hparams.training.backbone),
+            self._hparams.training['pretrained'])
+
+        params = {
+            'in_cnn': in_cnn,
+            'mid_dimension': mid_dimension,
+            'n_joints': self._hparams.dataset['n_joints'],
+            'n_stages': self._hparams.training['stages'],
+            'predict_3d': True
+        }
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
         self.predict_3d = self._hparams.training.predict_3d
-
-        params = {
-            'n_channels':
-            self._hparams.dataset['n_channels'],
-            'n_joints':
-            self._hparams.dataset['n_joints'],
-            'backbone_path':
-            join(self._hparams.model_zoo, self._hparams.training.backbone),
-            'n_stages':
-            self._hparams.training['stages'],
-            'predict_3d':
-            True
-        }
 
         self.max_x = self._hparams.dataset['max_x']
         self.max_y = self._hparams.dataset['max_y']
@@ -413,7 +433,8 @@ class MargiposeEstimator(BaseModule):
 
             pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
             pred_skeleton = denormalize_predict(pred_skeleton, width, height,
-                                                camera, z_ref).transpose(0, -1)
+                                                camera,
+                                                z_ref).transpose(0, -1)
             pred_skeletons.append(pred_skeleton)
 
         pred_skeletons = torch.stack(pred_skeletons).to(gt_skeletons.device)
@@ -494,9 +515,16 @@ class AutoEncoderEstimator(BaseModule):
               self).__init__(hparams, DatasetType.AUTOENCODER_DATASET)
 
     def set_params(self):
+        in_cnn, mid_dimension = self._get_feature_extractor(
+            self._hparams.training['model'],
+            self._hparams.dataset['n_channels'], None,
+            self._hparams.training['pretrained'])
+
         params = {
             'in_channels': self._hparams.dataset['n_channels'],
-            'pretrained': self._hparams.training['pretrained'],
+            'in_cnn': in_cnn,
+            'mid_dimension': mid_dimension,
+            'up_layers': self._hparams.training['up_layers'],
             'latent_size': self._hparams.training['latent_size'],
         }
         self.model = AutoEncoder(**params)
@@ -523,7 +551,7 @@ class AutoEncoderEstimator(BaseModule):
 
         logs = {'val_loss': avg_loss, 'step': self.current_epoch}
 
-        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs} 
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
     def test_step(self, batch, batch_idx):
         b_x = batch

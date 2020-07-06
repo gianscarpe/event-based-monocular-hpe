@@ -6,7 +6,6 @@ from ..utils import (
     _down_stride_block,
     _regular_block,
     _up_stride_block,
-    get_feature_extractor,
     init_parameters,
 )
 
@@ -52,12 +51,19 @@ class MargiPoseStage(nn.Module):
 
 
 class MargiPoseModel3D(nn.Module):
-    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
+    def __init__(
+        self,
+        n_stages,
+        in_cnn,
+        mid_dimension,
+        n_joints
+    ):
         super().__init__()
 
         self.n_stages = n_stages
-        self.in_cnn, self.mid_feature_dimension = get_feature_extractor(
-            backbone_path)
+
+        self.in_cnn = in_cnn
+        self.mid_feature_dimension = mid_dimension[0]
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()

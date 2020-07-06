@@ -4,8 +4,7 @@ training:
   batch_size: 32
   num_workers: 12
   module: MargiposeEstimator
-  model: MargiPoseModel
-  backbone:
-    timecount/classification/resnet34.pt
+  model: resnet34
+  backbone: timecount/classification/resnet34.pt
   stages: 2
   predict_3d: true
