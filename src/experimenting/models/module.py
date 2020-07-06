@@ -413,8 +413,9 @@ class MargiposeEstimator(BaseModule):
 
             pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
             pred_skeleton = denormalize_predict(pred_skeleton, width, height,
-                                                camera, z_ref)
+                                                camera, z_ref).transpose(0, -1)
             pred_skeletons.append(pred_skeleton)
+
         pred_skeletons = torch.stack(pred_skeletons).to(gt_skeletons.device)
 
         return gt_skeletons, pred_skeletons
@@ -489,14 +490,14 @@ class MargiposeEstimator(BaseModule):
 class AutoEncoderEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(AutoEncoderEstimator, self).__init__(hparams,
-                                                   DatasetType.AUTOENCODER_DATASET)
+        super(AutoEncoderEstimator,
+              self).__init__(hparams, DatasetType.AUTOENCODER_DATASET)
 
     def set_params(self):
         params = {
             'in_channels': self._hparams.dataset['n_channels'],
             'pretrained': self._hparams.training['pretrained'],
-            'latent_size': self._hparams.training['latent_size'],            
+            'latent_size': self._hparams.training['latent_size'],
         }
         self.model = AutoEncoder(**params)
 
@@ -522,7 +523,7 @@ class AutoEncoderEstimator(BaseModule):
 
         logs = {'val_loss': avg_loss, 'step': self.current_epoch}
 
-        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs} 
 
     def test_step(self, batch, batch_idx):
         b_x = batch
@@ -537,4 +538,3 @@ class AutoEncoderEstimator(BaseModule):
         logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
         return {**logs, 'log': logs, 'progress_bar': logs}
-<
