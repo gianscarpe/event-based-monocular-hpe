@@ -52,12 +52,19 @@ class MargiPoseStage(nn.Module):
 
 
 class MargiPoseModel3D(nn.Module):
-    def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
+    def __init__(
+        self,
+        n_stages,
+        feature_extractor,
+        mid_features_dimension,
+        n_joints
+    ):
         super().__init__()
 
         self.n_stages = n_stages
-        self.in_cnn, self.mid_feature_dimension = get_feature_extractor(
-            backbone_path)
+
+        self.in_cnn = feature_extractor
+        self.mid_feature_dimension = mid_features_dimension
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
@@ -154,8 +161,24 @@ class MargiPoseModel2D(MargiPoseModel3D):
         return xy_heatmaps
 
 
+def _get_feature_extractor(params):
+    extractor_params = {'n_channels': params.n_channels}
+    if params.backbone_path is not None and os.exists(params.backbone_path):
+        extractor_params['custom_model_path'] = params.backbone_path
+    elif params.pretrained_imagenet is not None:
+        extractor_params['pretrained'] = params.pretrained_imagenet
+    feature_extractor, mid_features_dimension = get_feature_extractor(
+            extractor_params)
+
+    return feature_extractor, mid_features_dimension
+        
+
 def get_margipose_model(params):
     predict_3d = params.pop('predict_3d')
+    feature_extractor, mid_features_dimension = _get_feature_extractor(params)
+    params['feature_extractor'] = feature_extractor
+    params['mid_features_dimension'] = mid_features_dimension
+
     if predict_3d:
         return MargiPoseModel3D(**params)
     else:

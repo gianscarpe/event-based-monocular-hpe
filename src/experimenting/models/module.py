@@ -16,6 +16,8 @@ from ..utils import (
     get_joints_from_heatmap,
     predict_xyz,
     unflatten,
+    get_feature_extractor
+    
 )
 from .autoencoder import AutoEncoder
 from .hourglass import HourglassModel
@@ -58,6 +60,20 @@ class BaseModule(pl.LightningModule):
     def prepare_data(self):
         self.train_loader, self.val_loader, self.test_loader = get_data(
             unflatten(self._hparams), dataset_type=self.dataset_type)
+
+    def _get_feature_extractor(self, model, n_channels, backbone_path, pretrained):
+        extractor_params = {'n_channels': n_channels, 'model': model}
+
+        if backbone_path is not None and os.exists(backbone_path):
+            extractor_params['custom_model_path'] = backbone_path
+        elif pretrained is not None:
+            extractor_params['pretrained'] = pretrained
+
+        feature_extractor, mid_dimension = get_feature_extractor(
+                extractor_params)
+
+        return feature_extractor, mid_dimension
+
 
     def forward(self, x):
         x = self.model(x)
@@ -493,9 +509,16 @@ class AutoEncoderEstimator(BaseModule):
                                                    DatasetType.AUTOENCODER_DATASET)
 
     def set_params(self):
+        in_cnn, mid_dimension = self._get_feature_extractor(
+            self._hparams.training['model'],
+            self._hparams.dataset['n_channels'], None,
+            self._hparams.training['pretrained'])
+        
         params = {
             'in_channels': self._hparams.dataset['n_channels'],
-            'pretrained': self._hparams.training['pretrained'],
+            'in_cnn': in_cnn,
+            'mid_dimension' : mid_dimension,
+            'up_layers': self._hparams.training['up_layers'],
             'latent_size': self._hparams.training['latent_size'],            
         }
         self.model = AutoEncoder(**params)
@@ -537,4 +560,4 @@ class AutoEncoderEstimator(BaseModule):
         logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
         return {**logs, 'log': logs, 'progress_bar': logs}
-<
+

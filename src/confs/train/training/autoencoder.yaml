@@ -4,7 +4,8 @@ training:
   batch_size: 32
   num_workers: 12
   module: AutoEncoderEstimator
-  model:  resnet34.pt
+  model:  resnet34_cut_256
   pretrained: true
   stages: 2
-  latent_size: 128
+  latent_size: 256
+  up_layers: 4

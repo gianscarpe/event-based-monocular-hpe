@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 
+__all__ = ['ConstantRepresentation', 'VoxelRepresentation']
+
 class Representation:
     def __init__(self, H, W, C, num_events):
         self.H = H
@@ -23,7 +25,7 @@ class Representation:
 
 class ConstantRepresentation(Representation):
     def __init__(self, H, W, num_events):
-        super(ConstantRepresentation, self).__init__(H, W, num_events)
+        super(ConstantRepresentation, self).__init__(H, W, 1, num_events)
 
     def frame_generator(self, events):
         event_count_frame = np.zeros((self.W, self.H))

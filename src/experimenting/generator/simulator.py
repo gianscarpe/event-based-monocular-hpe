@@ -1,6 +1,7 @@
 from esim_py import EventSimulator
 import os
 import numpy as np
+from tqdm import tqdm
 
 class SimulatorWrapper(EventSimulator):
     def __init__(self, Cp, Cn, refractory_period, log_eps, use_log):
@@ -20,7 +21,7 @@ class SimulatorWrapper(EventSimulator):
             events = self.generateFromFolder(imgs_path, ts_path)
             
             # representation yields frame of events
-            for ind, frame in enumerate(representation.frame_generator(events)):
+            for ind, frame in enumerate(tqdm(representation.frame_generator(events))):
                 np.save(os.path.join(events_output_path, f"frame{ind}.npy"), frame)
 
         

@@ -15,10 +15,6 @@ __all__ = [
     '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn'
 ]
 
-RESNET34_MID_FEATURES = 128
-RESNET50_MID_FEATURES = 512
-
-
 class FlatSoftmax(nn.Module):
     def __init__(self):
         super(FlatSoftmax, self).__init__()
@@ -102,26 +98,36 @@ class ResidualBlock(nn.Module):
         return self.module(inputs[0]) + self.shortcut(inputs[0])
 
 
-def get_feature_extractor(model_path):
+    
+def get_feature_extractor(params):
+    if 'n_classes' not in params:
+        params['n_classes'] = 1 # just placehodler
+        
     switch = {
-        'resnet34': _get_resnet34_feature_extactor,
-        'resnet50': _get_resnet50_feature_extactor
+        'resnet34': _get_resnet34_cut_128,
+        'resnet50': _get_resnet50_feature_extactor,
+        'resnet34_cut_256': _get_resnet34_cut_256,
+        'resnet34_cut_512': _get_resnet34_cut_512,        
     }
 
-    model_name = Path(model_path).with_suffix('').name
-
-    return switch[model_name](model_path)
+    return switch[params['model']](params)
 
 
-def _get_resnet34_feature_extactor(model_path):
-    try:
-        resnet = torch.load(model_path)
-    except:
+def _load_resnet34(params):
+    if 'custom_model_path' in params:
+        resnet = torch.load(params['custom_model_path'])
+    else:
         resnet = get_cnn('resnet34', {
-            'n_channels': 4,
-            'n_classes': 1,
-            'pretrained': True
+            'n_channels': params['n_channels'],
+            'pretrained': params['pretrained'],
+            'n_classes' : params['n_classes']
         })
+    return resnet
+
+
+def _get_resnet34_cut_128(params):
+    
+    resnet = _load_resnet34(params)
     net = nn.Sequential(
         resnet.conv1,
         resnet.bn1,
@@ -130,7 +136,41 @@ def _get_resnet34_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    return net, RESNET34_MID_FEATURES
+    mid_dimension = (_get_resnet_layer_channels(net[-1]), 32, 32)
+    return net, mid_dimension
+
+
+def _get_resnet34_cut_256(params):
+    resnet = _load_resnet34(params)
+    net = nn.Sequential(
+        resnet.conv1,
+        resnet.bn1,
+        resnet.relu,
+        resnet.maxpool,
+        resnet.layer1,
+        resnet.layer2,
+        resnet.layer3
+    )
+    mid_dimension = (_get_resnet_layer_channels(net[-1]), 16, 16)
+
+    return net, mid_dimension
+
+
+def _get_resnet34_cut_512(params):
+    resnet = _load_resnet34(params)
+    net = nn.Sequential(
+        resnet.conv1,
+        resnet.bn1,
+        resnet.relu,
+        resnet.maxpool,
+        resnet.layer1,
+        resnet.layer2,
+        resnet.layer3,
+        resnet.layer4
+    )
+    mid_dimension = (_get_resnet_layer_channels(net[-1]), 8, 8)
+
+    return net, mid_dimension
 
 
 def _get_resnet50_feature_extactor(model_path):
@@ -144,7 +184,7 @@ def _get_resnet50_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    return net, RESNET50_MID_FEATURES
+    return net, _get_resnet_layer_channels(net[-1])
 
 
 def _get_mobilenetv2(n_channels, n_classes, pretrained=False):
@@ -316,3 +356,7 @@ def get_cnn(model_name, params):
         'dhp19': _get_dhp19_model
     }
     return switcher[model_name](**params)
+
+
+def _get_resnet_layer_channels(layer):
+    return layer[-1].bn2.num_features
