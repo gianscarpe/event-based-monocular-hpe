@@ -155,8 +155,12 @@ def fit(cfg) -> pl.Trainer:
     trainer_configuration = get_training_params(cfg)
     if cfg.load_path:
         print('Loading training')
+        checkpoint_dir = cfg.load_path
+        checkpoints = sorted(os.listdir(checkpoint_dir))
+        checkpoint_path = os.path.join(checkpoint_dir, checkpoints[0])
+        print(f'Loading {checkpoint_path} ...')
         model = getattr(models, cfg.training.module).load_from_checkpoint(
-            cfg.load_path)
+            checkpoint_path)
     else:
         model = getattr(models, cfg.training.module)(cfg)
 
