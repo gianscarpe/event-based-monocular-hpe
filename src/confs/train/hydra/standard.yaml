@@ -1,4 +1,4 @@
-exp_dir: exps_${training.model}/
+exp_dir: exps_${training.module}/
 exp_name: exp_${optimizer.type}_${optimizer.params.lr}_${augmentation_train.type}
 
 hydra:
