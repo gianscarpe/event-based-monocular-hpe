@@ -88,7 +88,7 @@ class Upsampler:
     def upsample_sequence(self, sequence: Sequence, dest_imgs_dir: str, dest_timestamps_filepath: str):
         os.makedirs(dest_imgs_dir, exist_ok=True)
         timestamps_list = list()
-
+        
         idx = 0
         for img_pair, time_pair in tqdm(next(sequence), total=len(sequence), desc=type(sequence).__name__):
             img_pair = self._move_to_device(img_pair, self.device)

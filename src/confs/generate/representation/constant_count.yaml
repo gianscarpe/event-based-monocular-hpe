@@ -1,5 +1,5 @@
 representation:
-  class: experimenting.generator.ConstantRepresentation
+  cls: experimenting.generator.ConstantRepresentation
   params:
     W: 346
     H: 260

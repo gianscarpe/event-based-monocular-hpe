@@ -6,6 +6,18 @@ import hydra
 from omegaconf import DictConfig, ListConfig
 
 
+def get_files_paths_in_subtree(path, extensions):
+    video_files = []
+    extension_regex = "|".join(extensions)
+
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            if re.search(r'({})$'.format(extension_regex), f):
+                video_files.append(os.path.join(root, f))
+
+    return sorted(video_files)
+
+
 def get_file_paths(path, extensions):
     extension_regex = "|".join(extensions)
     print(extension_regex)
