@@ -1,5 +1,5 @@
 vid2e:
-  class: experimenting.generator.SimulatorWrapper
+  cls: experimenting.generator.SimulatorWrapper
   params:
     Cp: 0.1
     Cn: 0.1

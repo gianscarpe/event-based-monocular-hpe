@@ -2,7 +2,7 @@ import os
 
 from .extractor import extract_frames
 from .upsample import upsample
-from .representations import *w
+from .representations import *
 from .simulator import SimulatorWrapper
 
 # Must be set before importing torch.

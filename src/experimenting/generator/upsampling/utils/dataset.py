@@ -38,12 +38,14 @@ class ImageSequence(Sequence):
         assert self.file_names
         self.file_names.sort()
 
+
     @classmethod
     def _is_img_file(cls, path: str):
         return Path(path).suffix.lower() in img_formats
 
     def __next__(self):
         for idx in range(0, len(self.file_names) - 1):
+
             file_paths = self._get_path_from_name([self.file_names[idx], self.file_names[idx + 1]])
             imgs = list()
             for file_path in file_paths:

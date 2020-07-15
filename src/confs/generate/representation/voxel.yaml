@@ -1,5 +1,5 @@
 representation:
-  class: experimenting.generator.VoxelRepresentation
+  cls: experimenting.generator.VoxelRepresentation
   params:
     W: 346
     H: 260
