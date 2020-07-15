@@ -16,7 +16,7 @@ from .. import models
 
 logging.basicConfig(level=logging.INFO)
 
-__all__ = ['get_training_params', 'load_model', 'fit', 'get_hypersearch_cfg']
+__all__ = ['get_training_params', 'load_model', 'fit', 'get_hypersearch_cfg', 'dhp19_evaluate_procedure']
 
 
 def get_training_params(cfg: dict):
@@ -171,3 +171,17 @@ def fit(cfg) -> pl.Trainer:
     except Exception as ex:
         _safe_train_end(trainer_configuration)
         raise (ex)
+
+def dhp19_evaluate_procedure(cfg):
+    load_path = cfg.load_path
+    print("Loading from ... ", load_path)
+    if (os.path.exists(load_path)):
+        model = getattr(models, cfg.training.module).load_from_checkpoint(
+            cfg.load_path)
+    for movement in range(1, 34):
+        model._hparams.dataset.test_movements = [movement]
+        print(f"Movement {movement}")
+        trainer = pl.Trainer(gpus=cfg['gpus'], benchmark=True, weights_summary='top')
+        trainer.test(model)
+    else:
+        print(f"Error loading, {load_path} does not exist!")

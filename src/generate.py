@@ -1,10 +1,9 @@
 import os
 
-import hydra
-from omegaconf import DictConfig
-
 import experimenting.generator as generator
+import hydra
 from experimenting.utils import get_file_paths
+from omegaconf import DictConfig
 
 
 @hydra.main(config_path='./confs/generate/config.yaml')
@@ -24,8 +23,9 @@ def main(cfg: DictConfig) -> None:
     representation = hydra.utils.instantiate(cfg.representation)
     if extract:
         print("Extract RGB frames from videos")
-        generator.extract_frames(video_files, representation.get_size(),
-                                 tmp_frames_dir)
+        breakpoint()
+#        generator.extract_frames(video_files, representation.get_size(),
+#                                 tmp_frames_dir)
         generator.upsample(tmp_frames_dir, tmp_upsample_dir)
         print("Extraction completed")
 

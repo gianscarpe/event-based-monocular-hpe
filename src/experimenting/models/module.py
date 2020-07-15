@@ -8,7 +8,7 @@ import hydra
 import pytorch_lightning as pl
 from kornia import geometry
 
-from ..dataset import DatasetType, get_data
+from ..dataset import DatasetType, get_dataloader, get_datasets
 from ..utils import (
     average_loss,
     denormalize_predict,
@@ -58,8 +58,8 @@ class BaseModule(pl.LightningModule):
             self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
-        self.train_loader, self.val_loader, self.test_loader = get_data(
-            unflatten(self._hparams), dataset_type=self.dataset_type)
+        self.train_dataset, self.val_dataset, self.test_dataset = get_datasets(
+            self._hparams, dataset_type=self.dataset_type)
 
     def _get_feature_extractor(self, model, n_channels, backbone_path,
                                pretrained):
@@ -83,13 +83,22 @@ class BaseModule(pl.LightningModule):
         return x
 
     def train_dataloader(self):
-        return self.train_loader
+        return get_dataloader(self.train_dataset,
+                              self._hparams.training['batch_size'],
+                              shuffle=True,
+                              num_workers=self._hparams.training.num_workers)
 
     def val_dataloader(self):
-        return self.val_loader
+        return get_dataloader(self.val_dataset,
+                              self._hparams.training['batch_size'],
+                              shuffle=False,
+                              num_workers=self._hparams.training.num_workers)
 
     def test_dataloader(self):
-        return self.test_loader
+        return get_dataloader(self.test_dataset,
+                              self._hparams.training['batch_size'],
+                              shuffle=False,
+                              num_workers=self._hparams.training.num_workers)
 
     def configure_optimizers(self):
         optimizer = getattr(torch.optim, self.optimizer_config['type'])(

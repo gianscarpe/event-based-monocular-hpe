@@ -15,6 +15,7 @@ __all__ = [
     '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn'
 ]
 
+
 class FlatSoftmax(nn.Module):
     def __init__(self):
         super(FlatSoftmax, self).__init__()
@@ -98,17 +99,19 @@ class ResidualBlock(nn.Module):
         return self.module(inputs[0]) + self.shortcut(inputs[0])
 
 
-    
 def get_feature_extractor(params):
-    if 'n_classes' not in params:
-        params['n_classes'] = 1 # just placehodler
-        
     switch = {
         'resnet34': _get_resnet34_cut_128,
         'resnet50': _get_resnet50_feature_extactor,
         'resnet34_cut_256': _get_resnet34_cut_256,
-        'resnet34_cut_512': _get_resnet34_cut_512,        
+        'resnet34_cut_512': _get_resnet34_cut_512,
     }
+
+    if 'n_classes' not in params:
+        params['n_classes'] = 1  # just placehodler
+
+    if params['model'] not in switch:
+        params['model'] = 'resnet34'
 
     return switch[params['model']](params)
 
@@ -117,16 +120,17 @@ def _load_resnet34(params):
     if 'custom_model_path' in params:
         resnet = torch.load(params['custom_model_path'])
     else:
-        resnet = get_cnn('resnet34', {
-            'n_channels': params['n_channels'],
-            'pretrained': params['pretrained'],
-            'n_classes' : params['n_classes']
-        })
+        resnet = get_cnn(
+            'resnet34', {
+                'n_channels': params['n_channels'],
+                'pretrained': params['pretrained'],
+                'n_classes': params['n_classes']
+            })
     return resnet
 
 
 def _get_resnet34_cut_128(params):
-    
+
     resnet = _load_resnet34(params)
     net = nn.Sequential(
         resnet.conv1,
@@ -142,15 +146,8 @@ def _get_resnet34_cut_128(params):
 
 def _get_resnet34_cut_256(params):
     resnet = _load_resnet34(params)
-    net = nn.Sequential(
-        resnet.conv1,
-        resnet.bn1,
-        resnet.relu,
-        resnet.maxpool,
-        resnet.layer1,
-        resnet.layer2,
-        resnet.layer3
-    )
+    net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
+                        resnet.layer1, resnet.layer2, resnet.layer3)
     mid_dimension = (_get_resnet_layer_channels(net[-1]), 16, 16)
 
     return net, mid_dimension
@@ -158,16 +155,9 @@ def _get_resnet34_cut_256(params):
 
 def _get_resnet34_cut_512(params):
     resnet = _load_resnet34(params)
-    net = nn.Sequential(
-        resnet.conv1,
-        resnet.bn1,
-        resnet.relu,
-        resnet.maxpool,
-        resnet.layer1,
-        resnet.layer2,
-        resnet.layer3,
-        resnet.layer4
-    )
+    net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
+                        resnet.layer1, resnet.layer2, resnet.layer3,
+                        resnet.layer4)
     mid_dimension = (_get_resnet_layer_channels(net[-1]), 8, 8)
 
     return net, mid_dimension
@@ -228,10 +218,12 @@ def _get_unet_resnet(resnet,
     encoder_depth = 3
     decoder_channels = tuple(
         [16 * (2**i) for i in reversed(range(0, int(encoder_depth)))])
-    model = smp.Unet(resnet, encoder_weights=encoder_weights,
+    model = smp.Unet(resnet,
+                     encoder_weights=encoder_weights,
                      encoder_depth=encoder_depth,
                      decoder_channels=decoder_channels,
-                     classes=n_classes, activation=None)
+                     classes=n_classes,
+                     activation=None)
 
     model.encoder.conv1 = nn.Conv2d(n_channels,
                                     64,

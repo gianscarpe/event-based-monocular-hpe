@@ -2,6 +2,7 @@ import argparse
 import os
 
 import numpy as np
+
 from omegaconf import DictConfig
 
 from ..utils import get_file_paths, get_frame_info
@@ -30,7 +31,10 @@ def get_dataset_params(hparams_dataset):
                                               hparams_dataset.cams)
 
         data_index, test_index = _get_train_test_split(
-            file_paths, hparams_dataset.test_subjects)
+            file_paths,
+            subjects=hparams_dataset.test_subjects,
+            movements=hparams_dataset['test_movements'])
+
         train_index, val_index = _split_set(data_index, split_at=split_at)
 
         params = {
@@ -46,14 +50,22 @@ def get_dataset_params(hparams_dataset):
     return params
 
 
-def _get_train_test_split(file_paths, subjects=None):
+def _get_train_test_split(file_paths, movements=None, subjects=None):
     if subjects is None:
-        subjects = [1, 8, 14, 17]
+        subjects = [1, 2, 3, 4, 5]
+
+    if movements is None or movements == 'all':
+        movements = range(1, 34)
+
+    def get_cond_func():
+        return lambda x: get_frame_info(x)[
+            'subject'] in subjects and get_frame_info(x)['mov'] in movements
 
     data_indexes = np.arange(len(file_paths))
-    test_subject_indexes_mask = [
-        get_frame_info(x)['subject'] in subjects for x in file_paths
-    ]
+
+    cond_func = get_cond_func()
+    test_subject_indexes_mask = [cond_func(x) for x in file_paths]
+
     test_index = data_indexes[test_subject_indexes_mask]
     train_index = data_indexes[~np.in1d(data_indexes, test_index)]
 

@@ -25,7 +25,7 @@ def get_data(hparams, dataset_type):
     batch_size = hparams.training['batch_size']
     num_workers = hparams.training.num_workers
 
-    train_dataset, val_dataset, test_dataset = _get_datasets(
+    train_dataset, val_dataset, test_dataset = get_datasets(
         hparams, dataset_type)
 
     train_loader = get_dataloader(train_dataset,
@@ -55,7 +55,7 @@ def get_dataloader(dataset, batch_size, num_workers, shuffle=True):
     return loader
 
 
-def _get_datasets(hparams, dataset_type):
+def get_datasets(hparams, dataset_type):
     switch = {
         DatasetType.CLASSIFICATION_DATASET: _get_classification_datasets,
         DatasetType.HM_DATASET: _get_hm_datasets,
@@ -137,6 +137,7 @@ def _get_joints_datasets(hparams):
 
 
 def _get_3d_joints_datasets(hparams):
+
     preprocess_train, train_info = get_augmentation(hparams.augmentation_train)
     preprocess_val, test_info = get_augmentation(hparams.augmentation_test)
     n_joints = hparams.dataset.n_joints

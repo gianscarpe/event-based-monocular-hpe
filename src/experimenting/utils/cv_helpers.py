@@ -1,9 +1,10 @@
-import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+import cv2
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
@@ -273,7 +274,7 @@ def reproject_skeleton(M, joints, inv=-1, copy=False):
 
     gt = np.matmul(np.linalg.pinv(M), joints)
     gt = gt / gt[3, :]
-    gt = gt[:3, :].swapaxes(0, 1)
+    gt = gt[:3, :]
     return gt
 
 
