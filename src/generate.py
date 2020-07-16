@@ -1,3 +1,4 @@
+
 import os
 
 from tqdm import tqdm
@@ -5,17 +6,6 @@ from tqdm import tqdm
 import experimenting.generator as generator
 import hydra
 from omegaconf import DictConfig
-
-
-def _get_mpii_video_files(input_dir):
-    video_files = []
-    for root, dirs, files in os.walk(input_dir):
-        for f in files:
-            base_dir = os.path.split(root)[-1]
-            if f.endswith('.avi') and base_dir == 'imageSequence':
-                video_files.append(os.path.join(root, f))
-
-    return video_files
 
 
 @hydra.main(config_path='./confs/generate/config.yaml')
