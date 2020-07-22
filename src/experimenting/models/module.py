@@ -8,7 +8,14 @@ import hydra
 import pytorch_lightning as pl
 from kornia import geometry
 
-from ..dataset import DatasetType, get_dataloader, get_datasets
+from ..dataset import (
+    AutoEncoderConstructor,
+    ClassificationConstructor,
+    HeatmapConstructor,
+    Joints3DConstructor,
+    JointsConstructor,
+    get_dataloader,
+)
 from ..utils import (
     average_loss,
     denormalize_predict,
@@ -31,14 +38,13 @@ __all__ = [
 
 
 class BaseModule(pl.LightningModule):
-    def __init__(self, hparams, dataset_type):
+    def __init__(self, hparams, dataset_constructor):
         """
         Initialize Classifier model
         """
 
         super(BaseModule, self).__init__()
-        self.dataset_type = dataset_type
-
+        self.dataset_constructor = dataset_constructor
         self.hparams = flatten(hparams)
         self._hparams = unflatten(hparams)
 
@@ -58,8 +64,8 @@ class BaseModule(pl.LightningModule):
             self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
-        self.train_dataset, self.val_dataset, self.test_dataset = get_datasets(
-            self._hparams, dataset_type=self.dataset_type)
+        datasets = self.dataset_constructor.get_datasets()
+        self.train_dataset, self.val_dataset, self.test_dataset = datasets
 
     def _get_feature_extractor(self, model, n_channels, backbone_path,
                                pretrained):
@@ -135,8 +141,7 @@ class Classifier(BaseModule):
         Initialize Classifier model
         """
 
-        super(Classifier, self).__init__(hparams,
-                                         DatasetType.CLASSIFICATION_DATASET)
+        super(Classifier, self).__init__(hparams, ClassificationConstructor(hparams))
 
     def set_params(self):
         params = {
@@ -219,7 +224,7 @@ class Classifier(BaseModule):
 
 class PoseEstimator(BaseModule):
     def __init__(self, hparams):
-        super(PoseEstimator, self).__init__(hparams, DatasetType.HM_DATASET)
+        super(PoseEstimator, self).__init__(hparams, HeatmapConstructor(hparams))
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
@@ -292,8 +297,7 @@ class PoseEstimator(BaseModule):
 class HourglassEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(HourglassEstimator, self).__init__(hparams,
-                                                 DatasetType.JOINTS_DATASET)
+        super(HourglassEstimator, self).__init__(hparams, JointsConstructor(hparams))
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
@@ -383,8 +387,7 @@ class HourglassEstimator(BaseModule):
 class MargiposeEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(MargiposeEstimator, self).__init__(hparams,
-                                                 DatasetType.JOINTS_3D_DATASET)
+        super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor(hparams))
 
     def set_params(self):
 
@@ -520,8 +523,8 @@ class MargiposeEstimator(BaseModule):
 class AutoEncoderEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(AutoEncoderEstimator,
-              self).__init__(hparams, DatasetType.AUTOENCODER_DATASET)
+        super(AutoEncoderEstimator, self).__init__(hparams,
+                                                   AutoEncoderConstructor(hparams))
 
     def set_params(self):
         in_cnn, mid_dimension = self._get_feature_extractor(
@@ -548,6 +551,7 @@ class AutoEncoderEstimator(BaseModule):
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
+        breakpoint()
         b_x = batch
 
         output = self.forward(b_x)  # cnn output
