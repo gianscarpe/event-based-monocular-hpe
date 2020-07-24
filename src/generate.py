@@ -54,7 +54,7 @@ def main(cfg: DictConfig):
 
     print(with_errors)
     print("Simulation end")
-    with open(os.path.join(tmp_dir, 'errors.txt')) as error_files:
+    with open(os.path.join(tmp_dir, 'errors.txt'), "w") as error_files:
         error_files.write(with_errors)
 
 

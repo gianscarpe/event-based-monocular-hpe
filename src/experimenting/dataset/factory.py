@@ -3,12 +3,12 @@ from abc import ABC
 from ..utils import get_augmentation
 from .dataset import (
     DHP3DJointsDataset,
-    DHP19AutoEncoderDataset,
-    DHP19ClassificationDataset,
+    AutoEncoderDataset,
+    ClassificationDataset,
     DHPHeatmapDataset,
     DHPJointsDataset,
 )
-from .params_utils import get_dataset_params
+from .params_utils import DHP19Params
 
 __all__ = [
     'ClassificationConstructor', 'AutoEncoderConstructor',
@@ -18,11 +18,29 @@ __all__ = [
 
 class BaseConstructor(ABC):
     def __init__(self, hparams, dataset_class):
+
+        self.params = DHP19Params(hparams.dataset)
         self.dataset_class = dataset_class
         self.train_params = {}
         self.val_params = {}
         self.test_params = {}
-        self.set_base(hparams)
+
+        preprocess_train, self.train_aug_info = get_augmentation(
+            hparams.augmentation_train)
+        preprocess_val, self.val_aug_info = get_augmentation(
+            hparams.augmentation_test)
+
+        self._set_for_all('file_paths', self.params.file_paths)
+        self._set_for_train('indexes', self.params.train_indexes)
+        self._set_for_val('indexes', self.params.val_indexes)
+        self._set_for_test('indexes', self.params.test_indexes)
+
+        self._set_for_train('transform', preprocess_train)
+        self._set_for_val('transform', preprocess_val)
+        self._set_for_test('transform', preprocess_val)
+
+    def get_params(self, hparams):
+        pass
 
     def _set_for_all(self, key, value):
         self._set_for_train(key, value)
@@ -38,22 +56,6 @@ class BaseConstructor(ABC):
     def _set_for_test(self, key, value):
         self.test_params[key] = value
 
-    def set_base(self, hparams):
-        preprocess_train, self.train_aug_info = get_augmentation(
-            hparams.augmentation_train)
-        preprocess_val, self.val_aug_info = get_augmentation(
-            hparams.augmentation_test)
-
-        self.params = get_dataset_params(hparams.dataset)
-        self._set_for_all('file_paths', self.params['file_paths'])
-        self._set_for_train('indexes', self.params['train_indexes'])
-        self._set_for_val('indexes', self.params['val_indexes'])
-        self._set_for_test('indexes', self.params['test_indexes'])
-
-        self._set_for_train('transform', preprocess_train)
-        self._set_for_val('transform', preprocess_val)
-        self._set_for_test('transform', preprocess_val)
-
     def get_datasets(self):
         return self.dataset_class(**self.train_params), self.dataset_class(
             **self.val_params), self.dataset_class(**self.test_params)
@@ -64,10 +66,9 @@ class ClassificationConstructor(BaseConstructor):
         super(ClassificationConstructor, self).__init__(hparams)
 
     def get_datasets(self):
-        return DHP19ClassificationDataset(
-            **self.train_params), DHP19ClassificationDataset(
-                **self.val_params), DHP19ClassificationDataset(
-                    **self.test_params)
+        return ClassificationDataset(
+            **self.train_params), ClassificationDataset(
+                **self.val_params), ClassificationDataset(**self.test_params)
 
 
 class JointsConstructor(BaseConstructor):
@@ -102,7 +103,4 @@ class HeatmapConstructor(BaseConstructor):
 class AutoEncoderConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(AutoEncoderConstructor, self).__init__(hparams,
-                                                     DHP19AutoEncoderDataset)
-
-        self._set_for_all('n_joints', hparams.dataset.n_joints)
-        self._set_for_all('labels_dir', hparams.dataset.joints_dir)
+                                                     AutoEncoderDataset)

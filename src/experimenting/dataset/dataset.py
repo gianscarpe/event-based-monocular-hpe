@@ -25,12 +25,12 @@ from ..utils import (
 )
 
 __all__ = [
-    'DHP19ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
-    'DHP3DJointsDataset', 'DHP19AutoEncoderDataset'
+    'ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
+    'DHP3DJointsDataset', 'AutoEncoderDataset'
 ]
 
 
-class DHP19BaseDataset(Dataset):
+class BaseDataset(Dataset):
     def __init__(self,
                  file_paths,
                  labels=None,
@@ -72,7 +72,7 @@ class DHP19BaseDataset(Dataset):
         return x, y
 
 
-class DHP19ClassificationDataset(DHP19BaseDataset):
+class ClassificationDataset(BaseDataset):
     def __init__(self,
                  file_paths,
                  labels=None,
@@ -88,19 +88,19 @@ class DHP19ClassificationDataset(DHP19BaseDataset):
             for x_path in file_paths
         ]
 
-        super(DHP19ClassificationDataset,
+        super(ClassificationDataset,
               self).__init__(file_paths, labels, x_indexes, transform, False)
 
     def _get_y(self, idx):
         return self.labels[idx]
 
 
-class DHP19AutoEncoderDataset(DHP19BaseDataset):
+class AutoEncoderDataset(BaseDataset):
     def __init__(self, file_paths, labels=None, indexes=None, transform=None):
 
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
-        super(DHP19AutoEncoderDataset, self).__init__(file_paths, None,
+        super(AutoEncoderDataset, self).__init__(file_paths, None,
                                                       x_indexes, transform,
                                                       False)
 
@@ -117,7 +117,7 @@ class DHP19AutoEncoderDataset(DHP19BaseDataset):
         return x
 
 
-class DHPHeatmapDataset(DHP19BaseDataset):
+class DHPHeatmapDataset(BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
@@ -140,7 +140,7 @@ class DHPHeatmapDataset(DHP19BaseDataset):
         return load_heatmap(joints_file, self.n_joints)
 
 
-class DHPJointsDataset(DHP19BaseDataset):
+class DHPJointsDataset(BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
@@ -193,7 +193,7 @@ class DHPJointsDataset(DHP19BaseDataset):
         return x, y, mask
 
 
-class DHP3DJointsDataset(DHP19BaseDataset):
+class DHP3DJointsDataset(BaseDataset):
     def __init__(self,
                  file_paths,
                  labels_dir,
