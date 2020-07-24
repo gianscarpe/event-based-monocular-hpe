@@ -141,7 +141,8 @@ class Classifier(BaseModule):
         Initialize Classifier model
         """
 
-        super(Classifier, self).__init__(hparams, ClassificationConstructor(hparams))
+        super(Classifier, self).__init__(hparams,
+                                         ClassificationConstructor(hparams))
 
     def set_params(self):
         params = {
@@ -224,7 +225,8 @@ class Classifier(BaseModule):
 
 class PoseEstimator(BaseModule):
     def __init__(self, hparams):
-        super(PoseEstimator, self).__init__(hparams, HeatmapConstructor(hparams))
+        super(PoseEstimator, self).__init__(hparams,
+                                            HeatmapConstructor(hparams))
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
@@ -297,7 +299,8 @@ class PoseEstimator(BaseModule):
 class HourglassEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(HourglassEstimator, self).__init__(hparams, JointsConstructor(hparams))
+        super(HourglassEstimator, self).__init__(hparams,
+                                                 JointsConstructor(hparams))
 
     def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
@@ -387,7 +390,8 @@ class HourglassEstimator(BaseModule):
 class MargiposeEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor(hparams))
+        super(MargiposeEstimator, self).__init__(hparams,
+                                                 Joints3DConstructor(hparams))
 
     def set_params(self):
 
@@ -523,8 +527,8 @@ class MargiposeEstimator(BaseModule):
 class AutoEncoderEstimator(BaseModule):
     def __init__(self, hparams):
 
-        super(AutoEncoderEstimator, self).__init__(hparams,
-                                                   AutoEncoderConstructor(hparams))
+        super(AutoEncoderEstimator,
+              self).__init__(hparams, AutoEncoderConstructor(hparams))
 
     def set_params(self):
         in_cnn, mid_dimension = self._get_feature_extractor(

@@ -21,6 +21,7 @@ def main(cfg: DictConfig) -> None:
             cfg.load_path)
         trainer = pl.Trainer(gpus=1, benchmark=True, weights_summary='top')
         trainer.test(model)
+        breakpoint()
         print("Model loaded")
 
     else:
