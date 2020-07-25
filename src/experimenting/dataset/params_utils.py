@@ -1,75 +1,71 @@
-import argparse
-import os
-
 import numpy as np
-
-from omegaconf import DictConfig
 
 from ..utils import get_file_paths, get_frame_info
 
 
-def get_dataset_params(hparams_dataset):
-    """
-    Get dataset base parameters
+class BaseDatasetParams:
+    def __init__(self, hparams_dataset):
+        self.hparams_dataset = hparams_dataset
+        self._set()
 
-    Parameters
-    ----------
-    hparams_dataset :
-        Hydra object from config/dataset
+        if hparams_dataset.save_split:
+            self._save_params(hparams_dataset.preload_dir)
 
-    Returns
-    -------
-    Base params dict for dataset initialization
-    """
-    split_at = hparams_dataset.split_at
-    save_split = hparams_dataset.save_split
+    def _set(self):
+        pass
 
-    if hparams_dataset.load_split:
-        params = load_npy_indexes_and_map(hparams_dataset.preload_dir)
-    else:
-        file_paths = _get_file_paths_with_cam(hparams_dataset.data_dir,
-                                              hparams_dataset.cams)
+    def _set_train_test_split(self, split_at):
 
-        data_index, test_index = _get_train_test_split(
-            file_paths,
-            subjects=hparams_dataset.test_subjects,
-            movements=hparams_dataset['test_movements'])
+        data_indexes = np.arange(len(self.file_paths))
+        cond = self.get_partition_function()
+        test_subject_indexes_mask = [cond(x) for x in self.file_paths]
 
-        train_index, val_index = _split_set(data_index, split_at=split_at)
+        self.test_indexes = data_indexes[test_subject_indexes_mask]
+        data_index = data_indexes[~np.in1d(data_indexes, self.test_indexes)]
+        self.train_indexes, self.val_indexes = _split_set(data_index,
+                                                          split_at=split_at)
 
-        params = {
-            'file_paths': file_paths,
-            'train_indexes': train_index,
-            'val_indexes': val_index,
-            'test_indexes': test_index
-        }
-
-        if save_split:
-            _save_params(hparams_dataset.preload_dir, **params)
-
-    return params
+    def get_partition_function(self):
+        pass
 
 
-def _get_train_test_split(file_paths, movements=None, subjects=None):
-    if subjects is None:
-        subjects = [1, 2, 3, 4, 5]
+class DHP19Params(BaseDatasetParams):
+    def __init__(self, hparams_dataset):
+        super(DHP19Params, self).__init__(hparams_dataset)
 
-    if movements is None or movements == 'all':
-        movements = range(1, 34)
+    def _set(self):
+        self.file_paths = DHP19Params._get_file_paths_with_cam(
+            self.hparams_dataset.data_dir, self.hparams_dataset.cams)
 
-    def get_cond_func():
+        if self.hparams_dataset.test_subjects is None:
+            self.subjects = [1, 2, 3, 4, 5]
+        else:
+            self.subjects = self.hparams_dataset.test_subjects
+
+        if self.hparams_dataset.movements is None or self.hparams_dataset.movements == 'all':
+            self.movements = range(1, 34)
+        else:
+            self.movements = self.hparams_dataset.movements
+
+        self._set_train_test_split(self.hparams_dataset.split_at)
+
+    def get_partition_function(self):
         return lambda x: get_frame_info(x)[
-            'subject'] in subjects and get_frame_info(x)['mov'] in movements
+            'subject'] in self.subjects and get_frame_info(x)[
+                'mov'] in self.movements
 
-    data_indexes = np.arange(len(file_paths))
+    def _get_file_paths_with_cam(data_dir, cams=None):
 
-    cond_func = get_cond_func()
-    test_subject_indexes_mask = [cond_func(x) for x in file_paths]
+        if cams is None:
+            cams = [3]
 
-    test_index = data_indexes[test_subject_indexes_mask]
-    train_index = data_indexes[~np.in1d(data_indexes, test_index)]
+        file_paths = np.array(
+            get_file_paths(data_dir, extensions=['.npy', '.mat']))
+        cam_mask = [get_frame_info(x)['cam'] in cams for x in file_paths]
 
-    return train_index, test_index
+        file_paths = file_paths[cam_mask]
+
+        return file_paths
 
 
 def _split_set(data_indexes, split_at=0.8):
@@ -80,87 +76,3 @@ def _split_set(data_indexes, split_at=0.8):
     val_indexes = data_indexes[train_split:]
 
     return train_indexes, val_indexes
-
-
-def _save_params(out_dir, file_paths, train_indexes, val_indexes,
-                 test_indexes):
-    print("Saving split ...")
-    os.makedirs(out_dir, exist_ok=True)
-
-    np.save(os.path.join(out_dir, "file_paths.npy"), file_paths)
-    np.save(os.path.join(out_dir, "train_indexes.npy"), train_indexes)
-    np.save(os.path.join(out_dir, "val_indexes.npy"), val_indexes)
-    np.save(os.path.join(out_dir, "test_indexes.npy"), test_indexes)
-
-
-def load_npy_indexes_and_map(path):
-
-    train_index = np.load(os.path.join(path, "train_indexes.npy"))
-    val_index = np.load(os.path.join(path, "val_indexes.npy"))
-    test_index = np.load(os.path.join(path, "test_indexes.npy"))
-    file_paths = np.load(os.path.join(path, "file_paths.npy"))
-
-    print(f"LOADED INDEXES! train: {len(train_index)} \t val: " +
-          f"{len(val_index)} \t test: {len(test_index)}")
-
-    params = {
-        'file_paths': file_paths,
-        'train_indexes': train_index,
-        'val_indexes': val_index,
-        'test_indexes': test_index
-    }
-
-    return params
-
-
-def _get_file_paths_with_cam(data_dir, cams=None):
-    if cams is None:
-        cams = [3]
-
-    file_paths = np.array(get_file_paths(data_dir, extensions=['.npy',
-                                                               '.mat']))
-    cam_mask = [get_frame_info(x)['cam'] in cams for x in file_paths]
-
-    file_paths = file_paths[cam_mask]
-
-    return file_paths
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Generate train, test and val indexes')
-    parser.add_argument('--data_dir',
-                        type=str,
-                        help='path to root dataset directory')
-    parser.add_argument('--labels_dir',
-                        type=str,
-                        help='path to root dataset directory')
-    parser.add_argument('--split', type=float, default=.8, help='Split at %')
-    parser.add_argument('--preload_dir',
-                        type=str,
-                        help='path to root dataset directory')
-    parser.add_argument('--cams',
-                        type=int,
-                        default=[1, 2, 3, 4],
-                        nargs='+',
-                        help='Cams')
-    parser.add_argument('--test_subjects',
-                        type=int,
-                        default=[1, 2, 3, 4, 5],
-                        nargs='+',
-                        help='Test subjects')
-
-    args = parser.parse_args()
-
-    hparams = DictConfig({
-        'data_dir': args.data_dir,
-        'save_split': True,
-        'labels_dir': args.labels_dir,
-        'preload_dir': args.preload_dir,
-        'test_subjects': args.test_subjects,
-        'cams': args.cams,
-        'split_at': args.split
-    })
-
-    get_dataset_params(hparams)
-    print("DONE!")

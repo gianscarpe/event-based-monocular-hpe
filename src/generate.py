@@ -3,9 +3,9 @@ import os
 
 from tqdm import tqdm
 
-import experimenting.generator as generator
 import hydra
 from omegaconf import DictConfig
+from experimenting.generator import upsample
 
 
 @hydra.main(config_path='./confs/generate/config.yaml')
@@ -14,38 +14,48 @@ def main(cfg: DictConfig):
 
     input_dir = cfg.input_dir
     base_output_dir = cfg.output_dir
+    tmp_dir = cfg.tmp_dir
     extract = cfg.extract
-    upsample = cfg.upsample
+    do_upsample = cfg.upsample
 
-    tmp_dir = os.path.join(input_dir, 'tmp')
     tmp_frames_dir = os.path.join(tmp_dir, "frames")
     tmp_upsample_dir = os.path.join(tmp_dir, "upsample")
+    extractor = hydra.utils.instantiate(cfg.extractor)
     representation = hydra.utils.instantiate(cfg.representation)
+    simulator = hydra.utils.instantiate(cfg.vid2e)
+
     if extract:
-        video_files = _get_mpii_video_files(input_dir)
-        print(f"Found n {len(video_files)} videos")
         print("Extract RGB frames from videos")
-        generator.extract_frames(video_files, representation.get_size(),
+        extractor.extract_frames(input_dir, representation.get_size(),
                                  tmp_frames_dir)
+
         print("Extraction completed")
 
-    if upsample:
+    if do_upsample:
         print("Upsampling")
-        generator.upsample(tmp_frames_dir, tmp_upsample_dir)
+        upsample(tmp_frames_dir, tmp_upsample_dir)
     print("Instantiate simulator")
+
     video_dirs = []
     for root, dirs, _ in os.walk(tmp_upsample_dir):
         for d in dirs:
             if d == 'imgs':
                 video_dirs.append(root)
 
+    with_errors = []
     for input_video_dir in tqdm(video_dirs):
         video_struct = os.path.relpath(input_video_dir, tmp_upsample_dir)
         output_dir = os.path.join(base_output_dir, video_struct)
-        simulator = hydra.utils.instantiate(cfg.vid2e)
-        simulator.generate(input_video_dir, output_dir, representation)
-        del simulator
+        try:
+            simulator.generate(input_video_dir, output_dir, representation)
+        except:
+            print(f"Error with {input_video_dir} ")
+            with_errors.append(input_video_dir)
+
+    print(with_errors)
     print("Simulation end")
+    with open(os.path.join(tmp_dir, 'errors.txt'), "w") as error_files:
+        error_files.write(with_errors)
 
 
 if __name__ == '__main__':

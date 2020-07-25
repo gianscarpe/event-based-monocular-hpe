@@ -6,4 +6,5 @@ vid2e:
     refractory_period: 1e-4
     log_eps: 1e-3
     use_log: true
+    batch_size: 3000
 

@@ -1,6 +1,6 @@
 import os
 
-from .extractor import extract_frames
+from .extractor import *
 from .upsample import upsample
 from .representations import *
 from .simulator import SimulatorWrapper
