@@ -1,16 +1,19 @@
 import numpy as np
-
+import os
 from ..utils import get_file_paths, get_frame_info
+from abc import ABC, abstractclassmethod
 
 
-class BaseDatasetParams:
+class BaseDatasetParams(ABC):
     def __init__(self, hparams_dataset):
         self.hparams_dataset = hparams_dataset
         self._set()
+        self._set_train_test_split(self.hparams_dataset.split_at)
 
         if hparams_dataset.save_split:
             self._save_params(hparams_dataset.preload_dir)
 
+    @abstractclassmethod
     def _set(self):
         pass
 
@@ -47,8 +50,6 @@ class DHP19Params(BaseDatasetParams):
         else:
             self.movements = self.hparams_dataset.movements
 
-        self._set_train_test_split(self.hparams_dataset.split_at)
-
     def get_partition_function(self):
         return lambda x: get_frame_info(x)[
             'subject'] in self.subjects and get_frame_info(x)[
@@ -66,6 +67,41 @@ class DHP19Params(BaseDatasetParams):
         file_paths = file_paths[cam_mask]
 
         return file_paths
+
+
+class NTUParams(BaseDatasetParams):
+    def __init__(self, hparams_dataset):
+        super(NTUParams, self).__init__(hparams_dataset)
+
+    def _set(self):
+        self.file_paths = NTUParams._get_file_paths(
+            self.hparams_dataset.data_dir)
+
+        if self.hparams_dataset.test_subjects is None:
+            self.subjects = [18, 19, 20]
+        else:
+            self.subjects = self.hparams_dataset.test_subjects
+
+    def get_frame_info(path):
+
+        dir_name = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(path))))
+        info = {}
+        info['subject'] = int(dir_name[-2:])
+        return info
+
+    def _get_file_paths(data_dir):
+        file_paths = []
+        for root, dirs, files in os.walk(data_dir):
+            if 'part_' in root:
+                for f in files:
+                    file_path = os.path.join(root, f)
+                    file_paths.append(file_path)
+        return file_paths
+
+    def get_partition_function(self):
+        return lambda x: NTUParams.get_frame_info(x)['subject'
+                                                     ] in self.subjects
 
 
 def _split_set(data_indexes, split_at=0.8):
