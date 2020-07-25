@@ -8,7 +8,7 @@ from .dataset import (
     DHPHeatmapDataset,
     DHPJointsDataset,
 )
-from .params_utils import DHP19Params
+from . import params_utils
 
 __all__ = [
     'ClassificationConstructor', 'AutoEncoderConstructor',
@@ -19,7 +19,7 @@ __all__ = [
 class BaseConstructor(ABC):
     def __init__(self, hparams, dataset_class):
 
-        self.params = DHP19Params(hparams.dataset)
+        self.params = BaseConstructor._get_params(hparams.dataset)
         self.dataset_class = dataset_class
         self.train_params = {}
         self.val_params = {}
@@ -39,8 +39,9 @@ class BaseConstructor(ABC):
         self._set_for_val('transform', preprocess_val)
         self._set_for_test('transform', preprocess_val)
 
-    def get_params(self, hparams):
-        pass
+    def _get_params(hparams_dataset):
+        return getattr(params_utils,
+                       hparams_dataset.params_class)(hparams_dataset)
 
     def _set_for_all(self, key, value):
         self._set_for_train(key, value)
@@ -63,7 +64,8 @@ class BaseConstructor(ABC):
 
 class ClassificationConstructor(BaseConstructor):
     def __init__(self, hparams):
-        super(ClassificationConstructor, self).__init__(hparams)
+        super(ClassificationConstructor,
+              self).__init__(hparams, ClassificationDataset)
 
     def get_datasets(self):
         return ClassificationDataset(

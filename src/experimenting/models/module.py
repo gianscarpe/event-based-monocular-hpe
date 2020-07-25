@@ -8,9 +8,14 @@ import hydra
 import pytorch_lightning as pl
 from kornia import geometry
 
-from ..dataset import (AutoEncoderConstructor, ClassificationConstructor,
-                       HeatmapConstructor, Joints3DConstructor,
-                       JointsConstructor, get_dataloader) 
+from ..dataset import (
+    AutoEncoderConstructor,
+    ClassificationConstructor,
+    HeatmapConstructor,
+    Joints3DConstructor,
+    JointsConstructor,
+    get_dataloader,
+)
 from ..utils import (
     average_loss,
     denormalize_predict,
@@ -220,6 +225,7 @@ class Classifier(BaseModule):
 
 class PoseEstimator(BaseModule):
     def __init__(self, hparams):
+
         super(PoseEstimator, self).__init__(hparams, HeatmapConstructor)
 
     def set_params(self):
