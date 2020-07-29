@@ -2,8 +2,9 @@ import os
 from abc import ABC, abstractclassmethod
 
 import numpy as np
+from scipy import io
 
-from ..utils import get_file_paths, get_frame_info
+from ..utils import get_file_paths
 
 
 class BaseDatasetParams(ABC):
@@ -18,6 +19,22 @@ class BaseDatasetParams(ABC):
     @abstractclassmethod
     def _set(self):
         pass
+
+    @abstractclassmethod
+    def get_frame_info(self, x):
+        pass
+
+    def load_frame(self, path):
+        ext = os.path.splitext(path)[1]
+
+        if ext == '.mat':
+            info = self.get_frame_info(path)
+            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"]+1}n'], 0, 1)
+        elif ext == '.npy':
+            x = np.load(path) / 255.
+            if len(x.shape) == 2:
+                x = np.expand_dims(x, -1)
+        return x
 
     def _set_train_test_split(self, split_at):
 
@@ -61,8 +78,8 @@ class DHP19Params(BaseDatasetParams):
             self.movements = self.hparams_dataset.movements
 
     def get_partition_function(self):
-        return lambda x: get_frame_info(x)[
-            'subject'] in self.subjects and get_frame_info(x)[
+        return lambda x: DHP19Params.get_frame_info(x)[
+            'subject'] in self.subjects and DHP19Params.get_frame_info(x)[
                 'mov'] in self.movements
 
     def _get_file_paths_with_cam(data_dir, cams=None):
@@ -72,7 +89,7 @@ class DHP19Params(BaseDatasetParams):
 
         file_paths = np.array(
             get_file_paths(data_dir, extensions=['.npy', '.mat']))
-        cam_mask = [get_frame_info(x)['cam'] in cams for x in file_paths]
+        cam_mask = [DHP19Params.get_frame_info(x)['cam'] in cams for x in file_paths]
 
         file_paths = file_paths[cam_mask]
 
@@ -106,7 +123,7 @@ class DHP19Params(BaseDatasetParams):
         """
 
         label = 0
-        info = get_frame_info(filepath)
+        info = DHP19Params.get_frame_info(filepath)
 
         for i in range(1, info['session']):
             label += self.MOVEMENTS_PER_SESSION[i]

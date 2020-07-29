@@ -11,13 +11,26 @@ from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 from .dsntnn import dsnt
 
 __all__ = [
-    'decay_heatmap', 'get_heatmaps_steps', 'get_joints_from_heatmap',
-    'predict_xyz', 'plot_skeleton_2d', 'plot_skeleton_3d', 'plot_heatmap',
-    'decompose_projection_matrix', 'denormalize_predict', 'reproject_skeleton',
-    'plot_3d'
+    'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps',
+    'get_joints_from_heatmap', 'predict_xyz', 'plot_skeleton_2d',
+    'plot_skeleton_3d', 'plot_heatmap', 'decompose_projection_matrix',
+    'denormalize_predict', 'reproject_skeleton', 'plot_3d'
 ]
 
 _normalizer = SkeletonNormaliser()
+
+
+def load_heatmap(path, n_joints):
+    joints = np.load(path)
+    h, w = joints.shape
+    y = np.zeros((h, w, n_joints))
+
+    for joint_id in range(1, n_joints + 1):
+        heatmap = (joints == joint_id).astype('float')
+        if heatmap.sum() > 0:
+            y[:, :, joint_id - 1] = decay_heatmap(heatmap)
+
+    return y
 
 
 def decay_heatmap(heatmap, sigma2=10):

@@ -10,7 +10,7 @@ from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
-from ..utils import load_frame, load_heatmap
+from ..utils import load_heatmap
 
 __all__ = [
     'ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
@@ -38,7 +38,7 @@ class BaseDataset(Dataset):
 
     def _get_x(self, idx):
         img_name = self.x_paths[idx]
-        x = load_frame(img_name)
+        x = self.dataset.load_frame(img_name)
         return x
 
     def __getitem__(self, idx):
