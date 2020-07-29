@@ -1,22 +1,23 @@
 import unittest
 
-from albumentations import CenterCrop, Compose
-from albumentations.pytorch import ToTensor
 from experimenting.dataset.factory import (
     AutoEncoderConstructor,
     ClassificationConstructor,
+    HeatmapConstructor,
+    Joints3DConstructor,
 )
 from omegaconf import DictConfig
 
 
 class TestFactoryDHP19(unittest.TestCase):
     def setUp(self):
-        aug = Compose([CenterCrop(256, 256), ToTensor()])
         data_dir = 'tests/data/dhp19/frames'
         labels_dir = 'tests/data/dhp19/labels'
+        joints_dir = 'tests/data/dhp19/joints'
         self.hparams = DictConfig({
             'dataset': {
                 'data_dir': data_dir,
+                'joints_dir': joints_dir,
                 'save_split': False,
                 'labels_dir': labels_dir,
                 'test_subjects': [1, 2, 3, 4, 5],
@@ -37,10 +38,31 @@ class TestFactoryDHP19(unittest.TestCase):
     def test_ae(self):
         data_constructor = AutoEncoderConstructor(self.hparams)
         self.assertIsNotNone(data_constructor)
+        train, val, test = data_constructor.get_datasets()
 
     def test_classification(self):
         data_constructor = ClassificationConstructor(self.hparams)
         self.assertIsNotNone(data_constructor)
+        train, val, test = data_constructor.get_datasets()
+        self.assertGreater(len(train), 0)
+        self.assertGreater(len(val), 0)
+        self.assertGreater(len(test), 0)
+
+    def test_3d_joints(self):
+        data_constructor = Joints3DConstructor(self.hparams)
+        self.assertIsNotNone(data_constructor)
+        train, val, test = data_constructor.get_datasets()
+        self.assertGreater(len(train), 0)
+        self.assertGreater(len(val), 0)
+        self.assertGreater(len(test), 0)
+
+    def test_hm(self):
+        data_constructor = HeatmapConstructor(self.hparams)
+        self.assertIsNotNone(data_constructor)
+        train, val, test = data_constructor.get_datasets()
+        self.assertGreater(len(train), 0)
+        self.assertGreater(len(val), 0)
+        self.assertGreater(len(test), 0)
 
 
 class TestFactoryAutoencoderNTU(unittest.TestCase):

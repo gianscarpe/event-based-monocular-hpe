@@ -1,14 +1,14 @@
 from abc import ABC
 
 from ..utils import get_augmentation
+from . import params_utils
 from .dataset import (
-    DHP3DJointsDataset,
     AutoEncoderDataset,
     ClassificationDataset,
+    DHP3DJointsDataset,
     DHPHeatmapDataset,
     DHPJointsDataset,
 )
-from . import params_utils
 
 __all__ = [
     'ClassificationConstructor', 'AutoEncoderConstructor',
@@ -30,6 +30,7 @@ class BaseConstructor(ABC):
         preprocess_val, self.val_aug_info = get_augmentation(
             hparams.augmentation_test)
 
+        self._set_for_all('dataset', self.params)
         self._set_for_all('file_paths', self.params.file_paths)
         self._set_for_train('indexes', self.params.train_indexes)
         self._set_for_val('indexes', self.params.val_indexes)
@@ -76,7 +77,6 @@ class ClassificationConstructor(BaseConstructor):
 class JointsConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(JointsConstructor, self).__init__(hparams, DHPJointsDataset)
-        self._set_for_all('n_joints', hparams.dataset.n_joints)
         self._set_for_all('labels_dir', hparams.dataset.joints_dir)
 
 
@@ -84,7 +84,6 @@ class Joints3DConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(Joints3DConstructor, self).__init__(hparams, DHP3DJointsDataset)
 
-        self._set_for_all('n_joints', hparams.dataset.n_joints)
         self._set_for_all('labels_dir', hparams.dataset.joints_dir)
         self._set_for_train('height', self.train_aug_info.height)
         self._set_for_train('width', self.train_aug_info.width)
@@ -98,7 +97,6 @@ class HeatmapConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(HeatmapConstructor, self).__init__(hparams, DHPHeatmapDataset)
 
-        self._set_for_all('n_joints', hparams.dataset.n_joints)
         self._set_for_all('labels_dir', hparams.dataset.joints_dir)
 
 

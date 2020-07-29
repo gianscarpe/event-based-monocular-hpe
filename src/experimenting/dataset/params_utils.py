@@ -36,6 +36,12 @@ class BaseDatasetParams(ABC):
 
 
 class DHP19Params(BaseDatasetParams):
+    MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
+    max_w = 346
+    max_h = 260
+
+    n_joints = 13
+
     def __init__(self, hparams_dataset):
         super(DHP19Params, self).__init__(hparams_dataset)
 
@@ -43,6 +49,7 @@ class DHP19Params(BaseDatasetParams):
         self.file_paths = DHP19Params._get_file_paths_with_cam(
             self.hparams_dataset.data_dir, self.hparams_dataset.cams)
 
+        self.labels_dir = self.hparams_dataset.labels_dir
         if self.hparams_dataset.test_subjects is None:
             self.subjects = [1, 2, 3, 4, 5]
         else:
@@ -70,6 +77,49 @@ class DHP19Params(BaseDatasetParams):
         file_paths = file_paths[cam_mask]
 
         return file_paths
+
+    def get_frame_info(filename):
+        filename = os.path.splitext(os.path.basename(filename))[0]
+
+        result = {
+            'subject':
+            int(filename[filename.find('S') + 1:filename.find('S') +
+                         4].split('_')[0]),
+            'session':
+            DHP19Params._get_info_from_string(filename, 'session'),
+            'mov':
+            DHP19Params._get_info_from_string(filename, 'mov'),
+            'cam':
+            DHP19Params._get_info_from_string(filename, 'cam'),
+            'frame':
+            DHP19Params._get_info_from_string(filename, 'frame')
+        }
+
+        return result
+
+    def _get_info_from_string(filename, info, split_symbol='_'):
+        return int(filename[filename.find(info):].split(split_symbol)[1])
+
+    def get_label_from_filename(self, filepath):
+        """Given the filepath, return the correspondent label E.g. n
+        S1_session_2_mov_1_frame_249_cam_2.npy
+        """
+
+        label = 0
+        info = get_frame_info(filepath)
+
+        for i in range(1, info['session']):
+            label += self.MOVEMENTS_PER_SESSION[i]
+
+        return label + info['mov'] - 1
+
+    def _retrieve_2hm_files(self, labels_dir):
+        labels_hm = [
+            os.path.join(labels_dir,
+                         os.path.basename(x).split('.')[0] + '_2dhm.npz')
+            for x in self.file_paths
+        ]
+        return labels_hm
 
 
 class NTUParams(BaseDatasetParams):
