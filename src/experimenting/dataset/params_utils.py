@@ -1,7 +1,9 @@
-import numpy as np
 import os
-from ..utils import get_file_paths, get_frame_info
 from abc import ABC, abstractclassmethod
+
+import numpy as np
+
+from ..utils import get_file_paths, get_frame_info
 
 
 class BaseDatasetParams(ABC):
@@ -28,6 +30,7 @@ class BaseDatasetParams(ABC):
         self.train_indexes, self.val_indexes = _split_set(data_index,
                                                           split_at=split_at)
 
+    @abstractclassmethod
     def get_partition_function(self):
         pass
 

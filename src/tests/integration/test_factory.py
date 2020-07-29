@@ -1,8 +1,12 @@
-from albumentations import Compose, CenterCrop
-from albumentations.pytorch import ToTensor
-from omegaconf import DictConfig
 import unittest
-from experimenting.dataset.factory import AutoEncoderConstructor, ClassificationConstructor
+
+from albumentations import CenterCrop, Compose
+from albumentations.pytorch import ToTensor
+from experimenting.dataset.factory import (
+    AutoEncoderConstructor,
+    ClassificationConstructor,
+)
+from omegaconf import DictConfig
 
 
 class TestFactoryDHP19(unittest.TestCase):
