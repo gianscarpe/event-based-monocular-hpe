@@ -18,7 +18,7 @@ class MargiPoseStage(nn.Module):
         self.softmax = FlatSoftmax()
         self.heatmap_space = heatmap_space
         self.down_layers = nn.Sequential(
-            _regular_block(128, 128),
+            _regular_block(mid_feature_dimension, 128),
             _regular_block(128, 128),
             _down_stride_block(128, 192),
             _regular_block(192, 192),
@@ -63,7 +63,7 @@ class MargiPoseModel3D(nn.Module):
         self.n_stages = n_stages
 
         self.in_cnn = in_cnn
-        self.mid_feature_dimension = mid_dimension[0]
+        self.mid_feature_dimension = mid_dimension
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()

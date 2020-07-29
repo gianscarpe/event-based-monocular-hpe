@@ -6,5 +6,6 @@ training:
   module: MargiposeEstimator
   model: resnet34
   backbone: timecount/classification/resnet34.pt
+  latent_size: 256
   stages: 2
   predict_3d: true

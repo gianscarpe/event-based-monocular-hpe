@@ -1,5 +1,4 @@
 from math import sqrt
-from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -105,15 +104,22 @@ def get_feature_extractor(params):
         'resnet50': _get_resnet50_feature_extactor,
         'resnet34_cut_256': _get_resnet34_cut_256,
         'resnet34_cut_512': _get_resnet34_cut_512,
+        'default': _load_as_is
     }
 
     if 'n_classes' not in params:
         params['n_classes'] = 1  # just placehodler
 
     if params['model'] not in switch:
-        params['model'] = 'resnet34'
+        params['model'] = 'default'
 
-    return switch[params['model']](params)
+    return switch.get(params['model'])(params)
+
+
+def _load_as_is(params):
+    net = torch.load(params['custom_model_path']).in_cnn
+    breakpoint()
+    return net
 
 
 def _load_resnet34(params):
@@ -132,6 +138,7 @@ def _load_resnet34(params):
 def _get_resnet34_cut_128(params):
 
     resnet = _load_resnet34(params)
+    breakpoint()
     net = nn.Sequential(
         resnet.conv1,
         resnet.bn1,
@@ -141,16 +148,17 @@ def _get_resnet34_cut_128(params):
         resnet.layer2,
     )
     mid_dimension = (_get_resnet_layer_channels(net[-1]), 32, 32)
-    return net, mid_dimension
+    return net
 
 
 def _get_resnet34_cut_256(params):
     resnet = _load_resnet34(params)
+    breakpoint()
     net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
                         resnet.layer1, resnet.layer2, resnet.layer3)
     mid_dimension = (_get_resnet_layer_channels(net[-1]), 16, 16)
 
-    return net, mid_dimension
+    return net
 
 
 def _get_resnet34_cut_512(params):
@@ -160,7 +168,7 @@ def _get_resnet34_cut_512(params):
                         resnet.layer4)
     mid_dimension = (_get_resnet_layer_channels(net[-1]), 8, 8)
 
-    return net, mid_dimension
+    return net
 
 
 def _get_resnet50_feature_extactor(model_path):
@@ -174,7 +182,7 @@ def _get_resnet50_feature_extactor(model_path):
         resnet.layer1,
         resnet.layer2,
     )
-    return net, _get_resnet_layer_channels(net[-1])
+    return net
 
 
 def _get_mobilenetv2(n_channels, n_classes, pretrained=False):

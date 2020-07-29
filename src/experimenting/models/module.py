@@ -80,10 +80,9 @@ class BaseModule(pl.LightningModule):
             else:
                 extractor_params['pretrained'] = True
 
-        feature_extractor, mid_dimension = get_feature_extractor(
-            extractor_params)
+        feature_extractor = get_feature_extractor(extractor_params)
 
-        return feature_extractor, mid_dimension
+        return feature_extractor
 
     def forward(self, x):
         x = self.model(x)
@@ -393,15 +392,14 @@ class MargiposeEstimator(BaseModule):
 
     def set_params(self):
 
-        in_cnn, mid_dimension = self._get_feature_extractor(
+        in_cnn = self._get_feature_extractor(
             self._hparams.training['model'],
             self._hparams.dataset['n_channels'],
             join(self._hparams.model_zoo, self._hparams.training.backbone),
             self._hparams.training['pretrained'])
-
         params = {
             'in_cnn': in_cnn,
-            'mid_dimension': mid_dimension,
+            'mid_dimension': self._hparams.training['latent_size'],
             'n_joints': self._hparams.dataset['n_joints'],
             'n_stages': self._hparams.training['stages'],
             'predict_3d': True
@@ -553,7 +551,7 @@ class AutoEncoderEstimator(BaseModule):
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
-        breakpoint()
+
         b_x = batch
 
         output = self.forward(b_x)  # cnn output
