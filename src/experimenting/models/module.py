@@ -553,7 +553,7 @@ class AutoEncoderEstimator(BaseModule):
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
-        breakpoint()
+
         b_x = batch
 
         output = self.forward(b_x)  # cnn output

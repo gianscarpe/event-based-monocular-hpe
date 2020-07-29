@@ -1,0 +1,11 @@
+dataset:
+  name: timecount_ntu
+  params_class: NTUParams
+  base_path: /data/gscarpellini/ntu/events
+  data_dir: ${dataset.base_path}/out
+  labels_dir: 
+  n_channels: 1
+  test_subjects: [18, 19, 20]
+  load_split: false
+  split_at: 0.8
+  save_split: false
