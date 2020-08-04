@@ -4,6 +4,7 @@ dataset:
   data_dir: ${dataset.base_path}/movements_per_frame
   hm_dir: ${dataset.base_path}/labels
   joints_dir: ${dataset.base_path}/labels_full_joints
+  params_class: DHP19Params
   
   load_split: false
   save_split: false

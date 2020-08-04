@@ -22,7 +22,6 @@ class AutoEncoder(nn.Module):
         self.latent_size = latent_size
         self.mid_tensor_dimension = mid_dimension[-1]
         self.dec_channels = 32
-
         self.up_layers = up_layers
         self.encoder_head = nn.Linear(
             self.mid_feature_dimension * self.mid_tensor_dimension *
@@ -51,7 +50,7 @@ class AutoEncoder(nn.Module):
             self.decoders.append(stage)
 
         self.d_conv_final = nn.Conv2d(self.dec_channels * 2,
-                                      1,
+                                      in_channels,
                                       kernel_size=(4, 4),
                                       stride=(1, 1),
                                       padding=0)

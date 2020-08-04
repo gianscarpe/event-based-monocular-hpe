@@ -535,6 +535,7 @@ class AutoEncoderEstimator(BaseModule):
             self._hparams.training['model'],
             self._hparams.dataset['n_channels'], None,
             self._hparams.training['pretrained'])
+
         mid_dimension = get_backbone_last_dimension(
             in_cnn[-1], self._hparams.training['model'])
 
