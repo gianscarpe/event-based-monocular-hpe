@@ -11,7 +11,8 @@ from torchvision import models
 
 __all__ = [
     'FlatSoftmax', 'get_feature_extractor', '_regular_block',
-    '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn'
+    '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn',
+    'get_backbone_last_dimension'
 ]
 
 
@@ -148,16 +149,15 @@ def _get_resnet34_cut_128(params):
         resnet.layer1,
         resnet.layer2,
     )
-    mid_dimension = (_get_resnet_layer_channels(net[-1]), 32, 32)
+
     return net
 
 
 def _get_resnet34_cut_256(params):
     resnet = _load_resnet34(params)
-    breakpoint()
+
     net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
                         resnet.layer1, resnet.layer2, resnet.layer3)
-    mid_dimension = (_get_resnet_layer_channels(net[-1]), 16, 16)
 
     return net
 
@@ -167,7 +167,6 @@ def _get_resnet34_cut_512(params):
     net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
                         resnet.layer1, resnet.layer2, resnet.layer3,
                         resnet.layer4)
-    mid_dimension = (_get_resnet_layer_channels(net[-1]), 8, 8)
 
     return net
 
@@ -359,5 +358,11 @@ def get_cnn(model_name, params):
     return switcher[model_name](**params)
 
 
-def _get_resnet_layer_channels(layer):
-    return layer[-1].bn2.num_features
+def get_backbone_last_dimension(net, net_name):
+    switch = {
+        'resnet34': (32, 32),
+        'resnet50': (64, 64),
+        'resnet34_cut_256': (16, 16),
+        'resnet34_cut_512': (8, 8)
+    }
+    return (*switch[net_name], net[-1].bn2.num_features)

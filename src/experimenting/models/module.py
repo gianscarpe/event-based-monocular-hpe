@@ -23,6 +23,7 @@ from ..utils import (
     get_cnn,
     get_feature_extractor,
     get_joints_from_heatmap,
+    get_backbone_last_dimension,
     predict_xyz,
     unflatten,
 )
@@ -530,10 +531,12 @@ class AutoEncoderEstimator(BaseModule):
                                                    AutoEncoderConstructor)
 
     def set_params(self):
-        in_cnn, mid_dimension = self._get_feature_extractor(
+        in_cnn = self._get_feature_extractor(
             self._hparams.training['model'],
             self._hparams.dataset['n_channels'], None,
             self._hparams.training['pretrained'])
+        mid_dimension = get_backbone_last_dimension(
+            in_cnn[-1], self._hparams.training['model'])
 
         params = {
             'in_channels': self._hparams.dataset['n_channels'],
