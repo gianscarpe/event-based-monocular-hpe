@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -177,11 +178,15 @@ def fit(cfg) -> pl.Trainer:
 
 
 def dhp19_evaluate_procedure(cfg):
-    load_path = cfg.load_path
+
+    checkpoint_dir = cfg.load_path
+    checkpoints = sorted(os.listdir(checkpoint_dir))
+    load_path = os.path.join(checkpoint_dir, checkpoints[0])
+
     print("Loading from ... ", load_path)
     if (os.path.exists(load_path)):
         model = getattr(models, cfg.training.module).load_from_checkpoint(
-            cfg.load_path)
+            load_path)
     final_results = {}
     for movement in range(0, 33):
         model._hparams.dataset.movements = [movement]
@@ -196,5 +201,8 @@ def dhp19_evaluate_procedure(cfg):
     else:
         print(f"Error loading, {load_path} does not exist!")
 
+    breakpoint()
     print(final_results)
+    with open(os.path.join(load_path, 'results.json'), 'w') as json_file:
+        json.dump(final_results, json_file)
     return final_results

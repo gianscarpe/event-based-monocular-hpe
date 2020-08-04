@@ -63,7 +63,7 @@ class MargiPoseModel3D(nn.Module):
         self.n_stages = n_stages
 
         self.in_cnn = in_cnn
-        self.mid_feature_dimension = mid_dimension
+        self.mid_feature_dimension = mid_dimension[0]
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
