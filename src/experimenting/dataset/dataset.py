@@ -10,8 +10,6 @@ from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
-from ..utils import load_heatmap
-
 __all__ = [
     'ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
     'DHP3DJointsDataset', 'AutoEncoderDataset'
@@ -21,15 +19,12 @@ __all__ = [
 class BaseDataset(Dataset):
     def __init__(self,
                  dataset,
-                 file_paths,
-                 labels=None,
                  indexes=None,
                  transform=None,
                  augment_label=False):
 
-        self.x_paths = file_paths
+        self.dataset = dataset
         self.x_indexes = indexes
-        self.labels = labels
         self.transform = transform
         self.augment_label = augment_label
 
@@ -37,8 +32,7 @@ class BaseDataset(Dataset):
         return len(self.x_indexes)
 
     def _get_x(self, idx):
-        img_name = self.x_paths[idx]
-        x = self.dataset.load_frame(img_name)
+        x = self.dataset.load_frame_from_id(idx)
         return x
 
     def __getitem__(self, idx):
@@ -62,39 +56,25 @@ class BaseDataset(Dataset):
 
 
 class ClassificationDataset(BaseDataset):
-    def __init__(self,
-                 dataset,
-                 file_paths,
-                 labels=None,
-                 indexes=None,
-                 transform=None):
+    def __init__(self, dataset, indexes=None, transform=None):
 
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
-        labels = labels if labels is not None else [
-            dataset.get_label_from_filename(x_path) for x_path in file_paths
-        ]
 
-        super(ClassificationDataset,
-              self).__init__(dataset, file_paths, labels, x_indexes, transform,
-                             False)
+        super(ClassificationDataset, self).__init__(dataset, x_indexes,
+                                                    transform, False)
 
     def _get_y(self, idx):
-        return self.labels[idx]
+        return self.dataset.get_label_from_id(idx)
 
 
 class AutoEncoderDataset(BaseDataset):
-    def __init__(self,
-                 dataset,
-                 file_paths,
-                 labels=None,
-                 indexes=None,
-                 transform=None):
+    def __init__(self, dataset, indexes=None, transform=None):
 
         x_indexes = indexes if indexes is not None else np.arange(
             len(self.x_paths))
-        super(AutoEncoderDataset, self).__init__(dataset, file_paths, None,
-                                                 x_indexes, transform, False)
+        super(AutoEncoderDataset, self).__init__(dataset, x_indexes, transform,
+                                                 False)
 
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
@@ -110,25 +90,13 @@ class AutoEncoderDataset(BaseDataset):
 
 
 class DHPHeatmapDataset(BaseDataset):
-    def __init__(self,
-                 dataset,
-                 file_paths,
-                 labels_dir,
-                 indexes=None,
-                 transform=None):
+    def __init__(self, dataset, labels_dir, indexes=None, transform=None):
 
-        labels = dataset._retrieve_2hm_files(labels_dir)
-
-        super(DHPHeatmapDataset, self).__init__(dataset, file_paths, labels,
-                                                indexes, transform, True)
-
-        self.n_joints = dataset.n_joints
-        self.augment_label = True
+        super(DHPHeatmapDataset, self).__init__(dataset, indexes, transform,
+                                                True)
 
     def _get_y(self, idx):
-        joints_file = self.labels[idx]
-
-        return load_heatmap(joints_file, self.n_joints)
+        return self.dataset.get_heatmap_from_id(idx)
 
 
 class DHPJointsDataset(BaseDataset):
@@ -139,20 +107,15 @@ class DHPJointsDataset(BaseDataset):
                  indexes=None,
                  transform=None):
 
-        labels = dataset._retrieve_2hm_files(labels_dir)
-
-        super(DHPJointsDataset, self).__init__(file_paths,
-                                               labels,
-                                               indexes,
+        super(DHPJointsDataset, self).__init__(indexes,
                                                transform,
                                                augment_label=False)
 
-        self.n_joints = dataset.n_joints
         self.max_h = dataset.max_h
         self.max_w = dataset.max_w
 
     def _get_y(self, idx):
-        joints_file = np.load(self.labels[idx])
+        joints_file = self.dataset.get_joint_from_id(idx)
 
         joints = torch.tensor(joints_file['joints'])
         mask = torch.tensor(joints_file['mask']).type(torch.bool)
@@ -175,19 +138,10 @@ class DHPJointsDataset(BaseDataset):
 
 
 class DHP3DJointsDataset(BaseDataset):
-    def __init__(self,
-                 dataset,
-                 file_paths,
-                 labels_dir,
-                 height,
-                 width,
-                 indexes=None,
-                 transform=None):
+    def __init__(self, dataset, height, width, indexes=None, transform=None):
 
-        labels = dataset._retrieve_2hm_files(labels_dir)
-
-        super(DHP3DJointsDataset, self).__init__(dataset, file_paths, labels,
-                                                 indexes, transform, False)
+        super(DHP3DJointsDataset, self).__init__(dataset, indexes, transform,
+                                                 False)
 
         self.n_joints = dataset.n_joints
         self.normalizer = SkeletonNormaliser()
@@ -195,7 +149,7 @@ class DHP3DJointsDataset(BaseDataset):
         self.width = width
 
     def _get_y(self, idx):
-        joints_file = np.load(self.labels[idx])
+        joints_file = self.dataset.get_joint_from_id(idx)
 
         joints = torch.tensor(joints_file['xyz_cam'].swapaxes(0, 1))
         xyz = torch.tensor(joints_file['xyz'].swapaxes(0, 1))

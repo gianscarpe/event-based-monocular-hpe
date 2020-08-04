@@ -47,7 +47,7 @@ class BaseModule(pl.LightningModule):
 
         self.hparams = flatten(hparams)
         self._hparams = unflatten(hparams)
-        self.dataset_constructor = dataset_constructor(self._hparams)
+        self.dataset_constructor = dataset_constructor
 
         self.optimizer_config = self._hparams.optimizer
         self.scheduler_config = None
@@ -65,7 +65,7 @@ class BaseModule(pl.LightningModule):
             self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
-        datasets = self.dataset_constructor.get_datasets()
+        datasets = self.dataset_constructor(self._hparams).get_datasets()
         self.train_dataset, self.val_dataset, self.test_dataset = datasets
 
     def _get_feature_extractor(self, model, n_channels, backbone_path,
@@ -397,6 +397,9 @@ class MargiposeEstimator(BaseModule):
             self._hparams.dataset['n_channels'],
             join(self._hparams.model_zoo, self._hparams.training.backbone),
             self._hparams.training['pretrained'])
+        if self._hparams.training['latent_size'] is None:
+            self._hparams.training['latent_size'] = 128
+
         params = {
             'in_cnn': in_cnn,
             'mid_dimension': self._hparams.training['latent_size'],

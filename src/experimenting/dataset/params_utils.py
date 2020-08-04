@@ -4,7 +4,7 @@ from abc import ABC, abstractclassmethod
 import numpy as np
 from scipy import io
 
-from ..utils import get_file_paths
+from ..utils import get_file_paths, load_heatmap
 
 
 class BaseDatasetParams(ABC):
@@ -24,16 +24,19 @@ class BaseDatasetParams(ABC):
     def get_frame_info(self, x):
         pass
 
-    def load_frame(self, path):
-        ext = os.path.splitext(path)[1]
+    @abstractclassmethod
+    def get_partition_function(self):
+        pass
 
-        if ext == '.mat':
-            info = self.get_frame_info(path)
-            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"]+1}n'], 0, 1)
-        elif ext == '.npy':
-            x = np.load(path) / 255.
-            if len(x.shape) == 2:
-                x = np.expand_dims(x, -1)
+    def load_frame(self, path):
+        x = np.load(path) / 255.
+        if len(x.shape) == 2:
+            x = np.expand_dims(x, -1)
+        return x
+
+    def load_frame_from_id(self, idx):
+        img_name = self.file_paths[idx]
+        x = self.load_frame(img_name)
         return x
 
     def _set_train_test_split(self, split_at):
@@ -47,10 +50,6 @@ class BaseDatasetParams(ABC):
         self.train_indexes, self.val_indexes = _split_set(data_index,
                                                           split_at=split_at)
 
-    @abstractclassmethod
-    def get_partition_function(self):
-        pass
-
 
 class DHP19Params(BaseDatasetParams):
     MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
@@ -62,11 +61,29 @@ class DHP19Params(BaseDatasetParams):
     def __init__(self, hparams_dataset):
         super(DHP19Params, self).__init__(hparams_dataset)
 
+    def load_frame(self, path):
+        ext = os.path.splitext(path)[1]
+        if ext == '.mat':
+            info = DHP19Params.get_frame_info(path)
+            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"]+1}n'], 0, 1)
+        elif ext == '.npy':
+            x = np.load(path) / 255.
+            if len(x.shape) == 2:
+                x = np.expand_dims(x, -1)
+        return x
+
     def _set(self):
         self.file_paths = DHP19Params._get_file_paths_with_cam(
             self.hparams_dataset.data_dir, self.hparams_dataset.cams)
 
         self.labels_dir = self.hparams_dataset.labels_dir
+        self.classification_labels = [
+            DHP19Params.get_label_from_filename(x_path)
+            for x_path in self.file_paths
+        ]
+        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir)
+        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir)
+
         if self.hparams_dataset.test_subjects is None:
             self.subjects = [1, 2, 3, 4, 5]
         else:
@@ -77,10 +94,23 @@ class DHP19Params(BaseDatasetParams):
         else:
             self.movements = self.hparams_dataset.movements
 
+    def get_label_from_id(self, idx):
+        return self.labels[idx]
+
+    def get_joint_from_id(self, idx):
+        joints_file = np.load(self.joints[idx])
+        return joints_file
+
+    def get_heatmap_from_id(self, idx):
+        hm_path = self.heatmaps[idx]
+
+        return load_heatmap(hm_path, self.n_joints)
+
     def get_partition_function(self):
-        return lambda x: DHP19Params.get_frame_info(x)[
-            'subject'] in self.subjects and DHP19Params.get_frame_info(x)[
-                'mov'] in self.movements
+        return lambda x: DHP19Params.get_frame_info(
+            x)['subject'
+               ] in self.subjects and DHP19Params.get_label_from_filename(
+                   x) in self.movements
 
     def _get_file_paths_with_cam(data_dir, cams=None):
 
@@ -89,7 +119,9 @@ class DHP19Params(BaseDatasetParams):
 
         file_paths = np.array(
             get_file_paths(data_dir, extensions=['.npy', '.mat']))
-        cam_mask = [DHP19Params.get_frame_info(x)['cam'] in cams for x in file_paths]
+        cam_mask = [
+            DHP19Params.get_frame_info(x)['cam'] in cams for x in file_paths
+        ]
 
         file_paths = file_paths[cam_mask]
 
@@ -117,7 +149,7 @@ class DHP19Params(BaseDatasetParams):
     def _get_info_from_string(filename, info, split_symbol='_'):
         return int(filename[filename.find(info):].split(split_symbol)[1])
 
-    def get_label_from_filename(self, filepath):
+    def get_label_from_filename(filepath):
         """Given the filepath, return the correspondent label E.g. n
         S1_session_2_mov_1_frame_249_cam_2.npy
         """
@@ -126,7 +158,7 @@ class DHP19Params(BaseDatasetParams):
         info = DHP19Params.get_frame_info(filepath)
 
         for i in range(1, info['session']):
-            label += self.MOVEMENTS_PER_SESSION[i]
+            label += DHP19Params.MOVEMENTS_PER_SESSION[i]
 
         return label + info['mov'] - 1
 

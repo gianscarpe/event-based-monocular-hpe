@@ -111,14 +111,16 @@ def get_feature_extractor(params):
         params['n_classes'] = 1  # just placehodler
 
     if params['model'] not in switch:
-        params['model'] = 'default'
+        params['model'] = 'resnet34'
 
     return switch.get(params['model'])(params)
 
 
 def _load_as_is(params):
-    net = torch.load(params['custom_model_path']).in_cnn
-    breakpoint()
+    net = torch.load(params['custom_model_path'])
+
+    if 'in_cnn' in dir(net):
+        net = net.in_cnn
     return net
 
 
@@ -138,7 +140,6 @@ def _load_resnet34(params):
 def _get_resnet34_cut_128(params):
 
     resnet = _load_resnet34(params)
-    breakpoint()
     net = nn.Sequential(
         resnet.conv1,
         resnet.bn1,

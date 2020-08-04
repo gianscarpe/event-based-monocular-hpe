@@ -16,7 +16,10 @@ from .. import models
 
 logging.basicConfig(level=logging.INFO)
 
-__all__ = ['get_training_params', 'load_model', 'fit', 'get_hypersearch_cfg', 'dhp19_evaluate_procedure']
+__all__ = [
+    'get_training_params', 'load_model', 'fit', 'get_hypersearch_cfg',
+    'dhp19_evaluate_procedure'
+]
 
 
 def get_training_params(cfg: dict):
@@ -159,8 +162,8 @@ def fit(cfg) -> pl.Trainer:
         checkpoints = sorted(os.listdir(checkpoint_dir))
         checkpoint_path = os.path.join(checkpoint_dir, checkpoints[0])
         print(f'Loading {checkpoint_path} ...')
-        model = getattr(models, cfg.training.module).load_from_checkpoint(
-            checkpoint_path)
+        model = getattr(
+            models, cfg.training.module).load_from_checkpoint(checkpoint_path)
     else:
         model = getattr(models, cfg.training.module)(cfg)
 
@@ -172,16 +175,26 @@ def fit(cfg) -> pl.Trainer:
         _safe_train_end(trainer_configuration)
         raise (ex)
 
+
 def dhp19_evaluate_procedure(cfg):
     load_path = cfg.load_path
     print("Loading from ... ", load_path)
     if (os.path.exists(load_path)):
         model = getattr(models, cfg.training.module).load_from_checkpoint(
             cfg.load_path)
-    for movement in range(1, 34):
-        model._hparams.dataset.test_movements = [movement]
+    final_results = {}
+    for movement in range(0, 33):
+        model._hparams.dataset.movements = [movement]
         print(f"Movement {movement}")
-        trainer = pl.Trainer(gpus=cfg['gpus'], benchmark=True, weights_summary='top')
-        trainer.test(model)
+        trainer = pl.Trainer(gpus=cfg['gpus'],
+                             benchmark=True,
+                             weights_summary='top')
+        results = trainer.test(model)
+        print(results)
+        final_results[f'movement_{movement}'] = results['test_meanMPJPE']
+
     else:
         print(f"Error loading, {load_path} does not exist!")
+
+    print(final_results)
+    return final_results

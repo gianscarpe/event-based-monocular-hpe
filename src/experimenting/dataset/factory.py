@@ -31,7 +31,6 @@ class BaseConstructor(ABC):
             hparams.augmentation_test)
 
         self._set_for_all('dataset', self.params)
-        self._set_for_all('file_paths', self.params.file_paths)
         self._set_for_train('indexes', self.params.train_indexes)
         self._set_for_val('indexes', self.params.val_indexes)
         self._set_for_test('indexes', self.params.test_indexes)
@@ -41,8 +40,12 @@ class BaseConstructor(ABC):
         self._set_for_test('transform', preprocess_val)
 
     def _get_params(hparams_dataset):
-        return getattr(params_utils,
-                       hparams_dataset.params_class)(hparams_dataset)
+
+        if hparams_dataset.params_class is None:
+            dataset = "DHP19Params"
+        else:
+            dataset = hparams_dataset.params_class
+        return getattr(params_utils, dataset)(hparams_dataset)
 
     def _set_for_all(self, key, value):
         self._set_for_train(key, value)
@@ -68,11 +71,6 @@ class ClassificationConstructor(BaseConstructor):
         super(ClassificationConstructor,
               self).__init__(hparams, ClassificationDataset)
 
-    def get_datasets(self):
-        return ClassificationDataset(
-            **self.train_params), ClassificationDataset(
-                **self.val_params), ClassificationDataset(**self.test_params)
-
 
 class JointsConstructor(BaseConstructor):
     def __init__(self, hparams):
@@ -84,7 +82,6 @@ class Joints3DConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(Joints3DConstructor, self).__init__(hparams, DHP3DJointsDataset)
 
-        self._set_for_all('labels_dir', hparams.dataset.joints_dir)
         self._set_for_train('height', self.train_aug_info.height)
         self._set_for_train('width', self.train_aug_info.width)
         self._set_for_val('height', self.val_aug_info.height)
