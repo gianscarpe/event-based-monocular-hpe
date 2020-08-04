@@ -401,7 +401,7 @@ class MargiposeEstimator(BaseModule):
         if self._hparams.training['latent_size'] is None:
             self._hparams.training['latent_size'] = 128
         mid_dimension = get_backbone_last_dimension(
-            in_cnn[-1], self._hparams.training['model'])
+            in_cnn, self._hparams.training['model'])
 
         params = {
             'in_cnn': in_cnn,
@@ -539,7 +539,7 @@ class AutoEncoderEstimator(BaseModule):
             self._hparams.training['pretrained'])
 
         mid_dimension = get_backbone_last_dimension(
-            in_cnn[-1], self._hparams.training['model'])
+            in_cnn, self._hparams.training['model'])
 
         params = {
             'in_channels': self._hparams.dataset['n_channels'],
