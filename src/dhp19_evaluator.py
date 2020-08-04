@@ -9,9 +9,11 @@ logging.basicConfig(level=logging.INFO)
 
 @hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
-
-    dhp19_evaluate_procedure(cfg)
     print(cfg.pretty())
+    fr = dhp19_evaluate_procedure(cfg)
+    
+    
+
 
 
 if __name__ == '__main__':

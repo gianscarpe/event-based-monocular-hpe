@@ -111,7 +111,7 @@ def get_feature_extractor(params):
         params['n_classes'] = 1  # just placehodler
 
     if params['model'] not in switch:
-        params['model'] = 'resnet34'
+        params['model'] = 'default'
 
     return switch.get(params['model'])(params)
 
