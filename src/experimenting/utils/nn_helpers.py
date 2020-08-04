@@ -363,6 +363,9 @@ def get_backbone_last_dimension(net, net_name):
         'resnet34': (32, 32),
         'resnet50': (64, 64),
         'resnet34_cut_256': (16, 16),
-        'resnet34_cut_512': (8, 8)
+        'resnet34_cut_512': (8, 8),
+        'ae_resnet34_cut_256': (16, 16),
+        'ae_resnet34_cut_512': (8, 8)
+
     }
-    return (*switch[net_name], net[-1].bn2.num_features)
+    return (net[-1].bn2.num_features, *switch[net_name])

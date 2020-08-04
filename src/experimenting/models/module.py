@@ -20,10 +20,10 @@ from ..utils import (
     average_loss,
     denormalize_predict,
     flatten,
+    get_backbone_last_dimension,
     get_cnn,
     get_feature_extractor,
     get_joints_from_heatmap,
-    get_backbone_last_dimension,
     predict_xyz,
     unflatten,
 )
@@ -400,10 +400,12 @@ class MargiposeEstimator(BaseModule):
             self._hparams.training['pretrained'])
         if self._hparams.training['latent_size'] is None:
             self._hparams.training['latent_size'] = 128
+        mid_dimension = get_backbone_last_dimension(
+            in_cnn[-1], self._hparams.training['model'])
 
         params = {
             'in_cnn': in_cnn,
-            'mid_dimension': self._hparams.training['latent_size'],
+            'mid_dimension': mid_dimension,
             'n_joints': self._hparams.dataset['n_joints'],
             'n_stages': self._hparams.training['stages'],
             'predict_3d': True
