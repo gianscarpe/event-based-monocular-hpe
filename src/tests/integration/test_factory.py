@@ -20,6 +20,7 @@ class TestFactoryDHP19(unittest.TestCase):
                 'joints_dir': joints_dir,
                 'save_split': False,
                 'labels_dir': labels_dir,
+                'hm_dir': labels_dir,
                 'test_subjects': [1, 2, 3, 4, 5],
                 'split_at': 0.8,
                 'cams': [3],
