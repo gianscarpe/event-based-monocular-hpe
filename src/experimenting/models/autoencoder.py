@@ -22,8 +22,8 @@ class AutoEncoder(nn.Module):
         self.latent_size = latent_size
         self.mid_tensor_dimension = mid_dimension[-1]
         self.dec_channels = 32
-
         self.up_layers = up_layers
+
         self.encoder_head = nn.Linear(
             self.mid_feature_dimension * self.mid_tensor_dimension *
             self.mid_tensor_dimension, latent_size)
@@ -39,10 +39,10 @@ class AutoEncoder(nn.Module):
 
         self.decoders = nn.ModuleList()
         for i in reversed(range(2, up_layers + 1)):
-            in_channels = self.dec_channels * (2**i)
+            mid_channels = self.dec_channels * (2**i)
             out_channels = self.dec_channels * (2**(i - 1))
             stage = nn.Sequential(
-                nn.Conv2d(in_channels,
+                nn.Conv2d(mid_channels,
                           out_channels,
                           kernel_size=(4, 4),
                           stride=(1, 1),
@@ -51,7 +51,7 @@ class AutoEncoder(nn.Module):
             self.decoders.append(stage)
 
         self.d_conv_final = nn.Conv2d(self.dec_channels * 2,
-                                      1,
+                                      self.in_channels,
                                       kernel_size=(4, 4),
                                       stride=(1, 1),
                                       padding=0)
@@ -60,7 +60,6 @@ class AutoEncoder(nn.Module):
 
     def encode(self, x):
         x = self.in_cnn(x)
-
         x = x.view(
             -1, self.mid_feature_dimension * self.mid_tensor_dimension *
             self.mid_tensor_dimension)
@@ -68,7 +67,9 @@ class AutoEncoder(nn.Module):
         return x
 
     def decode(self, x):
-        in_channels = self.dec_channels * (2**self.up_layers)
+
+        in_channels = self.dec_channels * (2**
+                                           self.up_layers)
         x = self.d_fc_1(x)
         x = F.leaky_relu(x, negative_slope=0.2, inplace=True)
         x = x.view(-1, in_channels, self.mid_tensor_dimension,
