@@ -5,9 +5,8 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-import torch
-
 import pytorch_lightning as pl
+import torch
 from hyperopt import hp
 from omegaconf import ListConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -177,7 +176,7 @@ def fit(cfg) -> pl.Trainer:
         raise (ex)
 
 
-def dhp19_evaluate_procedure(cfg):
+def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
 
     checkpoint_dir = cfg.load_path
     checkpoints = sorted(os.listdir(checkpoint_dir))
@@ -196,7 +195,7 @@ def dhp19_evaluate_procedure(cfg):
                              weights_summary='top')
         results = trainer.test(model)
         print(results)
-        final_results[f'movement_{movement}'] = results['test_meanMPJPE']
+        final_results[f'movement_{movement}'] = results[metric]
 
     else:
         print(f"Error loading, {load_path} does not exist!")
