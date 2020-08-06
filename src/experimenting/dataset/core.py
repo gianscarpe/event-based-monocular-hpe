@@ -94,7 +94,7 @@ class DHP19Core(BaseCore):
             self.subjects = self.hparams_dataset.test_subjects
 
         if self.hparams_dataset.movements is None or self.hparams_dataset.movements == 'all':
-            self.movements = range(0, 32)
+            self.movements = range(0, 34)
         else:
             self.movements = self.hparams_dataset.movements
 

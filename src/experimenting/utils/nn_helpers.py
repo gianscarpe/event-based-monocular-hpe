@@ -1,12 +1,11 @@
 from math import sqrt
 
+import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
+from kornia.geometry import spatial_softmax2d
 from torch.nn import init
 from torch.nn.modules.conv import _ConvNd
-
-import segmentation_models_pytorch as smp
-from kornia.geometry import spatial_softmax2d
 from torchvision import models
 
 __all__ = [

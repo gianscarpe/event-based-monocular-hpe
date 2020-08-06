@@ -26,8 +26,7 @@ class MargiposeEstimator(BaseModule):
             self._hparams.dataset['n_channels'],
             join(self._hparams.model_zoo, self._hparams.training.backbone),
             self._hparams.training['pretrained'])
-        if self._hparams.training['latent_size'] is None:
-            self._hparams.training['latent_size'] = 128
+
         mid_dimension = get_backbone_last_dimension(
             in_cnn, self._hparams.training['model'])
 
