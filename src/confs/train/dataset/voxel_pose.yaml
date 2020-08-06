@@ -12,6 +12,7 @@ dataset:
   preload_dir : ${dataset.base_path}/preload
   
   test_subjects: [1, 2, 3, 4, 5]
+
   cams: [0,1,2,3]
   n_classes: 33
   n_channels: 4
