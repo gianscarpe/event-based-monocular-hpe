@@ -95,7 +95,7 @@ class DHP19Params(BaseDatasetParams):
             self.movements = self.hparams_dataset.movements
 
     def get_label_from_id(self, idx):
-        return self.labels[idx]
+        return self.classification_labels[idx]
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
