@@ -93,8 +93,10 @@ class DHP19Core(BaseCore):
         else:
             self.subjects = self.hparams_dataset.test_subjects
 
-        if self.hparams_dataset.movements is None or self.hparams_dataset.movements == 'all':
-            self.movements = range(0, 32)
+        if self.hparams_dataset.movements is None:
+            self.movements = []
+        elif self.hparams_dataset.movements == 'all':
+            self.movements = range(0, 34)
         else:
             self.movements = self.hparams_dataset.movements
 
@@ -111,7 +113,7 @@ class DHP19Core(BaseCore):
 
     def get_partition_function(self):
         return lambda x: DHP19Core.get_frame_info(x)[
-            'subject'] in self.subjects and DHP19Core.get_label_from_filename(
+            'subject'] in self.subjects or DHP19Core.get_label_from_filename(
                 x) in self.movements
 
     def _get_file_paths_with_cam(data_dir, cams=None):
