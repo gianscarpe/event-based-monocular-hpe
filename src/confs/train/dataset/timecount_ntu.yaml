@@ -1,6 +1,6 @@
 dataset:
   name: timecount_ntu
-  params_class: NTUParams
+  params_class: NTUCore
   base_path: /data/gscarpellini/ntu/events
   data_dir: ${dataset.base_path}/out
   labels_dir: 

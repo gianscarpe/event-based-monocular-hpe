@@ -11,8 +11,8 @@ from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 __all__ = [
-    'ClassificationDataset', 'DHPHeatmapDataset', 'DHPJointsDataset',
-    'DHP3DJointsDataset', 'AutoEncoderDataset'
+    'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
+    'Joints3DDataset', 'AutoEncoderDataset'
 ]
 
 
@@ -89,17 +89,17 @@ class AutoEncoderDataset(BaseDataset):
         return x
 
 
-class DHPHeatmapDataset(BaseDataset):
+class HeatmapDataset(BaseDataset):
     def __init__(self, dataset, labels_dir, indexes=None, transform=None):
 
-        super(DHPHeatmapDataset, self).__init__(dataset, indexes, transform,
-                                                True)
+        super(HeatmapDataset, self).__init__(dataset, indexes, transform,
+                                             True)
 
     def _get_y(self, idx):
         return self.dataset.get_heatmap_from_id(idx)
 
 
-class DHPJointsDataset(BaseDataset):
+class JointsDataset(BaseDataset):
     def __init__(self,
                  dataset,
                  file_paths,
@@ -107,9 +107,9 @@ class DHPJointsDataset(BaseDataset):
                  indexes=None,
                  transform=None):
 
-        super(DHPJointsDataset, self).__init__(indexes,
-                                               transform,
-                                               augment_label=False)
+        super(JointsDataset, self).__init__(indexes,
+                                            transform,
+                                            augment_label=False)
 
         self.max_h = dataset.max_h
         self.max_w = dataset.max_w
@@ -137,11 +137,11 @@ class DHPJointsDataset(BaseDataset):
         return x, y, mask
 
 
-class DHP3DJointsDataset(BaseDataset):
+class Joints3DDataset(BaseDataset):
     def __init__(self, dataset, height, width, indexes=None, transform=None):
 
-        super(DHP3DJointsDataset, self).__init__(dataset, indexes, transform,
-                                                 False)
+        super(Joints3DDataset, self).__init__(dataset, indexes, transform,
+                                              False)
 
         self.n_joints = dataset.n_joints
         self.normalizer = SkeletonNormaliser()
@@ -163,7 +163,7 @@ class DHP3DJointsDataset(BaseDataset):
 
         z_ref = joints[4][2]
         camera = torch.tensor(joints_file['camera'])
-        M = torch.tensor(joints_file['M'])
+        extrinsic_matrix = torch.tensor(joints_file['M'])
         # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
@@ -179,8 +179,7 @@ class DHP3DJointsDataset(BaseDataset):
             'skeleton': joints,
             'normalized_skeleton': normalized_skeleton,
             'z_ref': z_ref,
-            'M': M,
-            'camera': camera,
+            'M': extrinsic_matrix,
             'mask': mask
         }
         return label

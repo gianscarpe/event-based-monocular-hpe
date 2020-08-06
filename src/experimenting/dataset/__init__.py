@@ -1,7 +1,6 @@
 from torch.utils.data import DataLoader
 
 from .factory import *
-from .params_utils import DHP19Params
 
 
 def get_data(hparams, dataset_constructor):

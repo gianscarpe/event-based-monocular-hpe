@@ -1,5 +1,5 @@
 import os
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import io
@@ -7,7 +7,7 @@ from scipy import io
 from ..utils import get_file_paths, load_heatmap
 
 
-class BaseDatasetParams(ABC):
+class BaseCore(ABC):
     def __init__(self, hparams_dataset):
         self.hparams_dataset = hparams_dataset
         self._set()
@@ -16,31 +16,31 @@ class BaseDatasetParams(ABC):
         if hparams_dataset.save_split:
             self._save_params(hparams_dataset.preload_dir)
 
-    @abstractclassmethod
+    @abstractmethod
     def _set(self):
         pass
 
-    @abstractclassmethod
-    def get_frame_info(self, x):
+    @abstractmethod
+    def get_frame_info(x):
         pass
 
-    @abstractclassmethod
+    @abstractmethod
     def get_partition_function(self):
         pass
 
-    def load_frame(self, path):
-        x = np.load(path) / 255.
-        if len(x.shape) == 2:
-            x = np.expand_dims(x, -1)
-        return x
-
     def load_frame_from_id(self, idx):
-        img_name = self.file_paths[idx]
-        x = self.load_frame(img_name)
-        return x
+        raise NotImplementedError()
+
+    def get_label_from_id(self, idx):
+        raise NotImplementedError()
+
+    def get_joint_from_id(self, idx):
+        raise NotImplementedError()
+
+    def get_heatmap_from_id(self, idx):
+        raise NotImplementedError()
 
     def _set_train_test_split(self, split_at):
-
         data_indexes = np.arange(len(self.file_paths))
         cond = self.get_partition_function()
         test_subject_indexes_mask = [cond(x) for x in self.file_paths]
@@ -51,7 +51,7 @@ class BaseDatasetParams(ABC):
                                                           split_at=split_at)
 
 
-class DHP19Params(BaseDatasetParams):
+class DHP19Core(BaseCore):
     MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
     max_w = 346
     max_h = 260
@@ -59,26 +59,30 @@ class DHP19Params(BaseDatasetParams):
     n_joints = 13
 
     def __init__(self, hparams_dataset):
-        super(DHP19Params, self).__init__(hparams_dataset)
+        super(DHP19Core, self).__init__(hparams_dataset)
 
-    def load_frame(self, path):
+    @staticmethod
+    def load_frame(path):
         ext = os.path.splitext(path)[1]
         if ext == '.mat':
-            info = DHP19Params.get_frame_info(path)
-            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"]+1}n'], 0, 1)
+            info = DHP19Core.get_frame_info(path)
+            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"] + 1}n'], 0, 1)
         elif ext == '.npy':
             x = np.load(path) / 255.
             if len(x.shape) == 2:
                 x = np.expand_dims(x, -1)
         return x
 
+    def load_frame_from_id(self, idx):
+        return DHP19Core.load_frame(self.file_paths[idx])
+
     def _set(self):
-        self.file_paths = DHP19Params._get_file_paths_with_cam(
+        self.file_paths = DHP19Core._get_file_paths_with_cam(
             self.hparams_dataset.data_dir, self.hparams_dataset.cams)
 
         self.labels_dir = self.hparams_dataset.labels_dir
         self.classification_labels = [
-            DHP19Params.get_label_from_filename(x_path)
+            DHP19Core.get_label_from_filename(x_path)
             for x_path in self.file_paths
         ]
         self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir)
@@ -90,7 +94,7 @@ class DHP19Params(BaseDatasetParams):
             self.subjects = self.hparams_dataset.test_subjects
 
         if self.hparams_dataset.movements is None or self.hparams_dataset.movements == 'all':
-            self.movements = range(1, 34)
+            self.movements = range(0, 32)
         else:
             self.movements = self.hparams_dataset.movements
 
@@ -103,14 +107,12 @@ class DHP19Params(BaseDatasetParams):
 
     def get_heatmap_from_id(self, idx):
         hm_path = self.heatmaps[idx]
-
         return load_heatmap(hm_path, self.n_joints)
 
     def get_partition_function(self):
-        return lambda x: DHP19Params.get_frame_info(
-            x)['subject'
-               ] in self.subjects and DHP19Params.get_label_from_filename(
-                   x) in self.movements
+        return lambda x: DHP19Core.get_frame_info(x)[
+            'subject'] in self.subjects and DHP19Core.get_label_from_filename(
+                x) in self.movements
 
     def _get_file_paths_with_cam(data_dir, cams=None):
 
@@ -119,8 +121,9 @@ class DHP19Params(BaseDatasetParams):
 
         file_paths = np.array(
             get_file_paths(data_dir, extensions=['.npy', '.mat']))
+
         cam_mask = [
-            DHP19Params.get_frame_info(x)['cam'] in cams for x in file_paths
+            DHP19Core.get_frame_info(x)['cam'] in cams for x in file_paths
         ]
 
         file_paths = file_paths[cam_mask]
@@ -135,13 +138,13 @@ class DHP19Params(BaseDatasetParams):
             int(filename[filename.find('S') + 1:filename.find('S') +
                          4].split('_')[0]),
             'session':
-            DHP19Params._get_info_from_string(filename, 'session'),
+            DHP19Core._get_info_from_string(filename, 'session'),
             'mov':
-            DHP19Params._get_info_from_string(filename, 'mov'),
+            DHP19Core._get_info_from_string(filename, 'mov'),
             'cam':
-            DHP19Params._get_info_from_string(filename, 'cam'),
+            DHP19Core._get_info_from_string(filename, 'cam'),
             'frame':
-            DHP19Params._get_info_from_string(filename, 'frame')
+            DHP19Core._get_info_from_string(filename, 'frame')
         }
 
         return result
@@ -155,10 +158,10 @@ class DHP19Params(BaseDatasetParams):
         """
 
         label = 0
-        info = DHP19Params.get_frame_info(filepath)
+        info = DHP19Core.get_frame_info(filepath)
 
         for i in range(1, info['session']):
-            label += DHP19Params.MOVEMENTS_PER_SESSION[i]
+            label += DHP19Core.MOVEMENTS_PER_SESSION[i]
 
         return label + info['mov'] - 1
 
@@ -171,12 +174,12 @@ class DHP19Params(BaseDatasetParams):
         return labels_hm
 
 
-class NTUParams(BaseDatasetParams):
+class NTUCore(BaseCore):
     def __init__(self, hparams_dataset):
-        super(NTUParams, self).__init__(hparams_dataset)
+        super(NTUCore, self).__init__(hparams_dataset)
 
     def _set(self):
-        self.file_paths = NTUParams._get_file_paths(
+        self.file_paths = NTUCore._get_file_paths(
             self.hparams_dataset.data_dir)
 
         if self.hparams_dataset.test_subjects is None:
@@ -184,6 +187,19 @@ class NTUParams(BaseDatasetParams):
         else:
             self.subjects = self.hparams_dataset.test_subjects
 
+    @staticmethod
+    def load_frame(path):
+        x = np.load(path) / 255.
+        if len(x.shape) == 2:
+            x = np.expand_dims(x, -1)
+        return x
+
+    def load_frame_from_id(self, idx):
+        img_name = self.file_paths[idx]
+        x = self.load_frame(img_name)
+        return x
+
+    @staticmethod
     def get_frame_info(path):
 
         dir_name = os.path.dirname(
@@ -202,8 +218,7 @@ class NTUParams(BaseDatasetParams):
         return file_paths
 
     def get_partition_function(self):
-        return lambda x: NTUParams.get_frame_info(x)['subject'
-                                                     ] in self.subjects
+        return lambda x: NTUCore.get_frame_info(x)['subject'] in self.subjects
 
 
 def _split_set(data_indexes, split_at=0.8):

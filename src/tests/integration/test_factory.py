@@ -24,7 +24,7 @@ class TestFactoryDHP19(unittest.TestCase):
                 'test_subjects': [1, 2, 3, 4, 5],
                 'split_at': 0.8,
                 'cams': [3],
-                'params_class': 'DHP19Params'
+                'params_class': 'DHP19Core'
             },
             'augmentation_train': {
                 'info': {},
@@ -78,7 +78,7 @@ class TestFactoryAutoencoderNTU(unittest.TestCase):
                 'labels_dir': labels_dir,
                 'test_subjects': [18],
                 'split_at': 0.8,
-                'params_class': 'NTUParams'
+                'params_class': 'NTUCore'
             },
             'augmentation_train': {
                 'info': {},

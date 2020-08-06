@@ -1,6 +1,6 @@
 dataset:
   name: timecount_pose
-  params_class: DHP19Params
+  params_class: DHP19Core
   base_path: /data/gscarpellini/dhp19/time_count_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
   hm_dir: ${dataset.base_path}/labels
@@ -13,6 +13,6 @@ dataset:
 
   n_classes: 33
   test_subjects: [1, 2, 3, 4, 5]
-  cams: [3]
+  cams: [0,1,2,3]
   n_channels: 1
   n_joints: 13

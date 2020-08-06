@@ -1,7 +1,8 @@
 import unittest
 
-from experimenting.dataset.params_utils import DHP19Params, NTUParams
 from omegaconf import DictConfig
+
+from experimenting.dataset.core import DHP19Core, NTUCore
 
 
 class TestDHP19Params(unittest.TestCase):
@@ -18,7 +19,7 @@ class TestDHP19Params(unittest.TestCase):
             'split_at': 0.8,
             'cams': [3]
         })
-        self.params = DHP19Params(self.hparams)
+        self.params = DHP19Core(self.hparams)
 
     def test_init(self):
         self.assertIsNotNone(self.params)
@@ -29,8 +30,8 @@ class TestDHP19Params(unittest.TestCase):
         self.assertGreater(len(self.params.file_paths), 0)
 
     def test_train_test_split(self):
-
         self.assertIsNotNone(self.params.train_indexes)
+
         self.assertGreater(len(self.params.test_indexes), 0)
         self.assertGreater(
             len(self.params.val_indexes) + len(self.params.train_indexes), 0)
@@ -47,7 +48,7 @@ class TestNTUParams(unittest.TestCase):
             'test_subjects': [19],
             'split_at': 0.8,
         })
-        self.params = NTUParams(self.hparams)
+        self.params = NTUCore(self.hparams)
 
     def test_init(self):
         self.assertIsNotNone(self.params)

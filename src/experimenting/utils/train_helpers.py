@@ -12,7 +12,7 @@ from omegaconf import ListConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from .. import models
+from .. import agents
 
 logging.basicConfig(level=logging.INFO)
 
@@ -83,7 +83,7 @@ def get_training_params(cfg: dict):
 
 def load_model(cfg: dict):
     print('Loading training')
-    model = getattr(models, cfg['training']['module']).load_from_checkpoint(
+    model = getattr(agents, cfg['training']['module']).load_from_checkpoint(
         cfg['load_path'])
     return model
 
@@ -163,9 +163,9 @@ def fit(cfg) -> pl.Trainer:
         checkpoint_path = os.path.join(checkpoint_dir, checkpoints[0])
         print(f'Loading {checkpoint_path} ...')
         model = getattr(
-            models, cfg.training.module).load_from_checkpoint(checkpoint_path)
+            agents, cfg.training.module).load_from_checkpoint(checkpoint_path)
     else:
-        model = getattr(models, cfg.training.module)(cfg)
+        model = getattr(agents, cfg.training.module)(cfg)
 
     try:
         trainer = pl.Trainer(**trainer_configuration)
@@ -173,7 +173,7 @@ def fit(cfg) -> pl.Trainer:
         return trainer
     except Exception as ex:
         _safe_train_end(trainer_configuration)
-        raise (ex)
+        raise ex
 
 
 def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
@@ -183,9 +183,12 @@ def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
     load_path = os.path.join(checkpoint_dir, checkpoints[0])
 
     print("Loading from ... ", load_path)
-    if (os.path.exists(load_path)):
-        model = getattr(models, cfg.training.module).load_from_checkpoint(
+    if os.path.exists(load_path):
+        model = getattr(agents, cfg.training.module).load_from_checkpoint(
             load_path)
+    else:
+        raise FileNotFoundError()
+
     final_results = {}
     for movement in range(0, 33):
         model._hparams.dataset.movements = [movement]
@@ -200,8 +203,6 @@ def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
     else:
         print(f"Error loading, {load_path} does not exist!")
 
-    breakpoint()
-    print(final_results)
     with open(os.path.join(load_path, 'results.json'), 'w') as json_file:
         json.dump(final_results, json_file)
     return final_results
