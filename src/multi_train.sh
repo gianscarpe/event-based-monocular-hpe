@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DATASET=$1
-BATCH_SIZE=32
+BATCH_SIZE=16
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 

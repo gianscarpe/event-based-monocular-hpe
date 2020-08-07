@@ -77,8 +77,10 @@ class DHP19Core(BaseCore):
         return DHP19Core.load_frame(self.file_paths[idx])
 
     def _set(self):
-        self.file_paths = DHP19Core._get_file_paths_with_cam(
-            self.hparams_dataset.data_dir, self.hparams_dataset.cams)
+
+        self.file_paths = DHP19Core._get_file_paths_with_cam_and_mov(
+            self.hparams_dataset.data_dir, self.hparams_dataset.cams,
+            self.hparams_dataset.movements)
 
         self.labels_dir = self.hparams_dataset.labels_dir
         self.classification_labels = [
@@ -93,11 +95,6 @@ class DHP19Core(BaseCore):
         else:
             self.subjects = self.hparams_dataset.test_subjects
 
-        if self.hparams_dataset.movements is None or self.hparams_dataset.movements == 'all':
-            self.movements = range(0, 34)
-        else:
-            self.movements = self.hparams_dataset.movements
-
     def get_label_from_id(self, idx):
         return self.classification_labels[idx]
 
@@ -110,23 +107,29 @@ class DHP19Core(BaseCore):
         return load_heatmap(hm_path, self.n_joints)
 
     def get_partition_function(self):
-        return lambda x: DHP19Core.get_frame_info(x)[
-            'subject'] in self.subjects and DHP19Core.get_label_from_filename(
-                x) in self.movements
+        return lambda x: DHP19Core.get_frame_info(x)['subject'
+                                                     ] in self.subjects
 
-    def _get_file_paths_with_cam(data_dir, cams=None):
+    def _get_file_paths_with_cam_and_mov(data_dir, cams=None, movs=None):
 
         if cams is None:
             cams = [3]
 
         file_paths = np.array(
             get_file_paths(data_dir, extensions=['.npy', '.mat']))
+        cam_mask = np.zeros(len(file_paths))
 
-        cam_mask = [
-            DHP19Core.get_frame_info(x)['cam'] in cams for x in file_paths
-        ]
+        for c in cams:
+            cam_mask += [f'cam_{c}' in x for x in file_paths]
 
-        file_paths = file_paths[cam_mask]
+        file_paths = file_paths[cam_mask > 0]
+        if movs is not None:
+            mov_mask = [
+                DHP19Core.get_label_from_filename(x) in movs
+                for x in file_paths
+            ]
+
+            file_paths = file_paths[mov_mask]
 
         return file_paths
 

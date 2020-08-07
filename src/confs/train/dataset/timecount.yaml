@@ -1,5 +1,5 @@
 dataset:
-  name: timecount_pose
+  name: timecount_dhp19
   params_class: DHP19Core
   base_path: /data/gscarpellini/dhp19/time_count_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
