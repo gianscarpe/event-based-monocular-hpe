@@ -81,13 +81,6 @@ class Joints3DConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(Joints3DConstructor, self).__init__(hparams, Joints3DDataset)
 
-        self._set_for_train('height', self.train_aug_info.height)
-        self._set_for_train('width', self.train_aug_info.width)
-        self._set_for_val('height', self.val_aug_info.height)
-        self._set_for_val('width', self.val_aug_info.width)
-        self._set_for_test('height', self.val_aug_info.height)
-        self._set_for_test('width', self.val_aug_info.width)
-
 
 class HeatmapConstructor(BaseConstructor):
     def __init__(self, hparams):

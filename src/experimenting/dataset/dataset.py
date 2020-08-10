@@ -134,15 +134,15 @@ class JointsDataset(BaseDataset):
 
 
 class Joints3DDataset(BaseDataset):
-    def __init__(self, dataset, height, width, indexes=None, transform=None):
+    def __init__(self, dataset, in_shape, indexes=None, transform=None):
 
         super(Joints3DDataset, self).__init__(dataset, indexes, transform,
                                               False)
 
         self.n_joints = dataset.n_joints
         self.normalizer = SkeletonNormaliser()
-        self.height = height
-        self.width = width
+        self.height = in_shape[0]
+        self.width = in_shape[1]
 
     def _get_y(self, idx):
         joints_file = self.dataset.get_joint_from_id(idx)

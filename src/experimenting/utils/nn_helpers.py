@@ -358,14 +358,6 @@ def get_cnn(model_name, params):
     return switcher[model_name](**params)
 
 
-def get_backbone_last_dimension(net, net_name):
-    switch = {
-        'resnet34': (32, 32),
-        'resnet50': (64, 64),
-        'resnet34_cut_256': (16, 16),
-        'resnet34_cut_512': (8, 8),
-        'ae_resnet34_cut_256': (16, 16),
-        'ae_resnet34_cut_512': (8, 8)
-
-    }
-    return (net[-1][-1].bn2.num_features, *switch[net_name])
+def get_backbone_last_dimension(net, input_shape):
+    x = torch.randn((32, *input_shape))
+    return net(x).shape[1:]

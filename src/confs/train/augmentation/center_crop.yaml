@@ -1,14 +1,14 @@
 augmentation_train:
   type: center_crop
   info:
-    height: 346
-    width: 346
+    height: 256
+    width: 256
   apply:
     aug1:
         cls: albumentations.CenterCrop
         params:
-          height: 346
-          width: 346
+          height: 256
+          width: 256
           p: 1.0
     aug2:
         cls: albumentations.pytorch.ToTensor
@@ -22,8 +22,8 @@ augmentation_test:
     aug1:
         cls: albumentations.CenterCrop
         params:
-          height: 346
-          width: 346
+          height: 256
+          width: 256
           p: 1.0
     aug2:
         cls: albumentations.pytorch.ToTensor

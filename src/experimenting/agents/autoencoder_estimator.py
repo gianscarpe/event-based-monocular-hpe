@@ -3,7 +3,6 @@ import torch
 from experimenting.agents.base import BaseModule
 from experimenting.dataset import AutoEncoderConstructor
 from experimenting.models.autoencoder import AutoEncoder
-from experimenting.utils import get_backbone_last_dimension
 
 
 class AutoEncoderEstimator(BaseModule):
@@ -18,15 +17,15 @@ class AutoEncoderEstimator(BaseModule):
             self._hparams.dataset['n_channels'], None,
             self._hparams.training['pretrained'])
 
-        mid_dimension = get_backbone_last_dimension(
-            in_cnn, self._hparams.training['model'])
-
         params = {
-            'in_channels': self._hparams.dataset['n_channels'],
-            'in_cnn': in_cnn,
-            'mid_dimension': mid_dimension,
-            'up_layers': self._hparams.training['up_layers'],
-            'latent_size': self._hparams.training['latent_size'],
+            'in_shape': (self.hparams.dataset['n_channels'],
+                         *self.hparams.dataset['in_shape']),
+            'in_cnn':
+            in_cnn,
+            'up_layers':
+            self._hparams.training['up_layers'],
+            'latent_size':
+            self._hparams.training['latent_size'],
         }
         self.model = AutoEncoder(**params)
 

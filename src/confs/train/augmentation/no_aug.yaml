@@ -1,8 +1,7 @@
 augmentation_train:
   type: no_aug
   info:
-    height: 260
-    width: 346
+    in_shape: ${dataset.in_shape}
   apply:
     aug1:
       class: albumentations.pytorch.ToTensor
@@ -10,8 +9,7 @@ augmentation_train:
 augmentation_test:
   type: no_aug
   info:
-    height: 260
-    width: 346
+    in_shape: ${dataset.in_shape}
   apply:
     aug1:
       class: albumentations.pytorch.ToTensor
