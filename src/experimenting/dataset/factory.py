@@ -5,8 +5,8 @@ from . import core
 from .dataset import (
     AutoEncoderDataset,
     ClassificationDataset,
-    Joints3DDataset,
     HeatmapDataset,
+    Joints3DDataset,
     JointsDataset,
 )
 
@@ -75,7 +75,6 @@ class ClassificationConstructor(BaseConstructor):
 class JointsConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(JointsConstructor, self).__init__(hparams, JointsDataset)
-        self._set_for_all('labels_dir', hparams.dataset.joints_dir)
 
 
 class Joints3DConstructor(BaseConstructor):
@@ -93,8 +92,6 @@ class Joints3DConstructor(BaseConstructor):
 class HeatmapConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(HeatmapConstructor, self).__init__(hparams, HeatmapDataset)
-
-        self._set_for_all('labels_dir', hparams.dataset.joints_dir)
 
 
 class AutoEncoderConstructor(BaseConstructor):

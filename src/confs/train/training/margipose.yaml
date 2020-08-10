@@ -9,3 +9,4 @@ training:
   latent_size: 256
   stages: 2
   predict_3d: true
+  pretrained: true

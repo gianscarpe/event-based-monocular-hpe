@@ -87,8 +87,8 @@ class DHP19Core(BaseCore):
             DHP19Core.get_label_from_filename(x_path)
             for x_path in self.file_paths
         ]
-        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir)
-        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir)
+        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir, 'npz')
+        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir, 'npy')
 
         if self.hparams_dataset.test_subjects is None:
             self.subjects = [1, 2, 3, 4, 5]
@@ -168,10 +168,10 @@ class DHP19Core(BaseCore):
 
         return label + info['mov'] - 1
 
-    def _retrieve_2hm_files(self, labels_dir):
+    def _retrieve_2hm_files(self, labels_dir, suffix):
         labels_hm = [
             os.path.join(labels_dir,
-                         os.path.basename(x).split('.')[0] + '_2dhm.npz')
+                         os.path.basename(x).split('.')[0] + f'_2dhm.{suffix}')
             for x in self.file_paths
         ]
         return labels_hm

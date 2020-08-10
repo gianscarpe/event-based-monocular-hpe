@@ -1,7 +1,8 @@
 """
 DHP19 dataset implementations (classification, heatmap, joints)
-
+data_dir = 
 """
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -90,24 +91,19 @@ class AutoEncoderDataset(BaseDataset):
 
 
 class HeatmapDataset(BaseDataset):
-    def __init__(self, dataset, labels_dir, indexes=None, transform=None):
+    def __init__(self, dataset, indexes=None, transform=None):
 
-        super(HeatmapDataset, self).__init__(dataset, indexes, transform,
-                                             True)
+        super(HeatmapDataset, self).__init__(dataset, indexes, transform, True)
 
     def _get_y(self, idx):
         return self.dataset.get_heatmap_from_id(idx)
 
 
 class JointsDataset(BaseDataset):
-    def __init__(self,
-                 dataset,
-                 file_paths,
-                 labels_dir,
-                 indexes=None,
-                 transform=None):
+    def __init__(self, dataset, indexes=None, transform=None):
 
-        super(JointsDataset, self).__init__(indexes,
+        super(JointsDataset, self).__init__(dataset,
+                                            indexes,
                                             transform,
                                             augment_label=False)
 
