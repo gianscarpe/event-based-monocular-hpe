@@ -9,7 +9,6 @@ from experimenting.models.metrics import MPJPE
 from experimenting.utils import (
     average_loss,
     denormalize_predict,
-    get_backbone_last_dimension,
     predict_xyz,
 )
 
@@ -27,15 +26,17 @@ class MargiposeEstimator(BaseModule):
             join(self._hparams.model_zoo, self._hparams.training.backbone),
             self._hparams.training['pretrained'])
 
-        mid_dimension = get_backbone_last_dimension(
-            in_cnn, self._hparams.training['model'])
-
         params = {
-            'in_cnn': in_cnn,
-            'mid_dimension': mid_dimension,
-            'n_joints': self._hparams.dataset['n_joints'],
-            'n_stages': self._hparams.training['stages'],
-            'predict_3d': True
+            'in_cnn':
+            in_cnn,
+            'in_shape': (self.hparams.dataset['n_channels'],
+                         *self.hparams.dataset['in_shape']),
+            'n_joints':
+            self._hparams.dataset['n_joints'],
+            'n_stages':
+            self._hparams.training['stages'],
+            'predict_3d':
+            True
         }
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
