@@ -104,12 +104,9 @@ class MargiPoseModel3D(nn.Module):
         xz_heatmaps = []
 
         inp = features
-        if inp.shape[-1] > inp.shape[-2]:
-            pad = (0, 0, inp.shape[-1] - inp.shape[-2], 0)
-        else:
-            pad = (0, inp.shape[-2] - inp.shape[-1], 0, 0)
-
-        inp = nn.functional.pad(inp, pad, 'constant', 0)
+        # TODO: padding hard coded
+        
+        inp = nn.functional.pad(inp, (0, 0, 11, 0), 'constant', 0)
 
         for t in range(self.n_stages):
             if t > 0:
