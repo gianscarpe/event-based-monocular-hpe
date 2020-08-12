@@ -153,7 +153,7 @@ dependencies:
   - testpath=0.4.4=py_0
   - tk=8.6.8=hbc83047_0
   - toolz=0.10.0=py_0
-  - torch=1.5.0
+  - torch=1.5
   - tornado=6.0.4=py37h7b6447c_1
   - traitlets=4.3.3=py37_0
   - wcwidth=0.1.9=py_0
