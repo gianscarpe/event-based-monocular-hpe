@@ -22,18 +22,23 @@ class TestFactoryDHP19(unittest.TestCase):
                 'labels_dir': labels_dir,
                 'hm_dir': labels_dir,
                 'test_subjects': [1, 2, 3, 4, 5],
+                'in_shape': [256, 256],
                 'split_at': 0.8,
                 'cams': [3],
                 'params_class': 'DHP19Core'
             },
             'augmentation_train': {
-                'info': {},
+                'info': {
+                    'in_shape': [256, 256],
+                },
                 'apply': {}
             },
             'augmentation_test': {
-                'info': {},
-                'apply': {}
-            }
+                'info': {
+                    'in_shape': [256, 256]
+                },
+               'apply': {}
+            }        
         })
 
     def test_ae(self):
@@ -78,7 +83,8 @@ class TestFactoryAutoencoderNTU(unittest.TestCase):
                 'labels_dir': labels_dir,
                 'test_subjects': [18],
                 'split_at': 0.8,
-                'params_class': 'NTUCore'
+                'params_class': 'NTUCore',
+                'in_shape': [256, 256]
             },
             'augmentation_train': {
                 'info': {},

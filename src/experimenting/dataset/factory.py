@@ -80,6 +80,7 @@ class JointsConstructor(BaseConstructor):
 class Joints3DConstructor(BaseConstructor):
     def __init__(self, hparams):
         super(Joints3DConstructor, self).__init__(hparams, Joints3DDataset)
+        self._set_for_all('in_shape', self.train_aug_info.in_shape)
 
 
 class HeatmapConstructor(BaseConstructor):

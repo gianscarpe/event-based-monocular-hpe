@@ -18,8 +18,8 @@ class AutoEncoderEstimator(BaseModule):
             self._hparams.training['pretrained'])
 
         params = {
-            'in_shape': (self.hparams.dataset['n_channels'],
-                         *self.hparams.dataset['in_shape']),
+            'in_shape': (self._hparams.dataset['n_channels'],
+                         *self._hparams.dataset['in_shape']),
             'in_cnn':
             in_cnn,
             'up_layers':

@@ -46,7 +46,7 @@ class TestMargipose(unittest.TestCase):
                 'n_channels': 1,
                 'pretrained': True
             }),
-            'mid_dimension': (128, 16, 16),
+            'in_shape': (128, 16, 16),
             'n_stages':
             3
         }
