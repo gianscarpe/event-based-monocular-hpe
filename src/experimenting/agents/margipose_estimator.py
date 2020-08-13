@@ -29,8 +29,7 @@ class MargiposeEstimator(BaseModule):
         params = {
             'in_cnn':
             in_cnn,
-            'in_shape': (self.hparams.dataset['n_channels'],
-                         *self.hparams.dataset['in_shape']),
+            'latent_size': self._hparams.training['latent_size'],
             'n_joints':
             self._hparams.dataset['n_joints'],
             'n_stages':
@@ -103,7 +102,6 @@ class MargiposeEstimator(BaseModule):
 
     def _eval(self, batch, denormalize=False):
         b_x, b_y = batch
-
         outs = self.forward(b_x)  # cnn output
         loss = self._calculate_loss3d(outs, b_y)
         b_masks = b_y['mask']
@@ -130,6 +128,7 @@ class MargiposeEstimator(BaseModule):
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
+        
         loss, results = self._eval(batch,
                                    denormalize=False)  # Normalized results
         return {"batch_val_loss": loss, **results}

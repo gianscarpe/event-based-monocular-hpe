@@ -51,13 +51,14 @@ def _up_stride_block(in_chans, out_chans):
                            kernel_size=3,
                            padding=1,
                            stride=2,
-                           output_padding=(1, 1),
+                           output_padding=(0, 1),
                            bias=False),
+        
         nn.ConvTranspose2d(in_chans,
                            out_chans,
                            kernel_size=1,
                            stride=2,
-                           output_padding=(1, 1),
+                           output_padding=(0, 1),
                            bias=False))
 
 

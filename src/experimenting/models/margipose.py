@@ -21,17 +21,18 @@ class MargiPoseStage(nn.Module):
         self.n_joints = n_joints
         self.softmax = FlatSoftmax()
         self.heatmap_space = heatmap_space
+        max_dimension = 256
         self.down_layers = nn.Sequential(
             _regular_block(mid_feature_dimension, 128),
             _regular_block(128, 128),
-            _down_stride_block(128, 176),  # 22 * 8
-            _regular_block(176, 176),
-            _regular_block(176, 176),
+            _down_stride_block(128, max_dimension),  # 22 * 8
+            _regular_block(max_dimension, max_dimension),
+            _regular_block(max_dimension, max_dimension),
         )
         self.up_layers = nn.Sequential(
-            _regular_block(176, 176),
-            _regular_block(176, 176),
-            _up_stride_block(176, 128),
+            _regular_block(max_dimension, max_dimension),
+            _regular_block(max_dimension, max_dimension),
+            _up_stride_block(max_dimension, 128),
             _regular_block(128, 128),
             _regular_block(128, self.n_joints),
         )
@@ -65,15 +66,15 @@ class MargiPoseModel3D(nn.Module):
     def __init__(self,
                  n_stages,
                  in_cnn,
-                 in_shape,
+                 latent_size,
                  n_joints,
                  permute_axis=False):
         super().__init__()
 
         self.n_stages = n_stages
-
+        
         self.in_cnn = in_cnn
-        self.mid_feature_dimension = in_shape[0]
+        self.mid_feature_dimension = latent_size
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
@@ -127,7 +128,6 @@ class MargiPoseModel3D(nn.Module):
                 combined_hm_features = self.hm_combiners[t - 1](torch.cat([
                     xy_heatmaps[t - 1], zy_heatmaps[t - 1], xz_heatmaps[t - 1]
                 ], -3))
-
                 inp = inp + combined_hm_features
             xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))
             zy_heatmaps.append(self.softmax(self.zy_hm_cnns[t](inp)))
