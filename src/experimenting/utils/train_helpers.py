@@ -4,11 +4,10 @@ import os
 import shutil
 from pathlib import Path
 
-import numpy as np
-import pytorch_lightning as pl
 import torch
-from hyperopt import hp
-from omegaconf import ListConfig, OmegaConf
+
+import pytorch_lightning as pl
+from omegaconf import ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -17,8 +16,7 @@ from .. import agents
 logging.basicConfig(level=logging.INFO)
 
 __all__ = [
-    'get_training_params', 'load_model', 'fit', 'get_hypersearch_cfg',
-    'dhp19_evaluate_procedure'
+    'get_training_params', 'load_model', 'fit', 'dhp19_evaluate_procedure'
 ]
 
 
@@ -96,53 +94,6 @@ def _safe_train_end(trainer_configuration):
     logging.log(logging.ERROR, 'exp moved to trash')
 
 
-def _get_hyperopt_optimizer():
-    return hp.choice('hp_optimizer', [{
-        'type': 'SGD',
-        'use_lr_scheduler': True,
-        'params': {
-            'lr': hp.loguniform('sgd_optimizer_lr', np.log(0.001),
-                                np.log(0.2)),
-            'nesterov': True,
-            'momentum': 0.9
-        }
-    }, {
-        'type': 'Adam',
-        'params': {
-            'lr': hp.loguniform('adam_optimizer_lr', np.log(0.001),
-                                np.log(0.2))
-        }
-    }])
-
-
-def _get_hyperopt_training(training_config: dict):
-    """
-
-    Parameters
-    ----------
-    training_config: dict :
-        Hydra training config, loaded from confs/train/training
-
-    Returns
-    -------
-    Config with hypersearch parameters
-
-    """
-
-    training_config['backbone'] = hp.choice(
-        'backbone',
-        ['classification/resnet34.pt', 'classification/resnet50.pt'])
-    training_config['stages'] = hp.uniformint('n_stages', 0, 5)
-    return training_config
-
-
-def get_hypersearch_cfg(cfg):
-    cfg = OmegaConf.to_container(cfg)
-    cfg['optimizer'] = _get_hyperopt_optimizer()
-    cfg['training'] = _get_hyperopt_training(cfg['training'])
-    return cfg
-
-
 def fit(cfg) -> pl.Trainer:
     """
     Main function for executing training of models
@@ -184,8 +135,8 @@ def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
 
     print("Loading from ... ", load_path)
     if os.path.exists(load_path):
-        model = getattr(agents, cfg.training.module).load_from_checkpoint(
-            load_path)
+        model = getattr(agents,
+                        cfg.training.module).load_from_checkpoint(load_path)
     else:
         raise FileNotFoundError()
 
