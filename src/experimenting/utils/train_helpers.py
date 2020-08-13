@@ -146,6 +146,7 @@ def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
         print(f"Movement {movement}")
         trainer = pl.Trainer(gpus=cfg['gpus'],
                              benchmark=True,
+                             limit_val_batches=0.10,
                              weights_summary='top')
         results = trainer.test(model)
         print(results)
