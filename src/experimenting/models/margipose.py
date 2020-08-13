@@ -21,20 +21,21 @@ class MargiPoseStage(nn.Module):
         self.n_joints = n_joints
         self.softmax = FlatSoftmax()
         self.heatmap_space = heatmap_space
-        max_dimension = 256
+        min_dimension = 64
+        max_dimension = 128
         self.down_layers = nn.Sequential(
-            _regular_block(mid_feature_dimension, 128),
-            _regular_block(128, 128),
-            _down_stride_block(128, max_dimension),  # 22 * 8
+            _regular_block(mid_feature_dimension, min_dimension),
+            _regular_block(min_dimension, min_dimension),
+            _down_stride_block(min_dimension, max_dimension),
             _regular_block(max_dimension, max_dimension),
             _regular_block(max_dimension, max_dimension),
         )
         self.up_layers = nn.Sequential(
             _regular_block(max_dimension, max_dimension),
             _regular_block(max_dimension, max_dimension),
-            _up_stride_block(max_dimension, 128),
-            _regular_block(128, 128),
-            _regular_block(128, self.n_joints),
+            _up_stride_block(max_dimension, min_dimension),
+            _regular_block(min_dimension, min_dimension),
+            _regular_block(min_dimension, self.n_joints),
         )
         self.permute = permute
         init_parameters(self)
