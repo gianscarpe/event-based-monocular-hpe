@@ -46,9 +46,9 @@ class TestMargipose(unittest.TestCase):
                 'n_channels': 1,
                 'pretrained': True
             }),
-            'in_shape': (128, 16, 16),
+            'latent_size': 128,
             'n_stages':
-            3
+            4
         }
         self.model = MargiPoseModel3D(**self.hparams)
 
