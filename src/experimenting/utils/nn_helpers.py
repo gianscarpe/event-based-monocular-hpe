@@ -53,7 +53,6 @@ def _up_stride_block(in_chans, out_chans):
                            stride=2,
                            output_padding=(0, 1),
                            bias=False),
-        
         nn.ConvTranspose2d(in_chans,
                            out_chans,
                            kernel_size=1,
@@ -139,6 +138,19 @@ def _load_resnet34(params):
     return resnet
 
 
+def _load_resnet50(params):
+    if 'custom_model_path' in params:
+        resnet = torch.load(params['custom_model_path'])
+    else:
+        resnet = get_cnn(
+            'resnet50', {
+                'n_channels': params['n_channels'],
+                'pretrained': params['pretrained'],
+                'n_classes': params['n_classes']
+            })
+    return resnet
+
+
 def _get_resnet34_cut_128(params):
 
     resnet = _load_resnet34(params)
@@ -172,8 +184,8 @@ def _get_resnet34_cut_512(params):
     return net
 
 
-def _get_resnet50_feature_extactor(model_path):
-    resnet = torch.load(model_path)
+def _get_resnet50_feature_extactor(params):
+    resnet = _load_resnet50(params)
 
     net = nn.Sequential(
         resnet.conv1,

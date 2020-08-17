@@ -35,7 +35,7 @@ class TestAE(unittest.TestCase):
         self.assertEqual(out.shape, batch_input.shape)
 
 
-class TestMargipose(unittest.TestCase):
+class TestMargiposeResnet34(unittest.TestCase):
     def setUp(self):
         self.hparams = {
             'n_joints':
@@ -49,6 +49,31 @@ class TestMargipose(unittest.TestCase):
             'latent_size': 128,
             'n_stages':
             4
+        }
+        self.model = MargiPoseModel3D(**self.hparams)
+
+    def test_init(self):
+        self.assertIsNotNone(self.model)
+
+    def test_forward(self):
+        batch_input = torch.randn(32, 1, 260, 346)
+        out = self.model(batch_input)
+        self.assertIsNotNone(out)
+
+        
+class TestMargiposeResnet50(unittest.TestCase):
+    def setUp(self):
+        self.hparams = {
+            'n_joints':
+            13,
+            'in_cnn':
+            get_feature_extractor({
+                'model': 'resnet50',
+                'n_channels': 1,
+                'pretrained': True
+            }),
+            'latent_size': 256,
+            'n_stages': 3
         }
         self.model = MargiPoseModel3D(**self.hparams)
 

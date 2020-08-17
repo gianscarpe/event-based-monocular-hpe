@@ -60,3 +60,4 @@ data/
 /lightning_logs/
 git
 !src/tests/data
+config.yaml

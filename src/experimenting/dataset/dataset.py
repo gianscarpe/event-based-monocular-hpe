@@ -1,5 +1,11 @@
 """
-Task dataset implementations (classification, heatmap, joints, 3djoints, autoencoder)
+Task dataset implementations.
+Provided:
+- classification: frame + label
+- heatmap: frame + 2d gaussian heatmap
+- joints: frame + projected 2d joints
+- 3djoints: frame + 3d joints + camera information
+- autoencoder: frame
 
 """
 
@@ -33,6 +39,7 @@ class BaseDataset(Dataset):
 
     def _get_x(self, idx):
         """
+        Basic get_x utility. Load frame from dataset given frame index
 
         Args:
           idx: Input index (from 0 to len(self))
@@ -183,6 +190,7 @@ class Joints3DDataset(BaseDataset):
             'normalized_skeleton': normalized_skeleton,
             'z_ref': z_ref,
             'M': extrinsic_matrix,
+            'camera': camera,
             'mask': mask
         }
         return label

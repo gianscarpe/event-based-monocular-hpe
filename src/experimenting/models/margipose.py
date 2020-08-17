@@ -1,13 +1,9 @@
 import torch
 from torch import nn
 
-from ..utils import (
-    FlatSoftmax,
-    _down_stride_block,
-    _regular_block,
-    _up_stride_block,
-    init_parameters,
-)
+from ..utils import (FlatSoftmax, _down_stride_block, _regular_block,
+                     _up_stride_block, init_parameters,
+                     get_backbone_last_dimension)
 
 
 class MargiPoseStage(nn.Module):
@@ -70,9 +66,11 @@ class MargiPoseModel3D(nn.Module):
         super().__init__()
 
         self.n_stages = n_stages
-
         self.in_cnn = in_cnn
-        self.mid_feature_dimension = 128  #  latent_size
+        temp_in_shape = [1, 256, 256
+                         ]  # placeholder to call get_backbone_last_dimension
+        self.mid_feature_dimension = get_backbone_last_dimension(
+            in_cnn, temp_in_shape)[0]
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
