@@ -11,3 +11,7 @@ Welcome to master_thesis's documentation!
    :caption: Contents:
 
    experimenting.agents
+   experimenting.dataset
+   experimenting.models
+
+.. mdinclude:: ../../README.md
