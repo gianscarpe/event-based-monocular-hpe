@@ -1,3 +1,8 @@
+"""
+Core dataset implementation. BaseCore may be inherhit to create a new
+DatasetCore. DHP19 and NTU cores are provided
+"""
+
 import os
 from abc import ABC, abstractmethod
 
@@ -8,6 +13,11 @@ from ..utils import get_file_paths, load_heatmap
 
 
 class BaseCore(ABC):
+    """
+    Base class for dataset cores. Each core should implement get_frame_info and
+    load_frame_from_id for base functionalities. Labels, heatmaps, and joints
+    loading may be implemented as well to use the relative task implementations
+    """
     def __init__(self, hparams_dataset):
         self.hparams_dataset = hparams_dataset
         self._set()
@@ -18,15 +28,29 @@ class BaseCore(ABC):
 
     @abstractmethod
     def _set(self):
-        pass
+        """
+        Construction helper. Each implementation must provide its own
+        implementation to build object status
+        """
 
     @abstractmethod
     def get_frame_info(x):
-        pass
+        """
+        Get frame attributes given the path
+
+        Args:
+          x: frame path
+
+        Returns:
+          Frame attributes as an object
+        """
 
     @abstractmethod
     def get_partition_function(self):
-        pass
+        """
+        Provide the constructor with a function to split trainval and test
+        set e.g. cross-view, cross-subject, ...
+        """
 
     def load_frame_from_id(self, idx):
         raise NotImplementedError()
@@ -52,6 +76,11 @@ class BaseCore(ABC):
 
 
 class DHP19Core(BaseCore):
+    """
+    DHP19 dataset core class. It provides implementation to load frames,
+    heatmaps, 2D joints, 3D joints
+    """
+
     MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
     max_w = 346
     max_h = 260
@@ -65,19 +94,29 @@ class DHP19Core(BaseCore):
     def load_frame(path):
         ext = os.path.splitext(path)[1]
         if ext == '.mat':
-            info = DHP19Core.get_frame_info(path)
-            x = np.swapaxes(io.loadmat(path)[f'V{info["cam"] + 1}n'], 0, 1)
+            x = DHP19Core._load_matlab_frame(path)
         elif ext == '.npy':
             x = np.load(path) / 255.
             if len(x.shape) == 2:
                 x = np.expand_dims(x, -1)
         return x
 
+    def _load_matlab_frame(path):
+        """
+        Matlab files contain voxelgrid frames and must be loaded properly.
+        Information is contained respectiely in attributes: V1n, V2n, V3n, V4n
+        Example:
+          S1_.mat
+
+        """
+        info = DHP19Core.get_frame_info(path)
+        x = np.swapaxes(io.loadmat(path)[f'V{info["cam"] + 1}n'], 0, 1)
+        return x
+
     def load_frame_from_id(self, idx):
         return DHP19Core.load_frame(self.file_paths[idx])
 
     def _set(self):
-
         self.file_paths = DHP19Core._get_file_paths_with_cam_and_mov(
             self.hparams_dataset.data_dir, self.hparams_dataset.cams,
             self.hparams_dataset.movements)
@@ -87,8 +126,11 @@ class DHP19Core(BaseCore):
             DHP19Core.get_label_from_filename(x_path)
             for x_path in self.file_paths
         ]
-        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir, 'npz')
-        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir, 'npy')
+
+        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir,
+                                               'npz')
+        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir,
+                                                 'npy')
 
         if self.hparams_dataset.test_subjects is None:
             self.subjects = [1, 2, 3, 4, 5]
@@ -107,6 +149,9 @@ class DHP19Core(BaseCore):
         return load_heatmap(hm_path, self.n_joints)
 
     def get_partition_function(self):
+        """
+        Cross-subject partition
+        """
         return lambda x: DHP19Core.get_frame_info(x)['subject'
                                                      ] in self.subjects
 

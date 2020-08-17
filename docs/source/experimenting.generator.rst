@@ -5,6 +5,7 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    experimenting.generator.upsampling
 
@@ -50,7 +51,6 @@ experimenting.generator.upsample module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------

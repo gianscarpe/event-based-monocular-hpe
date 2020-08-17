@@ -1,15 +1,14 @@
 """
-DHP19 dataset implementations (classification, heatmap, joints)
-data_dir = 
+Task dataset implementations (classification, heatmap, joints, 3djoints, autoencoder)
+
 """
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
-
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
+from torch.utils.data import Dataset
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
@@ -33,6 +32,14 @@ class BaseDataset(Dataset):
         return len(self.x_indexes)
 
     def _get_x(self, idx):
+        """
+
+        Args:
+          idx: Input index (from 0 to len(self))
+
+        Returns:
+          Input loaded from dataset
+        """
         x = self.dataset.load_frame_from_id(idx)
         return x
 

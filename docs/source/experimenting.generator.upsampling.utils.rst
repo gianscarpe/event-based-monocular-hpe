@@ -44,7 +44,6 @@ experimenting.generator.upsampling.utils.utils module
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 

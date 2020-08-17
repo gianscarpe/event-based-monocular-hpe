@@ -44,7 +44,6 @@ experimenting.tools.summarize\_tb module
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 

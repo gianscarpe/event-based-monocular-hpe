@@ -4,9 +4,8 @@ import os
 import shutil
 from pathlib import Path
 
-import torch
-
 import pytorch_lightning as pl
+import torch
 from omegaconf import ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -95,16 +94,13 @@ def _safe_train_end(trainer_configuration):
 
 
 def fit(cfg) -> pl.Trainer:
-    """
-    Main function for executing training of models
-    Parameters
-    ----------
-    cfg :
-        configuration for train; configurations can be found at /confs/train
+    """Fit function
 
-    Returns
-    -------
-    Trainer object
+    Launch training for a given config. Confs file can be found at /src/confs
+
+    Args:
+       cfg (omegaconf.DictConfig): Config dictionary
+
     """
     trainer_configuration = get_training_params(cfg)
     if cfg.load_path:

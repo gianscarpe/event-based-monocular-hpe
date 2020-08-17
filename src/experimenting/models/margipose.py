@@ -11,10 +11,7 @@ from ..utils import (
 
 
 class MargiPoseStage(nn.Module):
-    def __init__(self,
-                 n_joints,
-                 mid_feature_dimension,
-                 heatmap_space,
+    def __init__(self, n_joints, mid_feature_dimension, heatmap_space,
                  permute):
         super().__init__()
 
@@ -73,9 +70,9 @@ class MargiPoseModel3D(nn.Module):
         super().__init__()
 
         self.n_stages = n_stages
-        
+
         self.in_cnn = in_cnn
-        self.mid_feature_dimension = latent_size
+        self.mid_feature_dimension = 128  #  latent_size
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
