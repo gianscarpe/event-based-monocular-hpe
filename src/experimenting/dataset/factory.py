@@ -1,3 +1,9 @@
+"""
+Factory module provide a set of Constructor for datasets using factory design
+pattern.  It encapsulates core dataset implementation and implement
+functionalities to get train, val, and test dataset
+"""
+
 from abc import ABC
 
 from ..utils import get_augmentation
@@ -17,10 +23,10 @@ __all__ = [
 
 
 class BaseConstructor(ABC):
-    def __init__(self, hparams, dataset_class):
+    def __init__(self, hparams, dataset_task):
 
-        self.params = BaseConstructor._get_params(hparams.dataset)
-        self.dataset_core = dataset_class
+        self.core = BaseConstructor._get_core(hparams)
+        self.dataset_task = dataset_task
         self.train_params = {}
         self.val_params = {}
         self.test_params = {}
@@ -30,22 +36,24 @@ class BaseConstructor(ABC):
         preprocess_val, self.val_aug_info = get_augmentation(
             hparams.augmentation_test)
 
-        self._set_for_all('dataset', self.params)
-        self._set_for_train('indexes', self.params.train_indexes)
-        self._set_for_val('indexes', self.params.val_indexes)
-        self._set_for_test('indexes', self.params.test_indexes)
+        train_indexes, val_indexes, test_indexes = self.core.get_train_test_split(
+        )
+        
+        self._set_for_all('dataset', self.core)
+        self._set_for_train('indexes', train_indexes)
+        self._set_for_val('indexes', val_indexes)
+        self._set_for_test('indexes', test_indexes)
 
         self._set_for_train('transform', preprocess_train)
         self._set_for_val('transform', preprocess_val)
         self._set_for_test('transform', preprocess_val)
 
-    def _get_params(hparams_dataset):
-
-        if hparams_dataset.core_class is None:
+    def _get_core(hparams):
+        if hparams.dataset.core_class is None:
             dataset = "DHP19Core"
         else:
-            dataset = hparams_dataset.core_class
-        return getattr(core, dataset)(hparams_dataset)
+            dataset = hparams.dataset.core_class
+        return getattr(core, dataset)(hparams.dataset)
 
     def _set_for_all(self, key, value):
         self._set_for_train(key, value)
@@ -62,8 +70,8 @@ class BaseConstructor(ABC):
         self.test_params[key] = value
 
     def get_datasets(self):
-        return self.dataset_core(**self.train_params), self.dataset_core(
-            **self.val_params), self.dataset_core(**self.test_params)
+        return self.dataset_task(**self.train_params), self.dataset_task(
+            **self.val_params), self.dataset_task(**self.test_params)
 
 
 class ClassificationConstructor(BaseConstructor):

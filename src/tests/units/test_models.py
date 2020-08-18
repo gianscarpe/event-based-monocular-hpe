@@ -11,8 +11,7 @@ class TestAE(unittest.TestCase):
     def setUp(self):
 
         self.hparams = {
-            'in_shape':
-            (4, 260, 346),
+            'in_shape': (4, 260, 346),
             'in_cnn':
             get_feature_extractor({
                 'model': 'resnet34',
@@ -40,13 +39,13 @@ class TestMargiposeResnet34(unittest.TestCase):
         self.hparams = {
             'n_joints':
             13,
+            'in_shape': (1, 260, 346),
             'in_cnn':
             get_feature_extractor({
                 'model': 'resnet34',
                 'n_channels': 1,
                 'pretrained': True
             }),
-            'latent_size': 128,
             'n_stages':
             4
         }
@@ -60,7 +59,7 @@ class TestMargiposeResnet34(unittest.TestCase):
         out = self.model(batch_input)
         self.assertIsNotNone(out)
 
-        
+
 class TestMargiposeResnet50(unittest.TestCase):
     def setUp(self):
         self.hparams = {
@@ -72,8 +71,9 @@ class TestMargiposeResnet50(unittest.TestCase):
                 'n_channels': 1,
                 'pretrained': True
             }),
-            'latent_size': 256,
-            'n_stages': 3
+            'in_shape': (1, 260, 346),
+            'n_stages':
+            3
         }
         self.model = MargiPoseModel3D(**self.hparams)
 

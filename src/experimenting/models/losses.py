@@ -1,3 +1,6 @@
+"""
+Losses implementations
+"""
 
 import torch
 import torch.nn as nn
@@ -88,7 +91,7 @@ class MultiPixelWiseLoss(PixelWiseLoss):
     def __init__(self, reduction='mask_mean', divergence=True):
         """
         Args:
-         reduction (String, optional): only "mask" methods allowed
+            reduction (String, optional): only "mask" methods allowed
         """
 
         super(MultiPixelWiseLoss, self).__init__(reduction, divergence)

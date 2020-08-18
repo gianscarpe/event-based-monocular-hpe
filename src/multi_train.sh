@@ -32,6 +32,15 @@ function get_command_with_backbone(){
     retval="python train.py training=margipose dataset=$DATASET training.latent_size=$LATENT training.model=$MODEL training.backbone=$DATASET/classification/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
 }
 
+function get_command_without_backbone(){
+    local MODEL=$1
+    local PRETRAINED=$2
+    
+    get_size $MODEL
+    LATENT=$retval
+    retval="python train.py training=margipose training.model=$MODEL dataset=$DATASET training.latent_size=$LATENT training.backbone=none training.pretrained=$PRETRAINED loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
+}
+
 
 echo -e ${RED} Experiments for classification ${NC}
 for MODEL in resnet50 ae_resnet34_256 ae_resnet34_512
@@ -56,7 +65,8 @@ do
     
     for PRETRAINED in true false   
     do
-	COMMAND="python train.py training=margipose training.model=$MODEL dataset=$DATASET training.backbone=none training.pretrained=$PRETRAINED loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
+	get_command_without_backbone $MODEL $PRETRAINED
+	COMMAND=$retval
 	echo -e ${RED}
 	echo $COMMAND
 	echo -e ${NC}

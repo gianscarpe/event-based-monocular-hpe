@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-from omegaconf import ListConfig
+from omegaconf import ListConfig, DictConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-def get_training_params(cfg: dict):
+def get_training_params(cfg: DictConfig):
     """
 
     Parameters
@@ -62,7 +62,6 @@ def get_training_params(cfg: dict):
     torch.autograd.set_detect_anomaly(debug)
     if debug:
         trainer_configuration['overfit_pct'] = 0.01
-        trainer_configuration['']
 
     if cfg.training.early_stopping > 0:
         early_stop_callback = EarlyStopping(
@@ -95,8 +94,7 @@ def _safe_train_end(trainer_configuration):
 
 
 def fit(cfg) -> pl.Trainer:
-    """Fit function
-
+    """
     Launch training for a given config. Confs file can be found at /src/confs
 
     Args:

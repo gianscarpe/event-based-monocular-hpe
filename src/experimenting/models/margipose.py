@@ -1,12 +1,25 @@
+"""
+Implementation of Margipose Model
+Original source code: https://github.com/anibali/margipose/src/margipose
+
+"""
 import torch
 from torch import nn
 
-from ..utils import (FlatSoftmax, _down_stride_block, _regular_block,
-                     _up_stride_block, init_parameters,
-                     get_backbone_last_dimension)
+from ..utils import (
+    FlatSoftmax,
+    _down_stride_block,
+    _regular_block,
+    _up_stride_block,
+    get_backbone_last_dimension,
+    init_parameters,
+)
 
 
 class MargiPoseStage(nn.Module):
+    MIN_FEATURE_DIMENSION = 64
+    MAX_FEATURE_DIMENSION = 128
+
     def __init__(self, n_joints, mid_feature_dimension, heatmap_space,
                  permute):
         super().__init__()
@@ -14,8 +27,9 @@ class MargiPoseStage(nn.Module):
         self.n_joints = n_joints
         self.softmax = FlatSoftmax()
         self.heatmap_space = heatmap_space
-        min_dimension = 64
-        max_dimension = 128
+
+        min_dimension = MargiPoseStage.MIN_FEATURE_DIMENSION
+        max_dimension = MargiPoseStage.MAX_FEATURE_DIMENSION
         self.down_layers = nn.Sequential(
             _regular_block(mid_feature_dimension, min_dimension),
             _regular_block(min_dimension, min_dimension),
@@ -57,20 +71,24 @@ class MargiPoseStage(nn.Module):
 
 
 class MargiPoseModel3D(nn.Module):
+    """
+    Multi-stage marginal heatmap estimator
+
+    """
     def __init__(self,
                  n_stages,
                  in_cnn,
-                 latent_size,
+                 in_shape,
                  n_joints,
                  permute_axis=False):
         super().__init__()
 
         self.n_stages = n_stages
-        self.in_cnn = in_cnn
-        temp_in_shape = [1, 256, 256
-                         ]  # placeholder to call get_backbone_last_dimension
+        self.in_cnn = in_cnn  # Backbone provided as parameter
+
         self.mid_feature_dimension = get_backbone_last_dimension(
-            in_cnn, temp_in_shape)[0]
+            in_cnn, in_shape)[0]
+
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
         self.xz_hm_cnns = nn.ModuleList()
@@ -80,7 +98,7 @@ class MargiPoseModel3D(nn.Module):
         self.permute_axis = permute_axis
         self._set_stages()
 
-    class _HeatmapCombiner(nn.Module):
+    class HeatmapCombiner(nn.Module):
         def __init__(self, n_joints, n_planes, out_channels):
             super().__init__()
             self.combine_block = _regular_block(n_joints * n_planes,
@@ -93,7 +111,7 @@ class MargiPoseModel3D(nn.Module):
         for t in range(self.n_stages):
             if t > 0:
                 self.hm_combiners.append(
-                    MargiPoseModel3D._HeatmapCombiner(
+                    MargiPoseModel3D.HeatmapCombiner(
                         self.n_joints, 3, self.mid_feature_dimension))
             self.xy_hm_cnns.append(
                 MargiPoseStage(self.n_joints,
@@ -111,7 +129,15 @@ class MargiPoseModel3D(nn.Module):
                                heatmap_space='xz',
                                permute=self.permute_axis))
 
-    def forward(self, inputs):
+    def forward(self, inputs) -> (list, list, list):
+        """
+        Model forward process
+        Args:
+            inputs: input batch
+
+        Returns:
+            Triple of list of heatmaps of length {n_stages}
+        """
         features = self.in_cnn(inputs)
         xy_heatmaps = []
         zy_heatmaps = []
@@ -136,7 +162,7 @@ class MargiPoseModel2D(MargiPoseModel3D):
     def __init__(self, n_stages, backbone_path, n_joints, n_channels=1):
         super().__init__(n_stages, backbone_path, n_joints, n_channels)
 
-    class _HeatmapCombiner(nn.Module):
+    class HeatmapCombiner(nn.Module):
         def __init__(self, n_joints, n_planes, out_channels):
             super().__init__()
             self.combine_block = _regular_block(n_joints * n_planes,
@@ -149,12 +175,13 @@ class MargiPoseModel2D(MargiPoseModel3D):
         for t in range(self.n_stages):
             if t > 0:
                 self.hm_combiners.append(
-                    MargiPoseModel2D._HeatmapCombiner(
-                        self.n_joints, self.mid_feature_dimension))
+                    MargiPoseModel2D.HeatmapCombiner(
+                        self.n_joints, 1, self.mid_feature_dimension))
             self.xy_hm_cnns.append(
                 MargiPoseStage(self.n_joints,
                                self.mid_feature_dimension,
-                               heatmap_space='xy'))
+                               heatmap_space='xy',
+                               permute=False))
 
     def forward(self, inputs):
         features = self.in_cnn(inputs)

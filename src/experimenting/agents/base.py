@@ -1,20 +1,22 @@
+"""
+Base class for agents classes. Each agent provides a dataset factory class to get train, val, and test datasets.
+Each agent must implement training, validation, and test `steps` methods as well as `epoch_end` methods
+"""
+
 import os
 
 import hydra
 import pytorch_lightning as pl
 import torch
 
-from experimenting.dataset import get_dataloader
-from experimenting.utils import flatten, get_feature_extractor, unflatten
-
-__all__ = [
-]
+from ..dataset import get_dataloader
+from ..utils import flatten, get_feature_extractor, unflatten
 
 
 class BaseModule(pl.LightningModule):
     def __init__(self, hparams, dataset_constructor):
         """
-        Initialize Classifier model
+        Base agent module
         """
 
         super(BaseModule, self).__init__()
@@ -27,8 +29,7 @@ class BaseModule(pl.LightningModule):
         self.scheduler_config = None
 
         self.loss_func = hydra.utils.instantiate(self._hparams.loss)
-
-        self.set_params()
+        self.train_dataset = self.val_dataset = self.test_dataset = None
         self.set_optional_params()
 
     def set_params(self):
@@ -39,10 +40,15 @@ class BaseModule(pl.LightningModule):
             self.scheduler_config = self._hparams.lr_scheduler
 
     def prepare_data(self):
+        """
+        It uses the provided factory constructor to get train, val, and test sets and set them as attributes
+
+        """
         datasets = self.dataset_constructor(self._hparams).get_datasets()
         self.train_dataset, self.val_dataset, self.test_dataset = datasets
 
-    def _get_feature_extractor(self, model, n_channels, backbone_path,
+    @staticmethod
+    def _get_feature_extractor(model, n_channels, backbone_path,
                                pretrained):
         extractor_params = {'n_channels': n_channels, 'model': model}
 

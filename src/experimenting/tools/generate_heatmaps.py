@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from experimenting.utils import get_heatmap
+from experimenting.utils import load_heatmap
 
 if __name__ == '__main__':
     homedir = '/home/gianscarpe/dev/data/dhp19'
@@ -46,8 +46,8 @@ if __name__ == '__main__':
         for cam in range(4):
             for ind in list(range(len(frames))):
 
-                xyz, joints, mask, _ = get_heatmap(frames[ind, :], p_mats[cam],
-                                                   width, height)
+                xyz, joints, mask, _ = load_heatmap(frames[ind, :],
+                                                    p_mats[cam], width, height)
                 out_filename = frame_path.format(ind, cam)
                 out_path = os.path.join(out_dir, out_filename)
 

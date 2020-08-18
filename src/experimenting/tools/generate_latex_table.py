@@ -9,7 +9,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     json_files = args.json_files
     values = {}
-    result = "\\begin{table}\n \\caption{} \n \\centering \n \\resizebox{\\columnwidth}{!}{% \n \\begin{tabular}{l" + "r" * len(
+    result = "\\begin{table}\n \\caption{} \n \\centering \n \\resizebox{\\columnwidth}{!}{% \n " + "\\begin{tabular}{l" + "r" * len(
         json_files) + "}\n \\hline \n "
     for json_file in json_files:
         with open(json_file) as js:

@@ -1,9 +1,9 @@
 import torch
 
-from experimenting.agents import BaseModule
-from experimenting.dataset import HeatmapConstructor
-from experimenting.models.metrics import MPJPE
-from experimenting.utils import average_loss, get_cnn, get_joints_from_heatmap
+from ..agents.base import BaseModule
+from ..dataset import HeatmapConstructor
+from ..models.metrics import MPJPE
+from ..utils import average_loss, get_cnn, get_joints_from_heatmap
 
 
 class PoseEstimator(BaseModule):
@@ -11,12 +11,11 @@ class PoseEstimator(BaseModule):
 
         super(PoseEstimator, self).__init__(hparams, HeatmapConstructor)
 
-    def set_params(self):
         self.n_channels = self._hparams.dataset.n_channels
-        self.n_joints = self._hparams.dataset.n_joints
+        self.n_joints = self._hparams.dataset.N_JOINTS
         params = {
             'n_channels': self._hparams.dataset['n_channels'],
-            'n_classes': self._hparams.dataset['n_joints'],
+            'n_classes': self._hparams.dataset['N_JOINTS'],
             'encoder_depth': self._hparams.training.encoder_depth
         }
 
@@ -29,6 +28,15 @@ class PoseEstimator(BaseModule):
         return x
 
     def predict(self, output):
+        """
+        Predict 2d joints coordinates using spatial argmax of model's heatmaps
+
+        Args:
+            output: Per joint heatmaps as output of the model
+
+        Returns:
+            Torch tensor of shape (BATCH_SIZExNUM_JOINTSx2)
+        """
         pred_joints, _ = get_joints_from_heatmap(output)
         return pred_joints
 

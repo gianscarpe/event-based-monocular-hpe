@@ -1,12 +1,13 @@
 import unittest
 
+from omegaconf import DictConfig
+
 from experimenting.dataset.factory import (
     AutoEncoderConstructor,
     ClassificationConstructor,
     HeatmapConstructor,
     Joints3DConstructor,
 )
-from omegaconf import DictConfig
 
 
 class TestFactoryDHP19(unittest.TestCase):
@@ -37,8 +38,8 @@ class TestFactoryDHP19(unittest.TestCase):
                 'info': {
                     'in_shape': [256, 256]
                 },
-               'apply': {}
-            }        
+                'apply': {}
+            },
         })
 
     def test_ae(self):
