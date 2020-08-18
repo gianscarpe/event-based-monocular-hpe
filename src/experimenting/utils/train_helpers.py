@@ -38,11 +38,12 @@ def get_training_params(cfg: dict):
     debug = cfg['debug']
 
     checkpoint_dir = os.path.join(exp_path, "checkpoints")
+    log_profiler = os.path.join(exp_path, 'profile.txt')
     os.makedirs(checkpoint_dir, exist_ok=True)
     ckpt_cb = ModelCheckpoint(
         filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}"))
 
-    profiler = pl.profiler.SimpleProfiler()
+    profiler = pl.profiler.AdvancedProfiler(log_profiler)
     gpus = cfg['gpus']
     if type(gpus) == list or type(gpus) == ListConfig:
         gpus = [int(x) for x in gpus]
