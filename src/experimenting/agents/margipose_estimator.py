@@ -28,8 +28,6 @@ class MargiposeEstimator(BaseModule):
                          *self._hparams.dataset['in_shape']),
             'in_cnn':
             in_cnn,
-            'latent_size':
-            self._hparams.training['latent_size'],
             'n_joints':
             self._hparams.dataset['n_joints'],
             'n_stages':

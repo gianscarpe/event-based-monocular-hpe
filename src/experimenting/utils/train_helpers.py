@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-from omegaconf import ListConfig, DictConfig
+from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
