@@ -19,40 +19,62 @@ class BaseCore(ABC):
     loading may be implemented as well to use the relative task implementations
     """
     def __init__(self, hparams_dataset):
-        self.hparams_dataset = hparams_dataset
-        self._set()
-        self._set_train_test_split(self.hparams_dataset.split_at)
+        self._set_partition_function(hparams_dataset)
 
-        if hparams_dataset.save_split:
-            self._save_params(hparams_dataset.preload_dir)
+    def _set_partition_function(self, hparams_dataset):
+        partition_param = hparams_dataset.partition
+        if (partition_param is None):
+            partition_param = 'cross-subject'
 
+        if (partition_param == 'cross-subject'):
+            self.partition_function = self.get_cross_subject_partition_function(
+            )
+        else:
+            self.partition_function = self.get_cross_view_partition_function()
+
+    @staticmethod
     @abstractmethod
-    def _set(self):
-        """
-        Construction helper. Each implementation must provide its own
-        implementation to build object status
-        """
-
-    @abstractmethod
-    def get_frame_info(x):
+    def get_frame_info(path):
         """
         Get frame attributes given the path
 
         Args:
-          x: frame path
+          path: frame path
 
         Returns:
-          Frame attributes as an object
+          Frame attributes as a subscriptable object
         """
 
-    @abstractmethod
-    def get_partition_function(self):
+    def get_cross_subject_partition_function(self):
         """
-        Provide the constructor with a function to split trainval and test
-        set e.g. cross-view, cross-subject, ...
+        Get partition function for cross-subject evaluation method
+
+        Note:
+          Core class must implement get_test_subjects
+          get_frame_info must provide frame's subject
+        """
+        return lambda x: type(self).get_frame_info(x)[
+            'subject'] in self.get_test_subjects()
+
+    def get_cross_view_partition_function(self):
+        """
+        Get partition function for cross-view evaluation method
+
+        Note:
+          Core class must implement get_test_view
+          get_frame_info must provide frame's cam
         """
 
-    def load_frame_from_id(self, idx):
+        return lambda x: type(self).get_frame_info(x)[
+            'cam'] in self.get_test_view()
+
+    def get_test_subjects(self):
+        raise NotImplementedError()
+
+    def get_test_view(self):
+        raise NotImplementedError()
+
+    def get_frame_from_id(self, idx):
         raise NotImplementedError()
 
     def get_label_from_id(self, idx):
@@ -64,15 +86,24 @@ class BaseCore(ABC):
     def get_heatmap_from_id(self, idx):
         raise NotImplementedError()
 
-    def _set_train_test_split(self, split_at):
-        data_indexes = np.arange(len(self.file_paths))
-        cond = self.get_partition_function()
-        test_subject_indexes_mask = [cond(x) for x in self.file_paths]
+    def get_train_test_split(self, split_at=0.8):
+        """
+        Get train, val, and test indexes accordingly to partition function
 
-        self.test_indexes = data_indexes[test_subject_indexes_mask]
-        data_index = data_indexes[~np.in1d(data_indexes, self.test_indexes)]
-        self.train_indexes, self.val_indexes = _split_set(data_index,
-                                                          split_at=split_at)
+        Args:
+            split_at: Split train/val according to a given percentage
+        Returns:
+            Train, val, and test indexes as numpy vectors
+        """
+        data_indexes = np.arange(len(self.file_paths))
+        test_subject_indexes_mask = [
+            self.partition_function(x) for x in self.file_paths
+        ]
+
+        test_indexes = data_indexes[test_subject_indexes_mask]
+        data_index = data_indexes[~np.in1d(data_indexes, test_indexes)]
+        train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
+        return train_indexes, val_indexes, test_indexes
 
 
 class DHP19Core(BaseCore):
@@ -82,13 +113,37 @@ class DHP19Core(BaseCore):
     """
 
     MOVEMENTS_PER_SESSION = {1: 8, 2: 6, 3: 6, 4: 6, 5: 7}
-    max_w = 346
-    max_h = 260
-
-    n_joints = 13
+    MAX_WIDTH = 346
+    MAX_HEIGHT = 260
+    N_JOINTS = 13
+    DEFAULT_TEST_SUBJECTS = [1, 2, 3, 4, 5]
+    DEFAULT_TEST_VIEW = [0, 1]
 
     def __init__(self, hparams_dataset):
         super(DHP19Core, self).__init__(hparams_dataset)
+        self.file_paths = DHP19Core._get_file_paths_with_cam_and_mov(
+            hparams_dataset.data_dir, hparams_dataset.cams,
+            hparams_dataset.movements)
+
+        self.labels_dir = hparams_dataset.labels_dir
+        self.classification_labels = [
+            DHP19Core.get_label_from_filename(x_path)
+            for x_path in self.file_paths
+        ]
+
+        self.joints = self._retrieve_2hm_files(hparams_dataset.joints_dir,
+                                               'npz')
+        self.heatmaps = self._retrieve_2hm_files(hparams_dataset.hm_dir, 'npy')
+
+        if hparams_dataset.test_subjects is None:
+            self.subjects = DHP19Core.DEFAULT_TEST_SUBJECTS
+        else:
+            self.subjects = hparams_dataset.test_subjects
+
+        if hparams_dataset.test_cams is None:
+            self.view = DHP19Core.DEFAULT_TEST_VIEW
+        else:
+            self.view = hparams_dataset.test_cams
 
     @staticmethod
     def load_frame(path):
@@ -105,7 +160,8 @@ class DHP19Core(BaseCore):
         """
         Matlab files contain voxelgrid frames and must be loaded properly.
         Information is contained respectiely in attributes: V1n, V2n, V3n, V4n
-        Example:
+
+        Examples:
           S1_.mat
 
         """
@@ -113,29 +169,8 @@ class DHP19Core(BaseCore):
         x = np.swapaxes(io.loadmat(path)[f'V{info["cam"] + 1}n'], 0, 1)
         return x
 
-    def load_frame_from_id(self, idx):
+    def get_frame_from_id(self, idx):
         return DHP19Core.load_frame(self.file_paths[idx])
-
-    def _set(self):
-        self.file_paths = DHP19Core._get_file_paths_with_cam_and_mov(
-            self.hparams_dataset.data_dir, self.hparams_dataset.cams,
-            self.hparams_dataset.movements)
-
-        self.labels_dir = self.hparams_dataset.labels_dir
-        self.classification_labels = [
-            DHP19Core.get_label_from_filename(x_path)
-            for x_path in self.file_paths
-        ]
-
-        self.joints = self._retrieve_2hm_files(self.hparams_dataset.joints_dir,
-                                               'npz')
-        self.heatmaps = self._retrieve_2hm_files(self.hparams_dataset.hm_dir,
-                                                 'npy')
-
-        if self.hparams_dataset.test_subjects is None:
-            self.subjects = [1, 2, 3, 4, 5]
-        else:
-            self.subjects = self.hparams_dataset.test_subjects
 
     def get_label_from_id(self, idx):
         return self.classification_labels[idx]
@@ -146,17 +181,9 @@ class DHP19Core(BaseCore):
 
     def get_heatmap_from_id(self, idx):
         hm_path = self.heatmaps[idx]
-        return load_heatmap(hm_path, self.n_joints)
-
-    def get_partition_function(self):
-        """
-        Cross-subject partition
-        """
-        return lambda x: DHP19Core.get_frame_info(x)['subject'
-                                                     ] in self.subjects
+        return load_heatmap(hm_path, self.N_JOINTS)
 
     def _get_file_paths_with_cam_and_mov(data_dir, cams=None, movs=None):
-
         if cams is None:
             cams = [3]
 
@@ -178,6 +205,7 @@ class DHP19Core(BaseCore):
 
         return file_paths
 
+    @staticmethod
     def get_frame_info(filename):
         filename = os.path.splitext(os.path.basename(filename))[0]
 
@@ -186,23 +214,40 @@ class DHP19Core(BaseCore):
             int(filename[filename.find('S') + 1:filename.find('S') +
                          4].split('_')[0]),
             'session':
-            DHP19Core._get_info_from_string(filename, 'session'),
+            int(DHP19Core._get_info_from_string(filename, 'session')),
             'mov':
-            DHP19Core._get_info_from_string(filename, 'mov'),
+            int(DHP19Core._get_info_from_string(filename, 'mov')),
             'cam':
-            DHP19Core._get_info_from_string(filename, 'cam'),
+            int(DHP19Core._get_info_from_string(filename, 'cam')),
             'frame':
             DHP19Core._get_info_from_string(filename, 'frame')
         }
 
         return result
 
+    def get_test_subjects(self):
+        return self.subjects
+
+    def get_test_view(self):
+        return self.view
+
     def _get_info_from_string(filename, info, split_symbol='_'):
         return int(filename[filename.find(info):].split(split_symbol)[1])
 
-    def get_label_from_filename(filepath):
-        """Given the filepath, return the correspondent label E.g. n
-        S1_session_2_mov_1_frame_249_cam_2.npy
+    @staticmethod
+    def get_label_from_filename(filepath) -> int:
+        """Given the filepath, return the correspondent movement label (range [0, 32])
+
+        Args:
+            filepath (str): frame absolute filepath
+
+        Returns:
+            Frame label
+
+        Examples:
+            >>> DHP19Core.get_label_from_filename("S1_session_2_mov_1_frame_249_cam_2.npy")
+            8
+
         """
 
         label = 0
@@ -211,7 +256,7 @@ class DHP19Core(BaseCore):
         for i in range(1, info['session']):
             label += DHP19Core.MOVEMENTS_PER_SESSION[i]
 
-        return label + info['mov'] - 1
+        return label + info['mov'] - 1  # label in range [0, max_label)
 
     def _retrieve_2hm_files(self, labels_dir, suffix):
         labels_hm = [
@@ -223,17 +268,16 @@ class DHP19Core(BaseCore):
 
 
 class NTUCore(BaseCore):
+    DEFAULT_TEST_SUBJECTS = [18, 19, 20]
+
     def __init__(self, hparams_dataset):
         super(NTUCore, self).__init__(hparams_dataset)
+        self.file_paths = NTUCore._get_file_paths(hparams_dataset.data_dir)
 
-    def _set(self):
-        self.file_paths = NTUCore._get_file_paths(
-            self.hparams_dataset.data_dir)
-
-        if self.hparams_dataset.test_subjects is None:
-            self.subjects = [18, 19, 20]
+        if hparams_dataset.test_subjects is None:
+            self.subjects = NTUCore.DEFAULT_TEST_SUBJECTS
         else:
-            self.subjects = self.hparams_dataset.test_subjects
+            self.subjects = hparams_dataset.test_subjects
 
     @staticmethod
     def load_frame(path):
@@ -242,7 +286,7 @@ class NTUCore(BaseCore):
             x = np.expand_dims(x, -1)
         return x
 
-    def load_frame_from_id(self, idx):
+    def get_frame_from_id(self, idx):
         img_name = self.file_paths[idx]
         x = self.load_frame(img_name)
         return x
@@ -252,10 +296,13 @@ class NTUCore(BaseCore):
 
         dir_name = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(path))))
-        info = {}
-        info['subject'] = int(dir_name[-2:])
+        info = {'subject': int(dir_name[-2:])}
         return info
 
+    def get_test_subjects(self):
+        return self.subjects
+
+    @staticmethod
     def _get_file_paths(data_dir):
         file_paths = []
         for root, dirs, files in os.walk(data_dir):

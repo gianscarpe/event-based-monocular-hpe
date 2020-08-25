@@ -1,20 +1,19 @@
 import torch
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
-from experimenting.agents.base import BaseModule
-from experimenting.dataset import ClassificationConstructor
-from experimenting.utils import get_cnn
+from ..agents.base import BaseModule
+from ..dataset import ClassificationConstructor
+from ..utils import get_cnn
 
 
 class Classifier(BaseModule):
     def __init__(self, hparams):
         """
-        Initialize Classifier model
+        Classifier agent for training and testing classification models
         """
 
         super(Classifier, self).__init__(hparams, ClassificationConstructor)
 
-    def set_params(self):
         params = {
             'n_channels': self._hparams.dataset['n_channels'],
             'n_classes': self._hparams.dataset['n_classes'],

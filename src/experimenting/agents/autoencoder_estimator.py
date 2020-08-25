@@ -1,18 +1,21 @@
 import torch
 
-from experimenting.agents.base import BaseModule
-from experimenting.dataset import AutoEncoderConstructor
-from experimenting.models.autoencoder import AutoEncoder
+from ..dataset import AutoEncoderConstructor
+from ..models.autoencoder import AutoEncoder
+from .base import BaseModule
 
 
 class AutoEncoderEstimator(BaseModule):
+    """
+    Agent for training and testing autoencoders
+    """
+
     def __init__(self, hparams):
 
         super(AutoEncoderEstimator, self).__init__(hparams,
                                                    AutoEncoderConstructor)
 
-    def set_params(self):
-        in_cnn = self._get_feature_extractor(
+        in_cnn = AutoEncoderEstimator._get_feature_extractor(
             self._hparams.training['model'],
             self._hparams.dataset['n_channels'], None,
             self._hparams.training['pretrained'])

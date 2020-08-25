@@ -47,7 +47,7 @@ class BaseDataset(Dataset):
         Returns:
           Input loaded from dataset
         """
-        x = self.dataset.load_frame_from_id(idx)
+        x = self.dataset.get_frame_from_id(idx)
         return x
 
     def __getitem__(self, idx):
@@ -121,8 +121,8 @@ class JointsDataset(BaseDataset):
                                             transform,
                                             augment_label=False)
 
-        self.max_h = dataset.max_h
-        self.max_w = dataset.max_w
+        self.max_h = dataset.MAX_HEIGHT
+        self.max_w = dataset.MAX_WIDTH
 
     def _get_y(self, idx):
         joints_file = self.dataset.get_joint_from_id(idx)
@@ -153,7 +153,7 @@ class Joints3DDataset(BaseDataset):
         super(Joints3DDataset, self).__init__(dataset, indexes, transform,
                                               False)
 
-        self.n_joints = dataset.n_joints
+        self.n_joints = dataset.N_JOINTS
         self.normalizer = SkeletonNormaliser()
         self.height = in_shape[0]
         self.width = in_shape[1]

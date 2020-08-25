@@ -1,10 +1,9 @@
+import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
-import cv2
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
@@ -36,16 +35,15 @@ def load_heatmap(path, n_joints):
 def decay_heatmap(heatmap, sigma2=10):
     """
 
-    Parameters
-    ----------
-    heatmap :
-       WxH matrix to decay
-    sigma2 :
-         (Default value = 1)
+    Args
+        heatmap :
+           WxH matrix to decay
+        sigma2 :
+             (Default value = 1)
 
     Returns
-    -------
-    Heatmap obtained by gaussian-blurring the input
+
+        Heatmap obtained by gaussian-blurring the input
     """
     heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
     heatmap /= np.max(heatmap)  # keep the max to 1
@@ -55,20 +53,18 @@ def decay_heatmap(heatmap, sigma2=10):
 def _project_xyz_onto_image(xyz, p_mat, width, height):
     """
 
-    Parameters
-    ----------
-    xyz :
-        xyz in world coordinate system
-    p_mat :
-        projection matrix word2cam_plane
-    width :
-        width of resulting frame
-    height :
-        height of resulting frame
+    Args
+        xyz :
+            xyz in world coordinate system
+        p_mat :
+            projection matrix word2cam_plane
+        width :
+            width of resulting frame
+        height :
+            height of resulting frame
 
     Returns
-    -------
-    u, v coordinate of skeleton joints as well as joints mask
+        u, v coordinate of skeleton joints as well as joints mask
     """
     num_joints = xyz.shape[-1]
     xyz_homog = np.concatenate([xyz, np.ones([1, num_joints])], axis=0)
@@ -97,16 +93,14 @@ def _project_xyz_onto_image(xyz, p_mat, width, height):
 def _project_xyz_onto_camera_coord(xyz, M):
     """
 
-    Parameters
-    ----------
-    xyz :
-        xyz coordinates as 3xNUM_JOINTS wrt world coord
-    M :
-        word2cam EXTRINSIC matrix
+    Args
+        xyz :
+            xyz coordinates as 3xNUM_JOINTS wrt world coord
+        M :
+            word2cam EXTRINSIC matrix
 
     Returns
-    -------
-    xyz coordinates projected onto cam coordinates system
+        xyz coordinates projected onto cam coordinates system
     """
     num_joints = xyz.shape[-1]
     xyz_homog = np.concatenate([xyz, np.ones([1, num_joints])], axis=0)
@@ -120,27 +114,24 @@ def _project_xyz_onto_camera_coord(xyz, M):
 def get_heatmaps_steps(xyz, p_mat, width, height):
     """
 
-    Parameters
-    ----------
-    xyz :
-        xyz coordinates as 3XNUM_JOINTS wrt world coord system
-    p_mat :
-        projection matrix from world to image plane
-    width :
-        width of the resulting frame
-    height :
-        height of the resulting frame
+    Args
+        xyz :
+            xyz coordinates as 3XNUM_JOINTS wrt world coord system
+        p_mat :
+            projection matrix from world to image plane
+        width :
+            width of the resulting frame
+        height :
+            height of the resulting frame
 
     Returns
-    -------
-    xyz wrf image coord system, uv image points of skeleton's joints, uv mask,
+        xyz wrf image coord system, uv image points of skeleton's joints, uv mask
     """
     M, K = decompose_projection_matrix(p_mat)
 
     u, v, mask = _project_xyz_onto_image(xyz, p_mat, height, width)
     joints = np.stack((v, u), axis=-1)
 
-    # hms = get_heatmap((u, v), mask, height, width, num_joints)
     xyz_cam = _project_xyz_onto_camera_coord(xyz, M)
 
     return xyz_cam, joints, mask  # , hms
@@ -161,15 +152,13 @@ def get_heatmap(joints, mask, heigth, width, num_joints=13):
 def decompose_projection_matrix(P):
     """
     QR decomposition of world2imageplane projection matrix
-    Parameters
-    ----------
-    P :
-        Projection matrix word 2 image plane
+    Args
+        P : Projection matrix word 2 image plane
 
     Returns
-    -------
-    M matrix, camera matrix
+        M matrix, camera matrix
     """
+
     Q = P[:3, :3]
     q = P[:, 3]
     U, S = scipy.linalg.qr(np.linalg.inv(Q))
@@ -208,14 +197,11 @@ def predict_xyz(out):
     """
     Derivable extraction of xyz normalized predicton from heatmaps
 
-    Parameters
-    ----------
-    out :
-        Heatmap as torch tensor BxNUM_JOINTSxWxH
+    Args:
+        out: Heatmap as torch tensor BxNUM_JOINTSxWxH
 
     Returns
-    -------
-    normalized xyz (BxNUM_JOINTSx3)
+        normalized xyz (BxNUM_JOINTSx3)
     """
     xy_hm, zy_hm, xz_hm = out
 
@@ -235,20 +221,14 @@ def _skeleton_z_ref(skeleton):
 def denormalize_predict(pred, height, width, camera, z_ref=None):
     """
 
-    Parameters
-    ----------
-    pred :
-        joints coordinates as NUM_JOINTSx3
-    height :
-        height of frame
-    width :
-        width of frame
-    camera :
-        intrinsics parameters
+    Args:
+        pred : joints coordinates as NUM_JOINTSx3
+        height : height of frame
+        width : width of frame
+        camera : intrinsics parameters
 
     Returns
-    -------
-    Denormalized skeleton joints as NUM_JOINTSx3
+        Denormalized skeleton joints as NUM_JOINTSx3
     """
 
     # skeleton
@@ -268,18 +248,13 @@ def denormalize_predict(pred, height, width, camera, z_ref=None):
 def reproject_skeleton(M, joints, inv=-1, copy=False):
     """
 
-    Parameters
-    ----------
-    M :
-        World to camera projection matrix
-    joints :
-        Skeleton joints as 3xNUM_JOINTS
-    inv :
-         Inverse y direction
+    Args:
+        M : World to camera projection matrix
+        joints : Skeleton joints as 3xNUM_JOINTS
+        inv : Inverse y direction
 
     Returns
-    -------
-    Skeleton joints reprojected in world coord system
+        Skeleton joints reprojected in world coord system
     """
     if copy:
         joints = joints.copy()
@@ -302,19 +277,14 @@ def plot_heatmap(img):
 def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
     """
     To plot image and 2D ground truth and prediction
-    Parameters
-    ----------
-    dvs_frame :
-        
-    sample_gt :
-        
-    sample_pred :
-        
 
-    Returns
-    -------
+    Args:
+      dvs_frame: frame as vector (1xWxH)
+      sample_gt: gt joints as vector (N_jointsx2)
+      sample_pred: prediction joints as vector (N_jointsx2)
 
     """
+
     plt.figure()
     plt.imshow(dvs_frame, cmap='gray')
     plt.plot(sample_gt[:, 1], sample_gt[:, 0], '.', c='red', label='gt')
@@ -323,21 +293,6 @@ def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
 
 
 def plot_skeleton_3d(gt, pred, M):
-    """
-
-    Parameters
-    ----------
-    gt :
-        
-    pred :
-        
-    M :
-        
-
-    Returns
-    -------
-
-    """
     gt = reproject_skeleton(M, gt, -1)
     pred = reproject_skeleton(M, pred, -1)
     fs = 5
@@ -401,9 +356,25 @@ def _get_skeleton_lines(x, y, z):
 def plot_3d(ax,
             y_true_pred,
             c='red',
-            limits=[[-500, 500], [-500, 500], [0, 1500]],
+            limits=None,
             plot_lines=True):
-    " 3D plot of single frame. Can be both label or prediction "
+    """
+    Plot the provided skeletons in 3D coordinate space 
+    Args:
+      ax: 
+      y_true_pred: joints to plot in 3D coordinate space
+      c: color (Default value = 'red')
+      limits: list of 3 ranges (x, y, and z limits)
+      plot_lines:  (Default value = True)
+
+    Note:
+      Plot the provided skeletons. Visualization purpose only
+
+    """
+
+    if limits is None:
+        limits = [[-500, 500], [-500, 500], [0, 1500]]
+
     x = y_true_pred[:, 0]
     y = y_true_pred[:, 1]
     z = y_true_pred[:, 2]
