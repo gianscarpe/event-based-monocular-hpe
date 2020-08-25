@@ -27,11 +27,11 @@ def _extract(path, exp_name, exp_params):
     print("model loaded")
     exp = {'exp_name': exp_name, 'load_path': path}
     for param in exp_params:
-        params = model.hparams
+        params = model._hparams
         for p in param.split('/'):
             params = params[p]
         exp[param] = params
-
+    print("Parameter extracted")
     return exp
 
 
@@ -83,5 +83,6 @@ if __name__ == '__main__':
     exp_params = args.exp_params
     default_postfix_path = 'checkpoints'
 
-    exps_pd = pd.DataFrame(get_pd_collection(root_path, default_postfix_path, exp_params))
+    exps_pd = pd.DataFrame(
+        get_pd_collection(root_path, default_postfix_path, exp_params))
     exps_pd.to_csv(os.path.join(out_dir, 'summary.csv'), index=False)

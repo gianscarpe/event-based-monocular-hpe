@@ -1,5 +1,5 @@
 exp_dir: exps_${training.module}/
-exp_name: exp_${training.model}_pretrained_${training.pretrained}_backbone_${training.backbone}
+exp_name: ${now:%m-%d-%H-%M}_exp_${training.model}_pretrained_${training.pretrained}
 
 hydra:
   job:
