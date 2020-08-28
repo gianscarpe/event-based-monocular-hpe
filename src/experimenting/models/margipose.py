@@ -3,6 +3,7 @@ Implementation of Margipose Model
 Original source code: https://github.com/anibali/margipose/src/margipose
 
 """
+
 import torch
 from torch import nn
 
@@ -20,16 +21,19 @@ class MargiPoseStage(nn.Module):
     MIN_FEATURE_DIMENSION = 64
     MAX_FEATURE_DIMENSION = 128
 
-    def __init__(self, n_joints, mid_feature_dimension, heatmap_space,
-                 permute):
+    def __init__(self, n_joints, mid_shape, heatmap_space, permute):
         super().__init__()
 
         self.n_joints = n_joints
         self.softmax = FlatSoftmax()
         self.heatmap_space = heatmap_space
+        mid_feature_dimension = mid_shape[0]
 
+        up_padding = (int(mid_shape[1] % 2 != 1), int(mid_shape[2] % 2 != 1)
+                      )  # TODO: eval up_padding basin on mid_shape
         min_dimension = MargiPoseStage.MIN_FEATURE_DIMENSION
         max_dimension = MargiPoseStage.MAX_FEATURE_DIMENSION
+
         self.down_layers = nn.Sequential(
             _regular_block(mid_feature_dimension, min_dimension),
             _regular_block(min_dimension, min_dimension),
@@ -40,7 +44,7 @@ class MargiPoseStage(nn.Module):
         self.up_layers = nn.Sequential(
             _regular_block(max_dimension, max_dimension),
             _regular_block(max_dimension, max_dimension),
-            _up_stride_block(max_dimension, min_dimension),
+            _up_stride_block(max_dimension, min_dimension, padding=up_padding),
             _regular_block(min_dimension, min_dimension),
             _regular_block(min_dimension, self.n_joints),
         )
@@ -86,8 +90,8 @@ class MargiPoseModel3D(nn.Module):
         self.n_stages = n_stages
         self.in_cnn = in_cnn  # Backbone provided as parameter
 
-        self.mid_feature_dimension = get_backbone_last_dimension(
-            in_cnn, in_shape)[0]
+        self.mid_shape = get_backbone_last_dimension(in_cnn, in_shape)
+        self.mid_feature_dimension = self.mid_shape[0]
 
         self.xy_hm_cnns = nn.ModuleList()
         self.zy_hm_cnns = nn.ModuleList()
@@ -115,17 +119,17 @@ class MargiPoseModel3D(nn.Module):
                         self.n_joints, 3, self.mid_feature_dimension))
             self.xy_hm_cnns.append(
                 MargiPoseStage(self.n_joints,
-                               self.mid_feature_dimension,
+                               self.mid_shape,
                                heatmap_space='xy',
                                permute=self.permute_axis))
             self.zy_hm_cnns.append(
                 MargiPoseStage(self.n_joints,
-                               self.mid_feature_dimension,
+                               self.mid_shape,
                                heatmap_space='zy',
                                permute=self.permute_axis))
             self.xz_hm_cnns.append(
                 MargiPoseStage(self.n_joints,
-                               self.mid_feature_dimension,
+                               self.mid_shape,
                                heatmap_space='xz',
                                permute=self.permute_axis))
 
@@ -151,6 +155,7 @@ class MargiPoseModel3D(nn.Module):
                     xy_heatmaps[t - 1], zy_heatmaps[t - 1], xz_heatmaps[t - 1]
                 ], -3))
                 inp = inp + combined_hm_features
+
             xy_heatmaps.append(self.softmax(self.xy_hm_cnns[t](inp)))
             zy_heatmaps.append(self.softmax(self.zy_hm_cnns[t](inp)))
             xz_heatmaps.append(self.softmax(self.xz_hm_cnns[t](inp)))

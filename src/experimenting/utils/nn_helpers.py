@@ -3,12 +3,13 @@ Toolbox for Neural Networks
 """
 from math import sqrt
 
-import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
-from kornia.geometry import spatial_softmax2d
 from torch.nn import init
 from torch.nn.modules.conv import _ConvNd
+
+import segmentation_models_pytorch as smp
+from kornia.geometry import spatial_softmax2d
 from torchvision import models
 
 __all__ = [
@@ -33,19 +34,19 @@ def _regular_block(in_chans, out_chans):
         nn.Conv2d(in_chans, out_chans, kernel_size=1, bias=False))
 
 
-def _down_stride_block(in_chans, out_chans):
+def _down_stride_block(in_chans, out_chans, padding=1):
     return ResidualBlock(
         out_chans,
         nn.Conv2d(in_chans,
                   out_chans,
                   kernel_size=3,
-                  padding=1,
+                  padding=padding,
                   stride=2,
                   bias=False),
         nn.Conv2d(in_chans, out_chans, kernel_size=1, stride=2, bias=False))
 
 
-def _up_stride_block(in_chans, out_chans):
+def _up_stride_block(in_chans, out_chans, padding=(0, 1)):
     return ResidualBlock(
         out_chans,
         nn.ConvTranspose2d(in_chans,
@@ -53,13 +54,13 @@ def _up_stride_block(in_chans, out_chans):
                            kernel_size=3,
                            padding=1,
                            stride=2,
-                           output_padding=(0, 1),
+                           output_padding=padding,
                            bias=False),
         nn.ConvTranspose2d(in_chans,
                            out_chans,
                            kernel_size=1,
                            stride=2,
-                           output_padding=(0, 1),
+                           output_padding=padding,
                            bias=False))
 
 
