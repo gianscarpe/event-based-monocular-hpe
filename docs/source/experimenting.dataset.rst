@@ -1,6 +1,8 @@
 experimenting.dataset package
 =============================
 
+.. mdinclude:: ../../src/experimenting/dataset/README.md
+
 Submodules
 ----------
 

@@ -49,7 +49,7 @@ def get_pd_collection(root_path, postfix_path, exp_metrics):
             print(f"Error with {path}")
             exp_path = Path(exp_path)
             error_path = os.path.join(exp_path.parent, 'with_errors', exp_name)
-            shutil.move(exp_path, error_path)
+            #shutil.move(exp_path, error_path)
             print(ex)
             continue
 

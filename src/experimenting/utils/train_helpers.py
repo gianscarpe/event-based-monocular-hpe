@@ -1,11 +1,16 @@
-import json
+"""
+Toolbox for helping training and evaluation of agents
+
+"""
+import collections
 import logging
 import os
 import shutil
 from pathlib import Path
 
-import pytorch_lightning as pl
 import torch
+
+import pytorch_lightning as pl
 from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -122,7 +127,21 @@ def fit(cfg) -> pl.Trainer:
         raise ex
 
 
-def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
+def dhp19_evaluate_procedure(cfg, metrics=None):
+    """
+    Retrieve trained agent using cfg and apply its evaluation protocol to
+    extract results
+
+    Args: cfg (omegaconf.DictConfig): Config dictionary (need to specify a
+          load_path and a training task)
+
+
+    Returns:
+        Results obtained applying the dataset evaluation protocol, per metric
+    """
+
+    if metrics is None:
+        metrics = ['test_meanMPJPE', 'test_meanAUC', 'test_meanPCK']
 
     checkpoint_dir = cfg.load_path
     checkpoints = sorted(os.listdir(checkpoint_dir))
@@ -135,21 +154,24 @@ def dhp19_evaluate_procedure(cfg, metric='test_meanMPJPE'):
     else:
         raise FileNotFoundError()
 
-    final_results = {}
+    final_results = collections.defaultdict(dict)
+
     for movement in range(0, 33):
         model._hparams.dataset.movements = [movement]
-        print(f"Movement {movement}")
+
         trainer = pl.Trainer(gpus=cfg['gpus'],
                              benchmark=True,
                              limit_val_batches=0.10,
                              weights_summary='top')
-        results = trainer.test(model)
+        trainer.test(model)
+        results = model.results
+
+        print(f"Movement {movement}")
         print(results)
-        final_results[f'movement_{movement}'] = results[metric]
+        for metric in metrics:
+            final_results[metric][f'movement_{movement}'] = results[metric]
 
     else:
         print(f"Error loading, {load_path} does not exist!")
 
-    with open(os.path.join(load_path, 'results.json'), 'w') as json_file:
-        json.dump(final_results, json_file)
     return final_results

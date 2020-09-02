@@ -1,6 +1,7 @@
 """
-Toolbox for Neural Networks
+Integration toolbox for pytorch nn package
 """
+
 from math import sqrt
 
 import torch

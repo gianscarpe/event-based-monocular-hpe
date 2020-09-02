@@ -1,13 +1,15 @@
 """
-Base class for agents classes. Each agent provides a dataset factory class to get train, val, and test datasets.
-Each agent must implement training, validation, and test `steps` methods as well as `epoch_end` methods
+Base class for agents classes.  Each agent provides a dataset factory class to
+get train, val, and test datasets.  Each agent must implement training,
+validation, and test `steps` methods as well as `epoch_end` methods
 """
 
 import os
 
+import torch
+
 import hydra
 import pytorch_lightning as pl
-import torch
 
 from ..dataset import get_dataloader
 from ..utils import flatten, get_feature_extractor, unflatten
@@ -41,15 +43,15 @@ class BaseModule(pl.LightningModule):
 
     def prepare_data(self):
         """
-        It uses the provided factory constructor to get train, val, and test sets and set them as attributes
+        It uses the provided factory constructor to get train, val, and test
+        sets and set them as attributes
 
         """
         datasets = self.dataset_constructor(self._hparams).get_datasets()
         self.train_dataset, self.val_dataset, self.test_dataset = datasets
 
     @staticmethod
-    def _get_feature_extractor(model, n_channels, backbone_path,
-                               pretrained):
+    def _get_feature_extractor(model, n_channels, backbone_path, pretrained):
         extractor_params = {'n_channels': n_channels, 'model': model}
 
         if backbone_path is not None and os.path.exists(backbone_path):
@@ -109,7 +111,8 @@ class BaseModule(pl.LightningModule):
     def _get_aggregated_results(self, outputs, prefix):
         results = {}
         for metric_key in self.metrics.keys():
+            # mean along batch axis
             results[prefix + metric_key] = torch.stack(
-                [x[metric_key] for x in outputs]).mean()
+                [x[metric_key] for x in outputs]).mean(axis=0)
 
         return results

@@ -51,7 +51,9 @@ def _coord_expectation(heatmaps, dim, transform=None):
     """
 
     dim_size = heatmaps.size()[dim]
-    own_coords = _normalized_linspace(dim_size, dtype=heatmaps.dtype, device=heatmaps.device)
+    own_coords = _normalized_linspace(dim_size,
+                                      dtype=heatmaps.dtype,
+                                      device=heatmaps.device)
     if transform:
         own_coords = transform(own_coords)
     summed = heatmaps.view(-1, *heatmaps.size()[2:])
@@ -78,7 +80,9 @@ def _coord_variance(heatmaps, dim):
     # mu_x = E[X]
     mu_x = _coord_expectation(heatmaps, dim)
     # var_x = E[(X - mu_x)^2]
-    var_x = _coord_expectation(heatmaps, dim, transform=lambda x: (x - mu_x) ** 2)
+    var_x = _coord_expectation(heatmaps,
+                               dim,
+                               transform=lambda x: (x - mu_x)**2)
 
     return var_x
 
@@ -94,8 +98,11 @@ def dsnt(heatmaps):
     """
 
     dim_range = range(-1, 1 - heatmaps.dim(), -1)
-    mu = torch.cat([_coord_expectation(heatmaps, dim).unsqueeze(-1) for dim in dim_range], -1)
+    mu = torch.cat(
+        [_coord_expectation(heatmaps, dim).unsqueeze(-1) for dim in dim_range],
+        -1)
     return mu
+
 
 def average_loss(losses, mask=None):
     """Calculate the average of per-location losses.
@@ -106,13 +113,15 @@ def average_loss(losses, mask=None):
             (B x L), defaults to including everything
     """
     if mask is not None:
-        assert mask.size() == losses.size(), 'mask must be the same size as losses'
+        assert mask.size() == losses.size(
+        ), 'mask must be the same size as losses'
         losses = losses[mask]
         denom = mask.sum()
     else:
-        denom = losses.numel()
+        denom = torch.FloatTensor([losses.numel()])
 
     denom = denom.type(torch.float64)
+    
     # Prevent division by zero
     if isinstance(denom, int):
         denom = max(denom, 1)
@@ -120,6 +129,7 @@ def average_loss(losses, mask=None):
         denom = denom.clamp(1)
 
     return losses.sum() / denom
+
 
 def flat_softmax(inp):
     """Compute the softmax with all but the first two tensor dimensions combined."""
@@ -142,7 +152,8 @@ def euclidean_losses(actual, target):
         target (Tensor): Ground truth target (B x L x D)
     """
 
-    assert actual.size() == target.size(), 'input tensors must have the same size'
+    assert actual.size() == target.size(
+    ), 'input tensors must have the same size'
 
     # Calculate Euclidean distances between actual and target locations
     diff = actual - target
@@ -167,23 +178,26 @@ def make_gauss(means, size, sigma, normalize=True):
     """
 
     dim_range = range(-1, -(len(size) + 1), -1)
-    coords_list = [_normalized_linspace(s, dtype=means.dtype, device=means.device)
-                   for s in reversed(size)]
+    coords_list = [
+        _normalized_linspace(s, dtype=means.dtype, device=means.device)
+        for s in reversed(size)
+    ]
 
     # PDF = exp(-(x - \mu)^2 / (2 \sigma^2))
 
     # dists <- (x - \mu)^2
-    dists = [(x - mean) ** 2 for x, mean in zip(coords_list, means.split(1, -1))]
+    dists = [(x - mean)**2 for x, mean in zip(coords_list, means.split(1, -1))]
 
     # ks <- -1 / (2 \sigma^2)
     stddevs = [2 * sigma / s for s in reversed(size)]
-    ks = [-0.5 * (1 / stddev) ** 2 for stddev in stddevs]
+    ks = [-0.5 * (1 / stddev)**2 for stddev in stddevs]
 
     exps = [(dist * k).exp() for k, dist in zip(ks, dists)]
 
     # Combine dimensions of the Gaussian
     gauss = reduce(mul, [
-        reduce(lambda t, d: t.unsqueeze(d), filter(lambda d: d != dim, dim_range), dist)
+        reduce(lambda t, d: t.unsqueeze(d),
+               filter(lambda d: d != dim, dim_range), dist)
         for dim, dist in zip(dim_range, exps)
     ])
 
@@ -191,14 +205,16 @@ def make_gauss(means, size, sigma, normalize=True):
         return gauss
 
     # Normalize the Gaussians
-    val_sum = reduce(lambda t, dim: t.sum(dim, keepdim=True), dim_range, gauss) + 1e-24
+    val_sum = reduce(lambda t, dim: t.sum(dim, keepdim=True), dim_range,
+                     gauss) + 1e-24
     return gauss / val_sum
 
 
 def _kl(p, q, ndims):
     eps = 1e-24
     unsummed_kl = p * ((p + eps).log() - (q + eps).log())
-    kl_values = reduce(lambda t, _: t.sum(-1, keepdim=False), range(ndims), unsummed_kl)
+    kl_values = reduce(lambda t, _: t.sum(-1, keepdim=False), range(ndims),
+                       unsummed_kl)
     return kl_values
 
 
@@ -209,7 +225,8 @@ def _js(p, q, ndims):
 
 def _divergence_reg_losses(heatmaps, mu_t, sigma_t, divergence):
     ndims = mu_t.size(-1)
-    assert heatmaps.dim() == ndims + 2, 'expected heatmaps to be a {}D tensor'.format(ndims + 2)
+    assert heatmaps.dim(
+    ) == ndims + 2, 'expected heatmaps to be a {}D tensor'.format(ndims + 2)
     assert heatmaps.size()[:-ndims] == mu_t.size()[:-1]
 
     gauss = make_gauss(mu_t, heatmaps.size()[2:], sigma_t)

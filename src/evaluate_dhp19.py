@@ -1,9 +1,10 @@
+Import json
 import logging
+import os
 
 import hydra
-from omegaconf import DictConfig
-
 from experimenting.utils import dhp19_evaluate_procedure
+from omegaconf import DictConfig
 
 logging.basicConfig(level=logging.INFO)
 
@@ -11,7 +12,10 @@ logging.basicConfig(level=logging.INFO)
 @hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
-    dhp19_evaluate_procedure(cfg)
+    results = dhp19_evaluate_procedure(cfg)
+
+    with open(os.path.join(cfg.load_dir, 'results.json'), 'w') as json_file:
+        json.dump(results, json_file)
 
 
 if __name__ == '__main__':

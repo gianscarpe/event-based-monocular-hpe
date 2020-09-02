@@ -5,13 +5,14 @@ import torch
 from ..agents.base import BaseModule
 from ..dataset import Joints3DConstructor
 from ..models.margipose import get_margipose_model
-from ..models.metrics import MPJPE
+from ..models.metrics import AUC, MPJPE, PCK
 from ..utils import average_loss, denormalize_predict, predict_xyz
 
 
 class MargiposeEstimator(BaseModule):
     """
-    Agents for training and testing multi-stage 3d joints estimator using marginal heatmaps (denoted as Margipose)
+    Agents for training and testing multi-stage 3d joints estimator using
+    marginal heatmaps (denoted as Margipose)
     """
     def __init__(self, hparams):
 
@@ -46,7 +47,11 @@ class MargiposeEstimator(BaseModule):
 
         self.model = get_margipose_model(params)
 
-        self.metrics = {"MPJPE": MPJPE(reduction=average_loss)}
+        self.metrics = {
+            "MPJPE": MPJPE(reduction=average_loss),
+            "AUC": AUC(reduction=average_loss, auc_reduction=None),
+            "PCK": PCK(reduction=average_loss)
+        }
 
     def forward(self, x):
         x = self.model(x)
@@ -85,8 +90,9 @@ class MargiposeEstimator(BaseModule):
             Returns a tuple of torch tensor of shape (BATCH_SIZE, NUM_JOINTS, 3)
 
         Note:
-            Prediction skeletons are normalized according to batch depth value `z_ref` and are kept in camera coordinate
-            space. GT skeletons are provided in camera coordinate as well for comparison.
+            Prediction skeletons are normalized according to batch depth value
+            `z_ref` and are kept in camera coordinate space.
+            GT skeletons are provided in camera coordinate as well for comparison.
 
         Todo:
             [] de-normalization is currently CPU only
@@ -135,8 +141,8 @@ class MargiposeEstimator(BaseModule):
     def _eval(self, batch, denormalize=False):
         """
         Note:
-            De-normalization is time-consuming, therefore it can be specified to either compare normalized or
-            de-normalized skeletons
+            De-normalization is time-consuming, therefore it can be specified to
+            either compare normalized or de-normalized skeletons
         """
         b_x, b_y = batch
         outs = self.forward(b_x)  # cnn output
@@ -186,7 +192,7 @@ class MargiposeEstimator(BaseModule):
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, 'test_mean')
-
-        logs = {'test_loss': avg_loss, **results, 'step': self.current_epoch}
+        self.results = results
+        logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
         return {**logs, 'log': logs, 'progress_bar': logs}

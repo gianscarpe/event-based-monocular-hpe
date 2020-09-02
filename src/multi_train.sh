@@ -1,4 +1,4 @@
-s#!/bin/bash
+#!/bin/bash
 
 DATASET=$1
 BATCH_SIZE=32
