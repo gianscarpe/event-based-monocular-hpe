@@ -14,7 +14,7 @@ def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
     results = dhp19_evaluate_procedure(cfg)
 
-    with open(os.path.join(cfg.load_dir, 'results.json'), 'w') as json_file:
+    with open(os.path.join(cfg.load_path, 'results.json'), 'w') as json_file:
         json.dump(results, json_file)
 
 

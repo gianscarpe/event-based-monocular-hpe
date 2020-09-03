@@ -117,7 +117,7 @@ class DHP19Core(BaseCore):
     MAX_HEIGHT = 260
     N_JOINTS = 13
     DEFAULT_TEST_SUBJECTS = [1, 2, 3, 4, 5]
-    DEFAULT_TEST_VIEW = [0, 1]
+    DEFAULT_TEST_VIEW = [1, 2]
 
     def __init__(self, hparams_dataset):
         super(DHP19Core, self).__init__(hparams_dataset)
@@ -146,6 +146,10 @@ class DHP19Core(BaseCore):
             self.view = hparams_dataset.test_cams
 
     @staticmethod
+    def get_standard_path(subject, session, movement, frame, cam, postfix=""):
+        return "S{}_session_{}_mov_{}_frame_{}_cam_{}{}.npy".format(subject, session, movement, frame, cam, postfix)
+
+    @staticmethod
     def load_frame(path):
         ext = os.path.splitext(path)[1]
         if ext == '.mat':
@@ -155,6 +159,7 @@ class DHP19Core(BaseCore):
             if len(x.shape) == 2:
                 x = np.expand_dims(x, -1)
         return x
+
 
     def _load_matlab_frame(path):
         """

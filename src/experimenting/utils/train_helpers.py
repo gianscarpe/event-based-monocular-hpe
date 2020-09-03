@@ -169,9 +169,13 @@ def dhp19_evaluate_procedure(cfg, metrics=None):
         print(f"Movement {movement}")
         print(results)
         for metric in metrics:
-            final_results[metric][f'movement_{movement}'] = results[metric]
+            tensor_result = results[metric]
+            if len(tensor_result.shape) > 0:  # list of values cannot be
+                # converted to python numeric!
+                tensor_result = tensor_result.tolist()
+            else:
+                tensor_result = float(tensor_result)
 
-    else:
-        print(f"Error loading, {load_path} does not exist!")
+            final_results[metric][f'movement_{movement}'] = tensor_result
 
     return final_results

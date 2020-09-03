@@ -6,4 +6,6 @@ training:
   load_training: false
   module: Classifier
   model: resnet34
+  pretrained: true
   load_path:
+    

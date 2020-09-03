@@ -1,9 +1,10 @@
-import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+import cv2
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
@@ -250,20 +251,21 @@ def reproject_skeleton(M, joints, inv=-1, copy=False):
 
     Args:
         M : World to camera projection matrix
-        joints : Skeleton joints as 3xNUM_JOINTS
+        joints : Skeleton joints as NUM_JOINTSx3
         inv : Inverse y direction
 
     Returns
-        Skeleton joints reprojected in world coord system
+        Skeleton joints reprojected in world coord system with shape NUM_JOINTSx3
     """
     if copy:
         joints = joints.copy()
-    joints[2, :] *= inv
+    joints[:, 2] *= inv
+    joints = joints.swapaxes(1, 0)
 
     gt = np.matmul(np.linalg.pinv(M), joints)
     gt = gt / gt[3, :]
     gt = gt[:3, :]
-    return gt
+    return gt.swapaxes(1, 0)
 
 
 def plot_heatmap(img):
@@ -293,6 +295,11 @@ def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
 
 
 def plot_skeleton_3d(gt, pred, M):
+    """
+    Args:
+       gt: torch tensor of shape NUM_JOINTSx3
+       pred: torch tensor of shape NUM_JOINTSx3
+    """
     gt = reproject_skeleton(M, gt, -1)
     pred = reproject_skeleton(M, pred, -1)
     fs = 5
@@ -353,11 +360,7 @@ def _get_skeleton_lines(x, y, z):
     return skeleton
 
 
-def plot_3d(ax,
-            y_true_pred,
-            c='red',
-            limits=None,
-            plot_lines=True):
+def plot_3d(ax, y_true_pred, c='red', limits=None, plot_lines=True):
     """
     Plot the provided skeletons in 3D coordinate space 
     Args:
