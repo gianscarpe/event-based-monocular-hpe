@@ -294,20 +294,23 @@ def plot_skeleton_2d(dvs_frame, sample_gt, sample_pred):
     plt.legend()
 
 
-def plot_skeleton_3d(gt, pred, M):
+def plot_skeleton_3d(M, gt, pred=None):
     """
     Args:
+       M: extrinsic matrix as tensor of shape 4x3
        gt: torch tensor of shape NUM_JOINTSx3
        pred: torch tensor of shape NUM_JOINTSx3
-    """
+    """    
     gt = reproject_skeleton(M, gt, -1)
-    pred = reproject_skeleton(M, pred, -1)
+
     fs = 5
     fig = plt.figure(figsize=(fs, fs))
 
     ax = Axes3D(fig)
     plot_3d(ax, gt, c='red')
-    plot_3d(ax, pred, c='blue')
+    if pred is not None:
+        pred = reproject_skeleton(M, pred, -1)
+        plot_3d(ax, pred, c='blue')
 
 
 def _get_skeleton_lines(x, y, z):
