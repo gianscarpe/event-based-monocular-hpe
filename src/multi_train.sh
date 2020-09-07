@@ -32,7 +32,7 @@ function get_command_with_backbone(){
     
     get_size $MODEL
     LATENT=$retval
-    retval="python train.py gpus=[$GPU] training=margipose dataset=$DATASET training.latent_size=$LATENT training.model=$MODEL training.backbone=$DATASET/${TYPE}/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
+    retval="python train.py gpus=[$GPU] dataset.partition=cross-view training=margipose dataset=$DATASET training.latent_size=$LATENT training.model=$MODEL training.backbone=$DATASET/${TYPE}/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
 }
 
 function get_command_without_backbone(){
@@ -41,39 +41,19 @@ function get_command_without_backbone(){
     
     get_size $MODEL
     LATENT=$retval
-    retval="python train.py training=margipose gpus=[$GPU] training.model=$MODEL dataset=$DATASET training.latent_size=$LATENT training.backbone=none training.pretrained=$PRETRAINED loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
+    retval="python train.py training=margipose dataset.partition=cross-view gpus=[$GPU] training.model=$MODEL dataset=$DATASET training.latent_size=$LATENT training.backbone=none training.pretrained=$PRETRAINED loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
 }
 
 
 
 echo -e ${RED} Experiments for classification ${NC}
 
-if $BASE
-then
-    
-    for MODEL in resnet50
-    do     
-	for PRETRAINED in true false   
-	do
-	    get_command_without_backbone $MODEL $PRETRAINED
-	    COMMAND=$retval
-	    echo -e ${RED}
-	    echo $COMMAND
-	    echo -e ${NC}
-	    echo
-	    if $EXECUTE
-	    then
-		$COMMAND
-	    fi
 
-	done
-    done
-else
-    echo -e ${RED} Experiments for classification ${NC}
-    TYPE=autoencoder
-    for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
+for MODEL in resnet34 resnet50
+do     
+    for PRETRAINED in true false   
     do
-	get_command_with_backbone $MODEL $TYPE
+	get_command_without_backbone $MODEL $PRETRAINED
 	COMMAND=$retval
 	echo -e ${RED}
 	echo $COMMAND
@@ -85,5 +65,20 @@ else
 	fi
 
     done
-fi
+done
+echo -e ${RED} Experiments for classification ${NC}
+TYPE=autoencoder
+for MODEL in resnet34 resnet50
+do
+    get_command_with_backbone $MODEL $TYPE
+    COMMAND=$retval
+    echo -e ${RED}
+    echo $COMMAND
+    echo -e ${NC}
+    echo
+    if $EXECUTE
+    then
+	$COMMAND
+    fi
 
+done

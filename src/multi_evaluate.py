@@ -13,7 +13,7 @@ if __name__ == "__main__":
         for exp in experiments:
             if not os.path.exists(
                     os.path.join(exp['load_path'], 'results.json')):
-                command = f"python evaluate_dhp19.py training=margipose load_path={exp['load_path']}f".replace(
+                command = f"python evaluate_dhp19.py gpus=[0] training=margipose load_path={exp['load_path']}".replace(
                     "$", "\\$")
                 print(command)
                 os.system(command)

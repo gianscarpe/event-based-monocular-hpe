@@ -179,7 +179,9 @@ class MargiposeEstimator(BaseModule):
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, 'val_mean')
-        logs = {'val_loss': avg_loss, **results, 'step': self.current_epoch}
+
+        self.results = results
+        logs = {'val_loss': avg_loss, 'step': self.current_epoch}
 
         return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
