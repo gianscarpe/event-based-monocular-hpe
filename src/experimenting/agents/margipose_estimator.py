@@ -47,10 +47,11 @@ class MargiposeEstimator(BaseModule):
 
         self.model = get_margipose_model(params)
 
+        # TODO: add again (?)
         self.metrics = {
-            "MPJPE": MPJPE(reduction=average_loss),
+            #            "MPJPE": MPJPE(reduction=average_loss),
             "AUC": AUC(reduction=average_loss, auc_reduction=None),
-            "PCK": PCK(reduction=average_loss)
+            #            "PCK": PCK(reduction=average_loss)
         }
 
     def forward(self, x):

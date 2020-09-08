@@ -15,7 +15,8 @@ class BaseMetric(nn.Module):
         Args:
             y_pr: 3D prediction of joints, tensor of shape (BATCH_SIZExN_JOINTSx3)
             points_gt: 3D gt of joints, tensor of shape (BATCH_SIZExN_JOINTSx3)
-            gt_mask: boolean mask, tensor of shape (BATCH_SIZExN_JOINTS). Applied to results, if provided
+            gt_mask: boolean mask, tensor of shape (BATCH_SIZExN_JOINTS). 
+            Applied to results, if provided
 
         Returns:
             Metric as single value, if reduction is given, or as a tensor of values
@@ -64,7 +65,8 @@ class PCK(BaseMetric):
 
 class AUC(BaseMetric):
     """
-    Area Under the Curve for PCK metric, at different thresholds
+    Area Under the Curve for PCK metric, 
+    at different thresholds (from 0 to 500)
     """
     def __init__(self, reduction=None, auc_reduction=torch.mean, **kwargs):
         super().__init__(**kwargs)
@@ -72,10 +74,7 @@ class AUC(BaseMetric):
         self.auc_reduction = auc_reduction
 
     def forward(self, y_pr, points_gt, gt_mask=None):
-        # This range of thresholds mimics `mpii_compute_3d_pck.m`, which is provided as part of the
-        # MPI-INF-3DHP test data release.
-
-        thresholds = torch.linspace(1, 150, 31).tolist()
+        thresholds = torch.linspace(0, 500, 50).tolist()
 
         pck_values = torch.DoubleTensor(len(thresholds))
         for i, threshold in enumerate(thresholds):

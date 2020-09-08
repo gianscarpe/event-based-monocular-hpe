@@ -141,7 +141,7 @@ def dhp19_evaluate_procedure(cfg, metrics=None):
     """
 
     if metrics is None:
-        metrics = ['test_meanMPJPE', 'test_meanAUC', 'test_meanPCK']
+        metrics = ['test_meanAUC']
 
     checkpoint_dir = cfg.load_path
     checkpoints = sorted(os.listdir(checkpoint_dir))
@@ -165,7 +165,6 @@ def dhp19_evaluate_procedure(cfg, metrics=None):
                              weights_summary='top')
         trainer.test(model)
         results = model.results
-
         print(f"Movement {movement}")
         print(results)
         for metric in metrics:
