@@ -62,3 +62,4 @@ git
 !src/tests/data
 config.yaml
 /src/model_zoo/
+config.yaml

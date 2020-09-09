@@ -12,8 +12,8 @@ if __name__ == "__main__":
         experiments = csv.DictReader(csvfile)
         for exp in experiments:
             if not os.path.exists(
-                    os.path.join(exp['load_path'], 'results.json')):
-                command = f"python evaluate_dhp19.py gpus=[0] training=margipose load_path={exp['load_path']}".replace(
+                    os.path.join(exp['load_path'], 'auc.json')):
+                command = f"python evaluate_dhp19.py training=margipose gpus=\"0\" load_path={exp['load_path']}".replace(
                     "$", "\\$")
                 print(command)
                 os.system(command)

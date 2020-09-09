@@ -29,7 +29,7 @@ function get_size(){
 function get_command_with_backbone(){
     local MODEL=$1
     local TYPE=$2
-    
+   
     get_size $MODEL
     LATENT=$retval
     retval="python train.py gpus=[$GPU] dataset.partition=cross-view training=margipose dataset=$DATASET training.latent_size=$LATENT training.model=$MODEL training.backbone=$DATASET/${TYPE}/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
@@ -67,8 +67,26 @@ do
     done
 done
 echo -e ${RED} Experiments for classification ${NC}
-TYPE=autoencoder
+TYPE=classification
 for MODEL in resnet34 resnet50
+do
+    get_command_with_backbone $MODEL $TYPE
+    COMMAND=$retval
+    echo -e ${RED}
+    echo $COMMAND
+    echo -e ${NC}
+    echo
+    if $EXECUTE
+    then
+	$COMMAND
+    fi
+
+done
+
+
+echo -e ${RED} Experiments for ae ${NC}
+TYPE=autoencoder
+for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
 do
     get_command_with_backbone $MODEL $TYPE
     COMMAND=$retval
