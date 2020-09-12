@@ -37,6 +37,7 @@ if __name__ == '__main__':
     summary_path = args.summary_path
     metric = args.metric
     means_per_experiment = {}
+    breakpoint()
     with open(summary_path) as csvfile:
         experiments = list([*csv.DictReader(csvfile)])
         for ind, exp in enumerate(experiments):
@@ -56,9 +57,9 @@ if __name__ == '__main__':
                 means = means / 33.
                 means_per_experiment[get_exp_acron(exp)] = means
 
-        breakpoint()
         fpr = torch.linspace(0, 800, 50)
-        for key in means_per_experiment.keys():
+        breakpoint()
+        for key in sorted(means_per_experiment.keys()):
             plt.plot(fpr, means_per_experiment[key], label=key)
         plt.xlabel("Threshold (in mm)")
         plt.ylabel("PCK")

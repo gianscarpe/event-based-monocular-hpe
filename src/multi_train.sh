@@ -45,9 +45,27 @@ function get_command_without_backbone(){
 }
 
 
-
 echo -e ${RED} Experiments for classification ${NC}
 
+
+
+
+echo -e ${RED} Experiments for ae ${NC}
+TYPE=autoencoder
+for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
+do
+    get_command_with_backbone $MODEL $TYPE
+    COMMAND=$retval
+    echo -e ${RED}
+    echo $COMMAND
+    echo -e ${NC}
+    echo
+    if $EXECUTE
+    then
+	$COMMAND
+    fi
+
+done
 
 for MODEL in resnet34 resnet50
 do     
@@ -69,24 +87,6 @@ done
 echo -e ${RED} Experiments for classification ${NC}
 TYPE=classification
 for MODEL in resnet34 resnet50
-do
-    get_command_with_backbone $MODEL $TYPE
-    COMMAND=$retval
-    echo -e ${RED}
-    echo $COMMAND
-    echo -e ${NC}
-    echo
-    if $EXECUTE
-    then
-	$COMMAND
-    fi
-
-done
-
-
-echo -e ${RED} Experiments for ae ${NC}
-TYPE=autoencoder
-for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
 do
     get_command_with_backbone $MODEL $TYPE
     COMMAND=$retval

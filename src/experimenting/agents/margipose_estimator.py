@@ -6,7 +6,7 @@ from ..agents.base import BaseModule
 from ..dataset import Joints3DConstructor
 from ..models.margipose import get_margipose_model
 from ..models.metrics import AUC, MPJPE, PCK
-from ..utils import average_loss, denormalize_predict, predict_xyz
+from ..utils import average_loss, denormalize_predict, predict_xyz, reproject_skeleton
 
 
 class MargiposeEstimator(BaseModule):
@@ -47,11 +47,10 @@ class MargiposeEstimator(BaseModule):
 
         self.model = get_margipose_model(params)
 
-        # TODO: add again (?)
         self.metrics = {
-            #            "MPJPE": MPJPE(reduction=average_loss),
+            "MPJPE": MPJPE(reduction=average_loss),
             "AUC": AUC(reduction=average_loss, auc_reduction=None),
-            #            "PCK": PCK(reduction=average_loss)
+            "PCK": PCK(reduction=average_loss)
         }
 
     def forward(self, x):
@@ -78,8 +77,7 @@ class MargiposeEstimator(BaseModule):
         xz_hm = outs[2][-1]
         return predict_xyz((xy_hm, zy_hm, xz_hm))
 
-    @staticmethod
-    def get_denormalized_pred_gt_skeletons(outs, b_y):
+    def get_denormalized_pred_gt_skeletons(self, b_x, b_y):
         """
         It composes gt and pred denormalized skeletons
 
@@ -99,30 +97,37 @@ class MargiposeEstimator(BaseModule):
             [] de-normalization is currently CPU only
         """
 
+        with torch.no_grad():
+            outs = self.model(b_x)
+
         width, height = outs[-1][-1].shape[-2:]
+        device = outs[-1][-1].device
         normalized_skeletons = MargiposeEstimator.predict3d(outs)
 
-        gt_skeletons = b_y['skeleton']
+        gt_skeletons = b_y['xyz']
 
-        cameras = b_y['camera'].cpu()  # CPU only
-        z_refs = b_y['z_ref'].cpu()  # CPU only
         normalized_skeletons = normalized_skeletons.cpu()  # CPU only
         pred_skeletons = []
-
         for i in range(len(normalized_skeletons)):
-            camera = cameras[i]  # Internal camera parameter for input i
-            z_ref = z_refs[i]  # Depth plane value for input i
+            camera = b_y['camera'][i].cpu(
+            )  # Internal camera parameter for input i
+            z_ref = b_y['z_ref'][i].cpu()  # Depth plane value for input i
+            M = b_y['M'][i].cpu()
 
             pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
+            pred_skeleton = denormalize_predict(pred=pred_skeleton,
+                                                width=260,
+                                                height=346,
+                                                camera=camera,
+                                                z_ref=z_ref).transpose(0, 1)
+            # Apply de-normalization using intrinsics, depth plane, and image
+            # plane pixel dimension
 
-            # Apply de-normalization using intrinsics, depth plane, and image plane pixel dimension
-            pred_skeleton = denormalize_predict(pred_skeleton, width, height,
-                                                camera, z_ref)
-            pred_skeletons.append(pred_skeleton.transpose(
-                0, -1))  # transpose to have shape (NUM_JOINTS, 3)
+            pred_skeleton = reproject_skeleton(M, pred_skeleton)
 
-        pred_skeletons = torch.stack(pred_skeletons).to(gt_skeletons.device)
+            pred_skeletons.append(pred_skeleton)
 
+        pred_skeletons = torch.stack(pred_skeletons).to(device)
         return gt_skeletons, pred_skeletons
 
     def _calculate_loss3d(self, outs, b_y):
@@ -146,21 +151,23 @@ class MargiposeEstimator(BaseModule):
             either compare normalized or de-normalized skeletons
         """
         b_x, b_y = batch
-        outs = self.forward(b_x)  # cnn output
-        loss = self._calculate_loss3d(outs, b_y)
+        with torch.no_grad():
+            outs = self.model(b_x)
+
         b_masks = b_y['mask']
         if not denormalize:  # Evaluate normalized and projected preds
             pred_joints = self.predict3d(outs)
             gt_joints = b_y['normalized_skeleton']
         else:  # Evaluate with actual skeletons
-            pred_joints, gt_joints = MargiposeEstimator.get_denormalized_pred_gt_skeletons(
-                outs, b_y)
+            pred_joints, gt_joints = self.get_denormalized_pred_gt_skeletons(
+                b_x, b_y)
 
         results = {
             metric_name: metric_function(pred_joints, gt_joints, b_masks)
             for metric_name, metric_function in self.metrics.items()
         }
 
+        loss = self._calculate_loss3d(outs, b_y)
         return loss, results
 
     def training_step(self, batch, batch_idx):

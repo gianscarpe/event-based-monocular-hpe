@@ -11,10 +11,11 @@ Provided:
 
 import numpy as np
 import torch
+from torch.utils.data import Dataset
+
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
-from torch.utils.data import Dataset
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
@@ -191,6 +192,7 @@ class Joints3DDataset(BaseDataset):
             'z_ref': z_ref,
             'M': extrinsic_matrix,
             'camera': camera,
-            'mask': mask
+            'mask': mask,
+            'path': self.dataset.file_paths[idx]
         }
         return label

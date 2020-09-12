@@ -147,7 +147,8 @@ class DHP19Core(BaseCore):
 
     @staticmethod
     def get_standard_path(subject, session, movement, frame, cam, postfix=""):
-        return "S{}_session_{}_mov_{}_frame_{}_cam_{}{}.npy".format(subject, session, movement, frame, cam, postfix)
+        return "S{}_session_{}_mov_{}_frame_{}_cam_{}{}.npy".format(
+            subject, session, movement, frame, cam, postfix)
 
     @staticmethod
     def load_frame(path):
@@ -159,7 +160,6 @@ class DHP19Core(BaseCore):
             if len(x.shape) == 2:
                 x = np.expand_dims(x, -1)
         return x
-
 
     def _load_matlab_frame(path):
         """

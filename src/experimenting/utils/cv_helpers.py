@@ -246,7 +246,15 @@ def denormalize_predict(pred, height, width, camera, z_ref=None):
     return pred_skeleton
 
 
-def reproject_skeleton(M, joints, inv=-1, copy=False):
+def _rotot_inverse(T):
+    Rinv = T[:3, :3].transpose(1, 0)
+    Tinv = torch.zeros_like(T)
+    Tinv[:3, :3] = Rinv
+    Tinv[:, 3] = -torch.matmul(Rinv, T[:, 3])
+    return Tinv
+
+
+def reproject_skeleton(M, joints, inv=-1, copy=True):
     """
 
     Args:
@@ -257,15 +265,16 @@ def reproject_skeleton(M, joints, inv=-1, copy=False):
     Returns
         Skeleton joints reprojected in world coord system with shape NUM_JOINTSx3
     """
-    if copy:
-        joints = joints.copy()
-    joints[:, 2] *= inv
-    joints = joints.swapaxes(1, 0)
 
-    gt = np.matmul(np.linalg.pinv(M), joints)
-    gt = gt / gt[3, :]
-    gt = gt[:3, :]
-    return gt.swapaxes(1, 0)
+    num_joints = joints.shape[0]
+    Tinv = _rotot_inverse(M)
+
+    Tinv = Tinv.type_as(joints)
+    hom = torch.cat((joints, torch.ones((num_joints, 1), dtype=joints.dtype)),    1).transpose(1, 0)
+    hom[2, :] *= inv
+    reprojected_result = torch.matmul(Tinv, hom)
+
+    return reprojected_result.transpose(1, 0)
 
 
 def plot_heatmap(img):
@@ -300,9 +309,8 @@ def plot_skeleton_3d(M, gt, pred=None):
        M: extrinsic matrix as tensor of shape 4x3
        gt: torch tensor of shape NUM_JOINTSx3
        pred: torch tensor of shape NUM_JOINTSx3
-    """    
+    """
     gt = reproject_skeleton(M, gt, -1)
-
     fs = 5
     fig = plt.figure(figsize=(fs, fs))
 
@@ -311,6 +319,8 @@ def plot_skeleton_3d(M, gt, pred=None):
     if pred is not None:
         pred = reproject_skeleton(M, pred, -1)
         plot_3d(ax, pred, c='blue')
+
+    return gt, pred
 
 
 def _get_skeleton_lines(x, y, z):

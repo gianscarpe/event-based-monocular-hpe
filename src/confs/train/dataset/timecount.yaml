@@ -1,9 +1,10 @@
 dataset:
   name: timecount_dhp19
-  params_class: DHP19Core
+  core_class: DHP19Core
   base_path: /data/gscarpellini/dhp19/time_count_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
   hm_dir: ${dataset.base_path}/labels
+  labels_dir: ${dataset.base_path}/labels
   joints_dir: ${dataset.base_path}/labels_full_joints
 
   load_split: false
@@ -13,7 +14,9 @@ dataset:
 
   n_classes: 33
   test_subjects: [1, 2, 3, 4, 5]
+  movements: 
   cams: [0,1,2,3]
+  test_cams: 
   n_channels: 1
   in_shape: [260, 346]
   n_joints: 13

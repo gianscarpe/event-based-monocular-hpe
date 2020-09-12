@@ -3,6 +3,7 @@ Toolbox for helping training and evaluation of agents
 
 """
 import collections
+import glob
 import logging
 import os
 import shutil
@@ -141,29 +142,31 @@ def dhp19_evaluate_procedure(cfg, metrics=None):
     """
 
     if metrics is None:
-        metrics = ['test_meanAUC']
+        metrics = ['test_meanMPJPE', 'test_meanPCK', 'test_meanAUC']
 
     checkpoint_dir = cfg.load_path
-    checkpoints = sorted(os.listdir(checkpoint_dir))
+    checkpoints = sorted(glob.glob(os.path.join(checkpoint_dir, "epoch*")))
     load_path = os.path.join(checkpoint_dir, checkpoints[0])
 
     print("Loading from ... ", load_path)
+
     if os.path.exists(load_path):
-        model = getattr(agents,
-                        cfg.training.module).load_from_checkpoint(load_path)
+        model = agents.MargiposeEstimator.load_from_checkpoint(load_path)
     else:
         raise FileNotFoundError()
 
     final_results = collections.defaultdict(dict)
-
+    from ..dataset import Joints3DConstructor, get_dataloader
     for movement in range(0, 33):
-        model._hparams.dataset.movements = [movement]
+        cfg.dataset.movements = [movement]
+        cfg.training.batch_size = 1
+        factory = Joints3DConstructor(cfg)
+        train, val, test = factory.get_datasets()
+        loader = get_dataloader(test, 1, shuffle=False, num_workers=2)
 
-        trainer = pl.Trainer(gpus=cfg['gpus'],
-                             benchmark=True,
-                             limit_val_batches=0.10,
-                             weights_summary='top')
-        trainer.test(model)
+        trainer = pl.Trainer(resume_from_checkpoint=load_path)
+
+        trainer.test(model, test_dataloaders=loader)
         results = model.results
         print(f"Movement {movement}")
         print(results)
