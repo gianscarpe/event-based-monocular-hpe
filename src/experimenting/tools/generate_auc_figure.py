@@ -37,12 +37,11 @@ if __name__ == '__main__':
     summary_path = args.summary_path
     metric = args.metric
     means_per_experiment = {}
-    breakpoint()
     with open(summary_path) as csvfile:
         experiments = list([*csv.DictReader(csvfile)])
         for ind, exp in enumerate(experiments):
-            means = np.zeros(50)
-            json_file = os.path.join(exp['load_path'], 'auc.json')
+            means = np.zeros(30)
+            json_file = os.path.join(exp['load_path'], 'result.json')
             if not os.path.exists(json_file):
                 print(f"Error with {json_file}")
                 continue
@@ -57,7 +56,7 @@ if __name__ == '__main__':
                 means = means / 33.
                 means_per_experiment[get_exp_acron(exp)] = means
 
-        fpr = torch.linspace(0, 800, 50)
+        fpr = torch.linspace(0, 150, 30)
         breakpoint()
         for key in sorted(means_per_experiment.keys()):
             plt.plot(fpr, means_per_experiment[key], label=key)

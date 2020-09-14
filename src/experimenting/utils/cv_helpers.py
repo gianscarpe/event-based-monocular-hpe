@@ -135,7 +135,7 @@ def get_heatmaps_steps(xyz, p_mat, width, height):
 
     xyz_cam = _project_xyz_onto_camera_coord(xyz, M)
 
-    return xyz_cam, joints, mask  # , hms
+    return xyz_cam, joints, mask  
 
 
 def get_heatmap(joints, mask, heigth, width, num_joints=13):

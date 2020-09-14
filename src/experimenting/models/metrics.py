@@ -74,7 +74,7 @@ class AUC(BaseMetric):
         self.auc_reduction = auc_reduction
 
     def forward(self, y_pr, points_gt, gt_mask=None):
-        thresholds = torch.linspace(0, 800, 50).tolist()
+        thresholds = torch.linspace(0, 150, 30).tolist()
 
         pck_values = torch.DoubleTensor(len(thresholds))
         for i, threshold in enumerate(thresholds):

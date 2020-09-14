@@ -239,6 +239,7 @@ class DHP19Core(BaseCore):
     def _get_info_from_string(filename, info, split_symbol='_'):
         return int(filename[filename.find(info):].split(split_symbol)[1])
 
+
     @staticmethod
     def get_label_from_filename(filepath) -> int:
         """Given the filepath, return the correspondent movement label (range [0, 32])

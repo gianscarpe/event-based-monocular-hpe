@@ -13,5 +13,6 @@ Welcome to master_thesis's documentation!
    experimenting.agents
    experimenting.dataset
    experimenting.models
+   experimenting.utils
 
 .. mdinclude:: ../../README.md

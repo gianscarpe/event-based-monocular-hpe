@@ -33,17 +33,16 @@ class MargiposeEstimator(BaseModule):
             self._hparams.dataset['n_joints'],
             'n_stages':
             self._hparams.training['stages'],
-            'predict_3d':
-            True
         }
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
-        self.predict_3d: bool = self._hparams.training.predict_3d
 
         #  Dataset parameters are used for 3d prediction
         self.max_x = self._hparams.dataset['max_x']
         self.max_y = self._hparams.dataset['max_y']
         self.max_z = self._hparams.dataset['max_z']
+
+        self.height, self.width = self._hparams.dataset['in_shape']
 
         self.model = get_margipose_model(params)
 
@@ -77,7 +76,7 @@ class MargiposeEstimator(BaseModule):
         xz_hm = outs[2][-1]
         return predict_xyz((xy_hm, zy_hm, xz_hm))
 
-    def get_denormalized_pred_gt_skeletons(self, b_x, b_y):
+    def denormalize_predictions(self, normalized_predictions, b_y):
         """
         It composes gt and pred denormalized skeletons
 
@@ -97,16 +96,9 @@ class MargiposeEstimator(BaseModule):
             [] de-normalization is currently CPU only
         """
 
-        with torch.no_grad():
-            outs = self.model(b_x)
+        device = normalized_predictions.device
 
-        width, height = outs[-1][-1].shape[-2:]
-        device = outs[-1][-1].device
-        normalized_skeletons = MargiposeEstimator.predict3d(outs)
-
-        gt_skeletons = b_y['xyz']
-
-        normalized_skeletons = normalized_skeletons.cpu()  # CPU only
+        normalized_skeletons = normalized_predictions.cpu()  # CPU only
         pred_skeletons = []
         for i in range(len(normalized_skeletons)):
             camera = b_y['camera'][i].cpu(
@@ -116,10 +108,11 @@ class MargiposeEstimator(BaseModule):
 
             pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
             pred_skeleton = denormalize_predict(pred=pred_skeleton,
-                                                width=260,
-                                                height=346,
+                                                width=self.width,
+                                                height=self.height,
                                                 camera=camera,
                                                 z_ref=z_ref).transpose(0, 1)
+
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension
 
@@ -128,7 +121,7 @@ class MargiposeEstimator(BaseModule):
             pred_skeletons.append(pred_skeleton)
 
         pred_skeletons = torch.stack(pred_skeletons).to(device)
-        return gt_skeletons, pred_skeletons
+        return pred_skeletons
 
     def _calculate_loss3d(self, outs, b_y):
         loss = 0
@@ -147,27 +140,28 @@ class MargiposeEstimator(BaseModule):
     def _eval(self, batch, denormalize=False):
         """
         Note:
-            De-normalization is time-consuming, therefore it can be specified to
-            either compare normalized or de-normalized skeletons
+            De-normalization is time-consuming, currently it's performed on CPU
+            only. Therefore, it can be specified to either compare normalized or
+            de-normalized skeletons
         """
         b_x, b_y = batch
-        with torch.no_grad():
-            outs = self.model(b_x)
 
-        b_masks = b_y['mask']
-        if not denormalize:  # Evaluate normalized and projected preds
-            pred_joints = self.predict3d(outs)
-            gt_joints = b_y['normalized_skeleton']
-        else:  # Evaluate with actual skeletons
-            pred_joints, gt_joints = self.get_denormalized_pred_gt_skeletons(
-                b_x, b_y)
+        outs = self.model(b_x)
+        loss = self._calculate_loss3d(outs, b_y)
+
+        pred_joints = self.predict3d(outs)
+
+        if denormalize:  # denormalize skeletons batch
+            pred_joints = self.denormalize_predictions(pred_joints, b_y)
+            gt_joints = b_y['xyz']  # xyz in original coord
+        else:
+            gt_joints = b_y['normalized_skeleton']  # xyz in normalized coord
 
         results = {
-            metric_name: metric_function(pred_joints, gt_joints, b_masks)
+            metric_name: metric_function(pred_joints, gt_joints, b_y['mask'])
             for metric_name, metric_function in self.metrics.items()
         }
 
-        loss = self._calculate_loss3d(outs, b_y)
         return loss, results
 
     def training_step(self, batch, batch_idx):
@@ -196,13 +190,13 @@ class MargiposeEstimator(BaseModule):
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(
             batch, denormalize=True
-        )  # Compare denormalized skeletons for test evaluation
+        )  # Compare denormalized skeletons for test evaluation only
         return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, 'test_mean')
         self.results = results
-        logs = {'test_loss': avg_loss, 'step': self.current_epoch}
 
-        return {**logs, 'log': logs, 'progress_bar': logs}
+        logs = {'test_loss': avg_loss, 'step': self.current_epoch}
+        return {**logs, **results, 'log': logs, 'progress_bar': logs}
