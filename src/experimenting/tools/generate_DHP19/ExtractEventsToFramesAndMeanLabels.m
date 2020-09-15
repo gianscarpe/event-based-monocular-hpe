@@ -114,7 +114,9 @@ function [] = ExtractEventsToFramesAndMeanLabels(...
             %dt = timeStamp(idx) - lastTimeStampLastFrame;
             %lastTimeStampLastFrame = timeStamp(idx);
             
-            % initialize for next frame.
+            % initialize for next frame.\
+            figure(1)
+            imshow(I2s)
             counter = 0;
             img = zeros(sx*nbcam,sy);
         end

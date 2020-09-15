@@ -112,7 +112,14 @@ class BaseModule(pl.LightningModule):
         results = {}
         for metric_key in self.metrics.keys():
             # mean along batch axis
-            results[prefix + metric_key] = torch.stack(
-                [x[metric_key] for x in outputs]).mean(axis=0)
+            tensor_result = torch.stack([x[metric_key]
+                                         for x in outputs]).mean(axis=0)
 
+            if len(tensor_result.shape) > 0:  # list of values cannot be
+                # converted to python numeric!
+                tensor_result = tensor_result.tolist()
+            else:
+                tensor_result = float(tensor_result)
+
+            results[prefix + metric_key] = tensor_result
         return results

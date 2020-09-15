@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from experimenting.agents import MargiposeEstimator
+from experimenting.utils import get_checkpoint_path
 
 
 def _get_existing_exps(root_path, postfix_path):
@@ -21,8 +22,7 @@ def _get_existing_exps(root_path, postfix_path):
 
 
 def _extract(path, exp_name, exp_params):
-    checkpoints = sorted(os.listdir(path))
-    load_path = os.path.join(path, checkpoints[0])
+    load_path = get_checkpoint_path(path)
     model = MargiposeEstimator.load_from_checkpoint(load_path)
     print("model loaded")
     exp = {'exp_name': exp_name, 'load_path': path}

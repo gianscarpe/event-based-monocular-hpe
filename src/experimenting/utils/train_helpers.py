@@ -2,7 +2,8 @@
 Toolbox for helping training and evaluation of agents
 
 """
-import collections
+
+import glob
 import logging
 import os
 import shutil
@@ -19,9 +20,29 @@ from .. import agents
 
 logging.basicConfig(level=logging.INFO)
 
-__all__ = [
-    'get_training_params', 'load_model', 'fit', 'dhp19_evaluate_procedure'
-]
+
+def fit(cfg) -> pl.Trainer:
+    """
+    Launch training for a given config. Confs file can be found at /src/confs
+
+    Args:
+       cfg (omegaconf.DictConfig): Config dictionary
+
+    """
+    trainer_configuration = get_training_params(cfg)
+    if cfg.load_path:
+        print('Loading training')
+        model = load_model(cfg)
+    else:
+        model = getattr(agents, cfg.training.module)(cfg)
+
+    try:
+        trainer = pl.Trainer(**trainer_configuration)
+        trainer.fit(model)
+        return trainer
+    except Exception as ex:
+        _safe_train_end(trainer_configuration)
+        raise ex
 
 
 def get_training_params(cfg: DictConfig):
@@ -85,9 +106,27 @@ def get_training_params(cfg: DictConfig):
 
 def load_model(cfg: dict):
     print('Loading training')
-    model = getattr(agents, cfg['training']['module']).load_from_checkpoint(
-        cfg['load_path'])
+    load_path = get_checkpoint_path(cfg.load_path)
+    print("Loading from ... ", load_path)
+
+    if os.path.exists(load_path):
+        model = getattr(
+            agents, cfg['training']['module']).load_from_checkpoint(load_path)
+    else:
+        raise FileNotFoundError()
+
     return model
+
+
+def get_checkpoint_path(checkpoint_dir):
+    # CHECKPOINT file are
+    checkpoints = sorted(glob.glob(os.path.join(checkpoint_dir, "*.ckpt")))
+    load_path = os.path.join(checkpoint_dir, checkpoints[0])
+    return load_path
+
+
+def get_result_path(load_path):
+    return os.path.join(load_path, 'result.json')
 
 
 def _safe_train_end(trainer_configuration):
@@ -96,85 +135,3 @@ def _safe_train_end(trainer_configuration):
     error_path = os.path.join(exp_path.parent, 'with_errors', exp_name)
     shutil.move(exp_path, error_path)
     logging.log(logging.ERROR, 'exp moved to trash')
-
-
-def fit(cfg) -> pl.Trainer:
-    """
-    Launch training for a given config. Confs file can be found at /src/confs
-
-    Args:
-       cfg (omegaconf.DictConfig): Config dictionary
-
-    """
-    trainer_configuration = get_training_params(cfg)
-    if cfg.load_path:
-        print('Loading training')
-        checkpoint_dir = cfg.load_path
-        checkpoints = sorted(os.listdir(checkpoint_dir))
-        checkpoint_path = os.path.join(checkpoint_dir, checkpoints[0])
-        print(f'Loading {checkpoint_path} ...')
-        model = getattr(
-            agents, cfg.training.module).load_from_checkpoint(checkpoint_path)
-    else:
-        model = getattr(agents, cfg.training.module)(cfg)
-
-    try:
-        trainer = pl.Trainer(**trainer_configuration)
-        trainer.fit(model)
-        return trainer
-    except Exception as ex:
-        _safe_train_end(trainer_configuration)
-        raise ex
-
-
-def dhp19_evaluate_procedure(cfg, metrics=None):
-    """
-    Retrieve trained agent using cfg and apply its evaluation protocol to
-    extract results
-
-    Args: cfg (omegaconf.DictConfig): Config dictionary (need to specify a
-          load_path and a training task)
-
-
-    Returns:
-        Results obtained applying the dataset evaluation protocol, per metric
-    """
-
-    if metrics is None:
-        metrics = ['test_meanAUC']
-
-    checkpoint_dir = cfg.load_path
-    checkpoints = sorted(os.listdir(checkpoint_dir))
-    load_path = os.path.join(checkpoint_dir, checkpoints[0])
-
-    print("Loading from ... ", load_path)
-    if os.path.exists(load_path):
-        model = getattr(agents,
-                        cfg.training.module).load_from_checkpoint(load_path)
-    else:
-        raise FileNotFoundError()
-
-    final_results = collections.defaultdict(dict)
-
-    for movement in range(0, 33):
-        model._hparams.dataset.movements = [movement]
-
-        trainer = pl.Trainer(gpus=cfg['gpus'],
-                             benchmark=True,
-                             limit_val_batches=0.10,
-                             weights_summary='top')
-        trainer.test(model)
-        results = model.results
-        print(f"Movement {movement}")
-        print(results)
-        for metric in metrics:
-            tensor_result = results[metric]
-            if len(tensor_result.shape) > 0:  # list of values cannot be
-                # converted to python numeric!
-                tensor_result = tensor_result.tolist()
-            else:
-                tensor_result = float(tensor_result)
-
-            final_results[metric][f'movement_{movement}'] = tensor_result
-
-    return final_results

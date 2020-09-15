@@ -1,11 +1,11 @@
-
 dataset:
   name: voxelgrid
   base_path: /data/gscarpellini/dhp19/voxel_grid_dataset
   data_dir: ${dataset.base_path}/movements_per_frame
   hm_dir: ${dataset.base_path}/labels
   joints_dir: ${dataset.base_path}/labels_full_joints
-  params_class: DHP19Core
+  labels_dir: ${dataset.base_path}/labels
+  core_class: DHP19Core
   
   load_split: false
   save_split: false
@@ -13,11 +13,12 @@ dataset:
   preload_dir : ${dataset.base_path}/preload
   
   test_subjects: [1, 2, 3, 4, 5]
-
   cams: [0,1,2,3]
   n_classes: 33
   n_channels: 4
   in_shape: [260, 346]
   n_joints: 13
   partition: cross-subject
+  movements:
+  test_cams:
   

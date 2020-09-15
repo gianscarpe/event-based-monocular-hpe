@@ -204,8 +204,4 @@ class MargiPoseModel2D(MargiPoseModel3D):
 
 
 def get_margipose_model(params):
-    predict_3d = params.pop('predict_3d')
-    if predict_3d:
-        return MargiPoseModel3D(**params)
-    else:
-        return MargiPoseModel2D(**params)
+    return MargiPoseModel3D(**params)
