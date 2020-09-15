@@ -6,7 +6,7 @@ import collections
 import pytorch_lightning as pl
 
 from ..dataset import Joints3DConstructor, get_dataloader
-from .train_helpers import _get_checkpoint_path, load_model
+from .train_helpers import get_checkpoint_path, load_model
 
 
 def _get_test_loaders_iterator(cfg):
@@ -18,7 +18,7 @@ def _get_test_loaders_iterator(cfg):
         loader = get_dataloader(dataset=test,
                                 batch_size=1,
                                 shuffle=False,
-                                num_workers=6)
+                                num_workers=12)
         yield loader
 
 
@@ -39,7 +39,7 @@ def evaluate_per_movement(cfg, metrics=None):
         metrics = ['test_meanMPJPE', 'test_meanPCK', 'test_meanAUC']
 
     model = load_model(cfg)
-    load_path = _get_checkpoint_path(cfg)
+    load_path = get_checkpoint_path(cfg.load_path)
     final_results = collections.defaultdict(dict)
     test_loaders = _get_test_loaders_iterator(cfg)
     trainer = pl.Trainer(gpus=cfg.gpus, resume_from_checkpoint=load_path)

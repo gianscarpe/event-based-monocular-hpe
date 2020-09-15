@@ -106,7 +106,7 @@ def get_training_params(cfg: DictConfig):
 
 def load_model(cfg: dict):
     print('Loading training')
-    load_path = _get_checkpoint_path(cfg)
+    load_path = get_checkpoint_path(cfg.load_path)
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
@@ -118,12 +118,15 @@ def load_model(cfg: dict):
     return model
 
 
-def _get_checkpoint_path(cfg: dict):
-    checkpoint_dir = cfg.load_path
+def get_checkpoint_path(checkpoint_dir):
     # CHECKPOINT file are
     checkpoints = sorted(glob.glob(os.path.join(checkpoint_dir, "*.ckpt")))
     load_path = os.path.join(checkpoint_dir, checkpoints[0])
     return load_path
+
+
+def get_result_path(load_path):
+    return os.path.join(load_path, 'result.json')
 
 
 def _safe_train_end(trainer_configuration):

@@ -4,15 +4,11 @@ Losses implementations
 
 import torch
 import torch.nn as nn
+
 from kornia.geometry import spatial_expectation2d
 
-from ..utils import (
-    SoftArgmax2D,
-    average_loss,
-    get_joints_from_heatmap,
-    js_reg_losses,
-    predict_xyz,
-)
+from ..agents.margipose_estimator import predict3d
+from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap, js_reg_losses
 from .metrics import MPJPE
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
@@ -108,7 +104,7 @@ class MultiPixelWiseLoss(PixelWiseLoss):
             [gt_joints.narrow(-1, 0, 1),
              gt_joints.narrow(-1, 2, 1)], -1)
 
-        pred_joints = predict_xyz(pred_hm)
+        pred_joints = predict3d(pred_xy_hm, pred_zy_hm, pred_xz_hm)
 
         loss = self.mpjpe(pred_joints, gt_joints, gt_mask)
         if self.divergence:

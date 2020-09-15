@@ -39,7 +39,7 @@ if __name__ == '__main__':
         for metric in metrics:
             values = {}
             result = "\n \n \\begin{table}\n \n \\caption{" + metric + "} \\centering \n \\resizebox{\\columnwidth}{!}{% \n " + "\\begin{tabular}{l" + "r" * (
-                len(experiments) + 1) + "}\n \\hline \n "
+                len(experiments)) + "|r}\n \\hline \\hline \n "
 
             for ind, exp in enumerate(experiments):
                 json_file = os.path.join(exp['load_path'], 'result.json')
@@ -56,12 +56,11 @@ if __name__ == '__main__':
                     values[exp_name] = results[metric].values()
                     if len(results[metric].values()) < 33:
                         print("ERROR!")
-                        breakpoint()
 
             for k, v in values.items():
                 result += "& " + k
             result += "& mean movement"
-            result += "\\\\ \n"
+            result += "\\\\ \\hline \\hline \n"
 
             values_items = values.items()
             for i in range(0, 33):
@@ -72,11 +71,13 @@ if __name__ == '__main__':
                     result += f"& {v[i]:.2f}"
                     values_per_movement.append(v[i])
                 result += f"& {sum(values_per_movement) / len(values_per_movement):.2f}"
-                result += " \\\\ \n \\hline \n"
-            result += "mean"
+                result += " \\\\ \n \n"
+            result += "\\hline \\hline mean"
             for _, v in values.items():
                 v = list(v)
                 result += f"& {sum(v)/len(v):.2f} "
+
+            result += f"& {sum([sum(v) for _, v in values.items()]) /            sum([len(v) for _, v in values.items()]):.2f}"
             result += "\\end{tabular}}\\end{table}"
             result = result.replace('_', '\\_')
             with open("table.tex", "a") as tf:

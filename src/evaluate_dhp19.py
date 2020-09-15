@@ -15,8 +15,7 @@ def main(cfg: DictConfig) -> None:
     results = evaluate_per_movement(cfg)
 
     with open(os.path.join(cfg.load_path, 'result.json'), 'w') as json_file:
-        json.dump(results, json_file
-)
+        json.dump(results, json_file)
 
 if __name__ == '__main__':
     main()

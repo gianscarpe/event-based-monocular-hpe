@@ -6,7 +6,8 @@ from ..agents.base import BaseModule
 from ..dataset import Joints3DConstructor
 from ..models.margipose import get_margipose_model
 from ..models.metrics import AUC, MPJPE, PCK
-from ..utils import average_loss, denormalize_predict, predict_xyz, reproject_skeleton
+from ..utils import Skeleton, average_loss
+from ..utils.dsntnn import dsnt
 
 
 class MargiposeEstimator(BaseModule):
@@ -56,41 +57,20 @@ class MargiposeEstimator(BaseModule):
         x = self.model(x)
         return x
 
-    @staticmethod
-    def predict3d(outs: (list, list, list)):
-        """
-        Predict normalized 3d skeleton joints
-
-        Args:
-            outs (list, list, list): output of the model
-
-        Returns:
-            torch tensor of normalized skeleton joints with shape (BATCH_SIZE, NUM_JOINTS, 3)
-        Note:
-            prediction used `dsnnt` toolbox
-        """
-
-        # Take last output (indexed -1)
-        xy_hm = outs[0][-1]
-        zy_hm = outs[1][-1]
-        xz_hm = outs[2][-1]
-        return predict_xyz((xy_hm, zy_hm, xz_hm))
-
     def denormalize_predictions(self, normalized_predictions, b_y):
         """
-        It composes gt and pred denormalized skeletons
+        Denormalize skeleton prediction and reproject onto original coord system
 
         Args:
-            outs (list, list, list): output of the model
+            normalized_predictions (torch.Tensor): normalized predictions
             b_y: batch y object (as returned by 3d joints dataset)
 
         Returns:
-            Returns a tuple of torch tensor of shape (BATCH_SIZE, NUM_JOINTS, 3)
+            Returns torch tensor of shape (BATCH_SIZE, NUM_JOINTS, 3)
 
         Note:
             Prediction skeletons are normalized according to batch depth value
-            `z_ref` and are kept in camera coordinate space.
-            GT skeletons are provided in camera coordinate as well for comparison.
+            `z_ref` and project onto world coordinate space.
 
         Todo:
             [] de-normalization is currently CPU only
@@ -106,17 +86,15 @@ class MargiposeEstimator(BaseModule):
             z_ref = b_y['z_ref'][i].cpu()  # Depth plane value for input i
             M = b_y['M'][i].cpu()
 
-            pred_skeleton = normalized_skeletons[i].narrow(-1, 0, 3)
-            pred_skeleton = denormalize_predict(pred=pred_skeleton,
-                                                width=self.width,
-                                                height=self.height,
-                                                camera=camera,
-                                                z_ref=z_ref).transpose(0, 1)
+            pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
+            pred_skeleton = pred_skeleton.denormalize(
+                width=self.width,
+                height=self.height,
+                camera=camera,
+                z_ref=z_ref).reproject_onto_world(M)._get_tensor()
 
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension
-
-            pred_skeleton = reproject_skeleton(M, pred_skeleton)
 
             pred_skeletons.append(pred_skeleton)
 
@@ -149,7 +127,11 @@ class MargiposeEstimator(BaseModule):
         outs = self.model(b_x)
         loss = self._calculate_loss3d(outs, b_y)
 
-        pred_joints = self.predict3d(outs)
+        xy_hm = outs[0][-1]
+        zy_hm = outs[1][-1]
+        xz_hm = outs[2][-1]
+
+        pred_joints = predict3d(xy_hm, zy_hm, xz_hm)
 
         if denormalize:  # denormalize skeletons batch
             pred_joints = self.denormalize_predictions(pred_joints, b_y)
@@ -200,3 +182,27 @@ class MargiposeEstimator(BaseModule):
 
         logs = {'test_loss': avg_loss, 'step': self.current_epoch}
         return {**logs, **results, 'log': logs, 'progress_bar': logs}
+
+
+def predict3d(xy_hm, zy_hm, xz_hm):
+    """
+        Predict normalized 3d skeleton joints
+
+        Args:
+            outs (list, list, list): output of the model
+
+        Returns:
+            torch tensor of normalized skeleton joints with shape (BATCH_SIZE, NUM_JOINTS, 3)
+        Note:
+            prediction used `dsnnt` toolbox
+        """
+
+    # Take last output (indexed -1)
+
+    xy = dsnt(xy_hm)
+    zy = dsnt(zy_hm)
+    xz = dsnt(xz_hm)
+    x, y = xy.split(1, -1)
+    z = 0.5 * (zy[:, :, 0:1] + xz[:, :, 1:2])
+
+    return torch.cat([x, y, z], -1)

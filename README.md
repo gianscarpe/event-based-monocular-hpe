@@ -10,7 +10,7 @@
 - [Environment](#environment)
 - [Data](#data)
 - [Model zoo](#model-zoo)
-- [Train and evaluate agents](#train-and-evaluate)
+- [Agents](#agents)
 - [Events from video](#events-from-video)
 
 
@@ -67,6 +67,8 @@ A script for converting h5 files to npy set of frames is also privided
 ### Model zoo
 A model zoo of backbones for `constant_count` and `voxelgrid` trained both with
 `cross-subject` and `cross-view` protocols is publicly accessible at .
+
+## Agents
 
 ### Train and evaluate for different tasks
 If you want to begin experiming with the classifier:
