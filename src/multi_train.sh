@@ -65,8 +65,8 @@ do
 
 done
 
-#for MODEL in resnet34 resnet50
-do     
+for MODEL in resnet34 resnet50
+wdo     
     for PRETRAINED in true false   
     do
 	get_command_without_backbone $MODEL $PRETRAINED

@@ -66,11 +66,6 @@ if __name__ == '__main__':
         default='/home/gianscarpe/dev/exps/voxelgrid/exps_MargiposeEstimator',
         help='Base exps path')
 
-    parser.add_argument('--output_dir',
-                        required=False,
-                        default='.',
-                        help='Output base dir')
-
     parser.add_argument(
         '--exp_params',
         nargs='+',
@@ -79,7 +74,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     root_path = args.root_path
-    out_dir = args.output_dir
+    out_dir = args.root_path
     exp_params = args.exp_params
     default_postfix_path = 'checkpoints'
 

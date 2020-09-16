@@ -15,7 +15,7 @@ class MargiposeEstimator(BaseModule):
     Agents for training and testing multi-stage 3d joints estimator using
     marginal heatmaps (denoted as Margipose)
     """
-    def __init__(self, hparams):
+    def __init__(self, hparams, test_metrics=None):
 
         super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor)
 
@@ -47,11 +47,14 @@ class MargiposeEstimator(BaseModule):
 
         self.model = get_margipose_model(params)
 
-        self.metrics = {
-            "MPJPE": MPJPE(reduction=average_loss),
-            "AUC": AUC(reduction=average_loss, auc_reduction=None),
-            "PCK": PCK(reduction=average_loss)
-        }
+        if test_metrics is None:
+            test_metrics = {
+                #                "MPJPE": MPJPE(reduction=average_loss),
+                "AUC": AUC(reduction=average_loss, auc_reduction=None),
+                #                "PCK": PCK(reduction=average_loss)
+            }
+
+        self.metrics = test_metrics
 
     def forward(self, x):
         x = self.model(x)

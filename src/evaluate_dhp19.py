@@ -12,9 +12,9 @@ logging.basicConfig(level=logging.INFO)
 @hydra.main(config_path='./confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
-    results = evaluate_per_movement(cfg)
 
-    with open(os.path.join(cfg.load_path, 'result.json'), 'w') as json_file:
+    results = evaluate_per_movement(cfg)
+    with open(os.path.join(cfg.load_path, 'aucs.json'), 'w') as json_file:
         json.dump(results, json_file)
 
 if __name__ == '__main__':
