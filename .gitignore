@@ -63,3 +63,6 @@ git
 config.yaml
 /src/model_zoo/
 config.yaml
+*.csv
+*.tex
+*.png

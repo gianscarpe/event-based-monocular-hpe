@@ -104,14 +104,14 @@ def get_training_params(cfg: DictConfig):
     return trainer_configuration
 
 
-def load_model(cfg: dict):
+def load_model(cfg: dict, **kwargs):
     print('Loading training')
     load_path = get_checkpoint_path(cfg.load_path)
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
         model = getattr(
-            agents, cfg['training']['module']).load_from_checkpoint(load_path)
+            agents, cfg['training']['module']).load_from_checkpoint(load_path, **kwargs)
     else:
         raise FileNotFoundError()
 

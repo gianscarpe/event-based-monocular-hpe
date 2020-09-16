@@ -47,14 +47,21 @@ class MargiposeEstimator(BaseModule):
 
         self.model = get_margipose_model(params)
 
+        metrics = {}
         if test_metrics is None:
-            test_metrics = {
-                #                "MPJPE": MPJPE(reduction=average_loss),
+            metrics = {
                 "AUC": AUC(reduction=average_loss, auc_reduction=None),
-                #                "PCK": PCK(reduction=average_loss)
             }
+        else:
+            if 'AUC' in test_metrics:
+                metrics['AUC'] = AUC(reduction=average_loss,
+                                     auc_reduction=None)
+            if 'MPJPE' in test_metrics:
+                metrics['MPJPE'] = MPJPE(reduction=average_loss)
+            if 'PCK' in test_metrics:
+                metrics['PCK'] = PCK(reduction=average_loss)
 
-        self.metrics = test_metrics
+        self.metrics = metrics
 
     def forward(self, x):
         x = self.model(x)

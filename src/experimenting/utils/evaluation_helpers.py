@@ -6,8 +6,6 @@ import collections
 import pytorch_lightning as pl
 
 from ..dataset import Joints3DConstructor, get_dataloader
-from ..models.metrics import AUC, MPJPE, PCK
-from ..utils import average_loss
 from .train_helpers import get_checkpoint_path, load_model
 
 
@@ -37,15 +35,8 @@ def evaluate_per_movement(cfg):
         Results obtained applying the dataset evaluation protocol, per metric
     """
 
-    test_metrics = {}
-    if 'AUC' in cfg.training.metrics:
-        test_metrics['AUC'] = AUC(reduction=average_loss, auc_reduction=None),
-    if 'MPJPE' in cfg.training.metrics:
-        test_metrics['MPJPE'] = MPJPE(reduction=average_loss)
-    if 'PCK' in cfg.training.metrics:
-        test_metrics['PCK'] = PCK(reduction=average_loss)
-
-    metrics = ["test_mean" + k for k in test_metrics.keys()]
+    test_metrics = cfg.training.metrics
+    metrics = ["test_mean" + k for k in test_metrics]
 
     model = load_model(cfg, test_metrics=test_metrics)
     load_path = get_checkpoint_path(cfg.load_path)
