@@ -19,6 +19,8 @@ dataset:
   in_shape: [260, 346]
   n_joints: 13
   partition: cross-subject
+  torso_length: 453.5242317
   movements:
   test_cams:
+    
   

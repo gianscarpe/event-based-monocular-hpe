@@ -16,13 +16,13 @@ def _get_test_loaders_iterator(cfg):
         _, _, test = factory.get_datasets()
 
         loader = get_dataloader(dataset=test,
-                                batch_size=1,
+                                batch_size=32,
                                 shuffle=False,
                                 num_workers=12)
         yield loader
 
 
-def evaluate_per_movement(cfg, metrics=None):
+def evaluate_per_movement(cfg):
     """
     Retrieve trained agent using cfg and apply its evaluation protocol to
     extract results
@@ -35,10 +35,10 @@ def evaluate_per_movement(cfg, metrics=None):
         Results obtained applying the dataset evaluation protocol, per metric
     """
 
-    if metrics is None:
-        metrics = ['test_meanMPJPE', 'test_meanPCK', 'test_meanAUC']
+    test_metrics = cfg.training.metrics
+    metrics = ["test_mean" + k for k in test_metrics]
 
-    model = load_model(cfg)
+    model = load_model(cfg, test_metrics=test_metrics)
     load_path = get_checkpoint_path(cfg.load_path)
     final_results = collections.defaultdict(dict)
     test_loaders = _get_test_loaders_iterator(cfg)

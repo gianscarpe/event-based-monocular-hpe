@@ -93,15 +93,19 @@ class TestAUC_reduced(TestBaseMetric):
         self.batch_size = 32
         self.n_joints = 13
 
-        self.metric = AUC(reduction=average_loss, auc_reduction=torch.mean)
+        self.metric = AUC(reduction=average_loss,
+                          auc_reduction=torch.mean,
+                          start_at=1,
+                          end_at=500,
+                          step=40)
 
     def test_accuracy_vanilla(self):
         gt = torch.randn(self.batch_size, self.n_joints, 3)
 
         result = self.metric(gt, gt)
 
-        self.assertEqual(result.sum(), 1)
-        # -> sum of results equal number of joint predictions
+        self.assertEqual(result.sum(), 1.)
+        # -> starting thresholds at 1 lead to a maximum of 1.>
 
 
 class TestAUC_raw(TestBaseMetric):
@@ -116,7 +120,7 @@ class TestAUC_raw(TestBaseMetric):
 
         result = self.metric(gt, gt)
 
-        self.assertEqual(result.sum(), len(result))
+        self.assertAlmostEqual(result.sum(), len(result) - 1)
         # -> sum of results equal number of joint predictions
 
 

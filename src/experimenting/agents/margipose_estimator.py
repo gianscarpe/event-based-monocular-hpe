@@ -15,7 +15,7 @@ class MargiposeEstimator(BaseModule):
     Agents for training and testing multi-stage 3d joints estimator using
     marginal heatmaps (denoted as Margipose)
     """
-    def __init__(self, hparams):
+    def __init__(self, hparams, estimate_depth=False, test_metrics=None):
 
         super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor)
 
@@ -46,12 +46,24 @@ class MargiposeEstimator(BaseModule):
         self.height, self.width = self._hparams.dataset['in_shape']
 
         self.model = get_margipose_model(params)
+        self.estimate_depth = estimate_depth
+        self.torso_length = self._hparams.dataset['torso_length']
 
-        self.metrics = {
-            "MPJPE": MPJPE(reduction=average_loss),
-            "AUC": AUC(reduction=average_loss, auc_reduction=None),
-            "PCK": PCK(reduction=average_loss)
-        }
+        metrics = {}
+        if test_metrics is None:
+            metrics = {
+                "AUC": AUC(reduction=average_loss, auc_reduction=None),
+            }
+        else:
+            if 'AUC' in test_metrics:
+                metrics['AUC'] = AUC(reduction=average_loss,
+                                     auc_reduction=None)
+            if 'MPJPE' in test_metrics:
+                metrics['MPJPE'] = MPJPE(reduction=average_loss)
+            if 'PCK' in test_metrics:
+                metrics['PCK'] = PCK(reduction=average_loss)
+
+        self.metrics = metrics
 
     def forward(self, x):
         x = self.model(x)
@@ -81,17 +93,25 @@ class MargiposeEstimator(BaseModule):
         normalized_skeletons = normalized_predictions.cpu()  # CPU only
         pred_skeletons = []
         for i in range(len(normalized_skeletons)):
-            camera = b_y['camera'][i].cpu(
-            )  # Internal camera parameter for input i
-            z_ref = b_y['z_ref'][i].cpu()  # Depth plane value for input i
+
+            denormalization_params = {
+                'width': self.width,
+                'height': self.height,
+                'camera': b_y['camera'][i].cpu()
+            }
+
+            if self.estimate_depth:
+                denormalization_params['torso_length'] = self.torso_length
+            else:
+                denormalization_params['z_ref'] = b_y['z_ref'][i].cpu()
+
             M = b_y['M'][i].cpu()
 
             pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
+
             pred_skeleton = pred_skeleton.denormalize(
-                width=self.width,
-                height=self.height,
-                camera=camera,
-                z_ref=z_ref).reproject_onto_world(M)._get_tensor()
+                **denormalization_params).reproject_onto_world(
+                    M)._get_tensor()
 
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension

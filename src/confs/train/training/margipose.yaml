@@ -9,3 +9,6 @@
   stages: 3
   predict_3d: true
   pretrained: true
+  metrics: ['AUC', 'PCK', 'MPJPE']
+  estimate_depth: false
+  
