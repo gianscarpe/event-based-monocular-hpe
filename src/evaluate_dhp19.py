@@ -13,9 +13,11 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
 
+    result_path = os.path.join(cfg.load_path, cfg.result_file)
     results = evaluate_per_movement(cfg)
-    with open(os.path.join(cfg.load_path, 'aucs.json'), 'w') as json_file:
+    with open(result_path, 'w') as json_file:
         json.dump(results, json_file)
+
 
 if __name__ == '__main__':
     main()

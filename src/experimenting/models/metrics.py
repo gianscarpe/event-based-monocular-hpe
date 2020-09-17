@@ -68,16 +68,21 @@ class AUC(BaseMetric):
     Area Under the Curve for PCK metric, 
     at different thresholds (from 0 to 800)
     """
-    def __init__(self, reduction=None, auc_reduction=torch.mean, **kwargs):
+    def __init__(self,
+                 reduction=None,
+                 auc_reduction=torch.mean,
+                 start_at=0,
+                 end_at=500,
+                 step=30,
+                 **kwargs):
         super().__init__(**kwargs)
         self.reduction = reduction
         self.auc_reduction = auc_reduction
+        self.thresholds = torch.linspace(start_at, end_at, step).tolist()
 
     def forward(self, y_pr, points_gt, gt_mask=None):
-        thresholds = torch.linspace(0, 500, 30).tolist()
-
-        pck_values = torch.DoubleTensor(len(thresholds))
-        for i, threshold in enumerate(thresholds):
+        pck_values = torch.DoubleTensor(len(self.thresholds))
+        for i, threshold in enumerate(self.thresholds):
             _pck = PCK(self.reduction, threshold=threshold)
             pck_values[i] = _pck(y_pr, points_gt, gt_mask)
 
