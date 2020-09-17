@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import os
+import pickle
 
 import matplotlib
 import numpy as np
@@ -29,14 +30,21 @@ if __name__ == '__main__':
         description='Extract tensoboard meaningfull information')
 
     parser.add_argument('--summary_path', type=str, help='Base exps path')
+    parser.add_argument('--dump_path', type=str, default='./roi.pickle',  help='Base exps path')
     parser.add_argument('--metric',
                         type=str,
                         default='test_meanAUC',
                         help='Base exps path')
     args = parser.parse_args()
     summary_path = args.summary_path
-    metric = args.metric
+    dump_path = args.dump_path
     means_per_experiment = {}
+
+    if os.path.exists(dump_path):
+        with open(dump_path, 'rb') as dump_read:
+            means_per_experiment = pickle.load(dump_read)
+    metric = args.metric
+
     with open(summary_path) as csvfile:
         experiments = list([*csv.DictReader(csvfile)])
         for ind, exp in enumerate(experiments):
@@ -54,14 +62,19 @@ if __name__ == '__main__':
                     key = f'movement_{i}'
                     means += results[key]
                 means = means / 33.
-                means_per_experiment[get_exp_acron(exp)] = means
 
-        fpr = torch.linspace(0, 150, 30)
-        breakpoint()
+                if exp_name in means_per_experiment:
+                    continue
+                means_per_experiment[exp_name] = means
+
+        fpr = torch.linspace(0, 500, 30)
+        with open(dump_path, 'wb') as dump_write:
+            pickle.dump(means_per_experiment, dump_write)
+
         for key in sorted(means_per_experiment.keys()):
             plt.plot(fpr, means_per_experiment[key], label=key)
         plt.xlabel("Threshold (in mm)")
         plt.ylabel("PCK")
         plt.legend()
-        plt.savefig("in-deg-dist.png")
+        plt.savefig("roi.png")
         plt.close()

@@ -53,14 +53,13 @@ def get_latex_from_numpy(table, headings, caption=""):
     return result
 
 
-def load_results(full_exps_results, metric):
+def load_results(loaded, metric):
     table_columns = []
     table_headings = []
-    if metric in full_exps_result:
-        item = full_exps_result[metric]
-        table_columns = item['table_columns']
+    if metric in loaded:
+        item = loaded[metric]
+        table_columns = [t for t in item['table_columns']]
         table_headings = item['table_headings']
-
     return table_columns, table_headings
 
 
@@ -108,10 +107,12 @@ if __name__ == '__main__':
                     exp_name = get_exp_acron(exp)
                     if exp_name in table_headings:
                         continue
+
                     table_headings.append(exp_name)
                     print(exp_name)
                     results = json.load(js)
                     values = list(results[metric].values())
+
                     table_columns.append(values)
 
             sorted_index = np.argsort(table_headings)
