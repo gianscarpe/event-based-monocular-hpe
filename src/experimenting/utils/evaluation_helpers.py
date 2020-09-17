@@ -42,7 +42,7 @@ def evaluate_per_movement(cfg, metrics=None):
     load_path = get_checkpoint_path(cfg.load_path)
     final_results = collections.defaultdict(dict)
     test_loaders = _get_test_loaders_iterator(cfg)
-    trainer = pl.Trainer(gpus=cfg.gpus, resume_from_checkpoint=load_path)
+    trainer = pl.Trainer(gpus=cfg.gpus)
 
     for loader_id, loader in enumerate(test_loaders):
         results = trainer.test(model, test_dataloaders=loader)[0]
