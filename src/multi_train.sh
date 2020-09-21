@@ -3,8 +3,7 @@
 DATASET=$1
 BATCH_SIZE=32
 EXECUTE=true
-BASE=$2
-GPU=$3
+GPU=$2
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -32,7 +31,7 @@ function get_command_with_backbone(){
    
     get_size $MODEL
     LATENT=$retval
-    retval="python train.py gpus=[$GPU] dataset.partition=cross-view training=margipose dataset=$DATASET training.model=$MODEL training.backbone=$DATASET/${TYPE}/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
+    retval="python train.py gpus=[$GPU] dataset.partition=cross-view training=margipose dataset=$DATASET training.model=$MODEL training.backbone=$DATASET/cross_view/${TYPE}/${MODEL}_no_aug.pt loss=multipixelwise training.batch_size=$BATCH_SIZE training.stages=3"
 }
 
 function get_command_without_backbone(){
@@ -45,7 +44,25 @@ function get_command_without_backbone(){
 }
 
 
-echo -e ${RED} Experiments for classification ${NC}
+
+
+
+echo -e ${RED} Experiments for ae ${NC}
+TYPE=autoencoder
+for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
+do
+    get_command_with_backbone $MODEL $TYPE
+    COMMAND=$retval
+    echo -e ${RED}
+    echo $COMMAND
+    echo -e ${NC}
+    echo
+    if $EXECUTE
+    then
+	$COMMAND
+    fi
+done
+
 
 
 echo -e ${RED} Experiments for classification ${NC}
@@ -65,8 +82,9 @@ do
 
 done
 
+echo -e ${RED} Experiments for classification ${NC}
 for MODEL in resnet34 resnet50
-wdo     
+do     
     for PRETRAINED in true false   
     do
 	get_command_without_backbone $MODEL $PRETRAINED
@@ -84,19 +102,3 @@ wdo
 done
 
 
-
-echo -e ${RED} Experiments for ae ${NC}
-TYPE=autoencoder
-for MODEL in ae_resnet34_cut_256 ae_resnet34_cut_512
-do
-    get_command_with_backbone $MODEL $TYPE
-    COMMAND=$retval
-    echo -e ${RED}
-    echo $COMMAND
-    echo -e ${NC}
-    echo
-    if $EXECUTE
-    then
-	$COMMAND
-    fi
-done

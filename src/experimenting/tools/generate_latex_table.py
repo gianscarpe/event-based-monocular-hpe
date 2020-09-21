@@ -68,6 +68,7 @@ if __name__ == '__main__':
         description='Extract tensoboard meaningfull information')
 
     parser.add_argument('--summary_path', type=str, help='Base exps path')
+    parser.add_argument('--result_file', default='result.json', type=str, help='Base exps path')
     parser.add_argument('--dump_path',
                         type=str,
                         default='./dump.pickle',
@@ -81,6 +82,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     summary_path = args.summary_path
     metrics = args.metrics
+    result_file = args.result_file
     loaded_results = {}
     full_exps_result = {}
 
@@ -98,7 +100,7 @@ if __name__ == '__main__':
                 loaded_results, metric)
 
             for ind, exp in enumerate(experiments):
-                json_file = os.path.join(exp['load_path'], 'result.json')
+                json_file = os.path.join(exp['load_path'], result_file)
                 if not os.path.exists(json_file):
                     print(f"Error with {json_file}")
                     continue

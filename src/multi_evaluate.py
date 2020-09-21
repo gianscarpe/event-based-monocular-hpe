@@ -10,12 +10,16 @@ if __name__ == "__main__":
     parser.add_argument('--summary_path', type=str)
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--metrics', nargs="+", default=['AUC'], type=str)
-    parser.add_argument('--result_file', default='aucs.json')
+    parser.add_argument('--result_file', default='result.json')
+    parser.add_argument('--estimate_depth', default='false')
+    
     args = parser.parse_args()
     csv_path = args.summary_path
     dataset = args.dataset
     metrics = "[" + ",".join(args.metrics) + "]"
     result_file = args.result_file
+    estimate_depth = args.estimate_depth
+    
     done = []
     with open(csv_path) as csvfile:
         experiments = csv.DictReader(csvfile)
@@ -25,8 +29,8 @@ if __name__ == "__main__":
                 continue
             
             result_path = os.path.join(exp['load_path'], result_file)
-            if not os.path.exists(os.path.join(exp['load_path'], 'aucs.json')):
-                command = f"python evaluate_dhp19.py training.metrics={metrics} training=margipose dataset={dataset} gpus=1 load_path={exp['load_path']}".replace(
+            if not os.path.exists(result_path):
+                command = f"python evaluate_dhp19.py training.metrics={metrics} result_file={result_file} training.estimate_depth={estimate_depth} training=margipose dataset={dataset} gpus=1 load_path={exp['load_path']}".replace(
                     "$", "\\$")
                 print(command)
                 os.system(command)
