@@ -30,6 +30,7 @@ if __name__ == '__main__':
         description='Extract tensoboard meaningfull information')
 
     parser.add_argument('--summary_path', type=str, help='Base exps path')
+    parser.add_argument('--result_file', type=str, help='Base exps path')
     parser.add_argument('--dump_path', type=str, default='./roi.pickle',  help='Base exps path')
     parser.add_argument('--metric',
                         type=str,
@@ -38,6 +39,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     summary_path = args.summary_path
     dump_path = args.dump_path
+    result_file = args.result_file
     means_per_experiment = {}
 
     if os.path.exists(dump_path):
@@ -49,7 +51,7 @@ if __name__ == '__main__':
         experiments = list([*csv.DictReader(csvfile)])
         for ind, exp in enumerate(experiments):
             means = np.zeros(30)
-            json_file = os.path.join(exp['load_path'], 'result.json')
+            json_file = os.path.join(exp['load_path'], result_file)
             if not os.path.exists(json_file):
                 print(f"Error with {json_file}")
                 continue
@@ -78,3 +80,13 @@ if __name__ == '__main__':
         plt.legend()
         plt.savefig("roi.png")
         plt.close()
+
+        zoom = slice(6, 15) # from 100mm to 240mm
+        breakpoint()
+        for key in sorted(means_per_experiment.keys()):
+            plt.plot(fpr[zoom], means_per_experiment[key][zoom], label=key)
+        plt.xlabel("Threshold (in mm)")
+        plt.ylabel("PCK")
+        plt.legend()
+        plt.savefig("zoom.png")
+        plt.close()        
