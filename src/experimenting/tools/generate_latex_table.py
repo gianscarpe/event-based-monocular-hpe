@@ -100,7 +100,7 @@ if __name__ == '__main__':
                 loaded_results, metric)
 
             for ind, exp in enumerate(experiments):
-                json_file = os.path.join(exp['load_path'], result_file)q
+                json_file = os.path.join(exp['load_path'], result_file)
                 if not os.path.exists(json_file):
                     print(f"Error with {json_file}")
                     continue
