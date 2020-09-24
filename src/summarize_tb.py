@@ -25,7 +25,7 @@ def _extract(path, exp_name, exp_params):
     load_path = get_checkpoint_path(path)
     model = MargiposeEstimator.load_from_checkpoint(load_path)
     print("model loaded")
-    exp = {'exp_name': exp_name, 'load_path': path}
+    exp = {'exp_name': exp_name, 'load_path': path, 'checkpoint': load_path}
     for param in exp_params:
         params = model._hparams
         for p in param.split('/'):

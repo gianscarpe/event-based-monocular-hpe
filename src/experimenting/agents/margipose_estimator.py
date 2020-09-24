@@ -71,7 +71,7 @@ class MargiposeEstimator(BaseModule):
 
     def denormalize_predictions(self, normalized_predictions, b_y):
         """
-        Denormalize skeleton prediction and reproject onto original coord system
+b        Denormalize skeleton prediction and reproject onto original coord system
 
         Args:
             normalized_predictions (torch.Tensor): normalized predictions

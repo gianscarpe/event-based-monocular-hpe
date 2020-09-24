@@ -7,22 +7,21 @@ and denormalization of skeletons joints
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.coords import ensure_homogeneous
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
-from .cv_helpers import reproject_xyz_onto_world_coord
+from .cv_helpers import _project_xyz_onto_image, reproject_xyz_onto_world_coord
 
 
 class Skeleton:
     _SKELETON_D = 3
 
-    def __init__(self, skeleton):
+    def __init__(self, skeleton, label="skeleton"):
         skeleton = ensure_homogeneous(skeleton, d=Skeleton._SKELETON_D)
         self._skeleton = skeleton
-
+        self.label = label
         self._normalizer = SkeletonNormaliser()
         self.head_point = skeleton[0]
         self.right_shoulder_point = skeleton[1]
@@ -252,42 +251,9 @@ class Skeleton:
         ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
-
-def plot_skeleton_3d(M, skeleton_gt, skeleton_pred=None):
-    """
-        Args:
-           M: extrinsic matrix as tensor of shape 4x3
-           xyz: torch tensor of shape NUM_JOINTSx3
-           pred: torch tensor of shape NUM_JOINTSx3
-        """
-
-    gt = skeleton_gt.reproject_onto_world(M)
-    fs = 5
-    fig = plt.figure(figsize=(fs, fs))
-
-    ax = Axes3D(fig)
-    gt.plot_3d(ax, c='red')
-    if skeleton_pred is not None:
-        pred = skeleton_pred.reproject_onto_world(M)
-        pred.plot_3d(ax, c='blue')
-        return gt, pred
-    else:
-        return gt
-
-
-def plot_skeleton_2d(self, dvs_frame, sample_gt, sample_pred):
-    """
-        To plot image and 2D ground truth and prediction
-
-        Args:
-          dvs_frame: frame as vector (1xWxH)
-          sample_gt: gt joints as vector (N_jointsx2)
-          sample_pred: prediction joints as vector (N_jointsx2)
-
-        """
-
-    plt.figure()
-    plt.imshow(dvs_frame, cmap='gray')
-    plt.plot(sample_gt[:, 1], sample_gt[:, 0], '.', c='red', label='gt')
-    plt.plot(sample_pred[:, 1], sample_pred[:, 0], '.', c='blue', label='pred')
-    plt.legend()
+    def get_2d_points(self, p_mat, height, width):
+        points = self._get_tensor()[:, :3].transpose(1, 0)
+        xj, yj, _ = _project_xyz_onto_image(points.numpy(), p_mat.numpy(),
+                                            height, width)
+        joints = np.array([xj, yj]).transpose(1, 0)
+        return joints
