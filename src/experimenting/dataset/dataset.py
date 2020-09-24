@@ -164,6 +164,7 @@ class Joints3DDataset(BaseDataset):
 
         joints = torch.tensor(joints_file['xyz_cam'].swapaxes(0, 1))
         xyz = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
+        joints_2d = torch.tensor(joints_file['joints'])
         mask = ~torch.isnan(joints[:, 0])
         joints[~mask] = 0
         xyz[~mask] = 0
@@ -190,6 +191,7 @@ class Joints3DDataset(BaseDataset):
             'skeleton': joints,
             'normalized_skeleton': normalized_skeleton,
             'z_ref': z_ref,
+            '2d_joints': joints_2d,
             'M': extrinsic_matrix,
             'camera': camera,
             'mask': mask,

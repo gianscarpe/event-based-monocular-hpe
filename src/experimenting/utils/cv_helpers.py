@@ -7,7 +7,7 @@ import cv2
 from pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
-    'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps', 'plot_heatmap',
+    'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps',
     'decompose_projection_matrix', 'reproject_xyz_onto_world_coord',
     'get_joints_from_heatmap'
 ]
@@ -82,6 +82,13 @@ def get_heatmap(joints, mask, heigth, width, num_joints=13):
     return label_heatmaps
 
 
+def compose_projection_matrix(K, M):
+    """
+    Compose intrinsics (K) and extrinsics (M) parameters to get a 
+    projection matrix
+    """
+    return torch.matmul(K[:, :3], M)
+
 def decompose_projection_matrix(P):
     """
     QR decomposition of world2imageplane projection matrix
@@ -104,14 +111,6 @@ def decompose_projection_matrix(P):
     camera = np.concatenate([K, np.zeros((3, 1))], axis=1)
 
     return M, camera
-
-
-def plot_heatmap(img):
-    fig, ax = plt.subplots(ncols=img.shape[0], nrows=1, figsize=(20, 20))
-    for i in range(img.shape[0]):
-        ax[i].imshow(img[i])
-        ax[i].axis('off')
-    plt.show()
 
 
 def _project_xyz_onto_image(xyz, p_mat, width, height):

@@ -3,8 +3,9 @@ import logging
 import os
 
 import hydra
-from experimenting.utils.evaluation_helpers import evaluate_per_movement
 from omegaconf import DictConfig
+
+from experimenting.utils.evaluation_helpers import evaluate_per_movement
 
 logging.basicConfig(level=logging.INFO)
 
