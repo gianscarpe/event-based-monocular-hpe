@@ -13,7 +13,7 @@ from experimenting.utils import get_checkpoint_path
 def get_exp_acron(exp):
     result = ""
     if exp['training']['backbone'] == "none":
-        if exp['training']['pretrained'] == 'True':
+        if exp['training']['pretrained']:
             result += "imagenet_"
         else:
             result += "raw_"
