@@ -24,10 +24,8 @@ def main(cfg: DictConfig) -> None:
         checkpoint_path = get_checkpoint_path(load_path)
         model = getattr(agents, cfg.training.module).load_from_checkpoint(
             checkpoint_path)
-        breakpoint()
         trainer = pl.Trainer(gpus=cfg.gpus, resume_from_checkpoint=checkpoint_path)
         results = trainer.test(model)
-        breakpoint()
         with open(result_path, 'w') as json_file:
             json.dump(results, json_file)
 

@@ -6,6 +6,7 @@ defaults:
   - augmentation: no_aug
   - training: hourglass
   - hydra: standard
+  - hydra/help: help
 
 gpus: [0]
 debug: false
