@@ -68,7 +68,10 @@ if __name__ == '__main__':
         description='Extract tensoboard meaningfull information')
 
     parser.add_argument('--summary_path', type=str, help='Base exps path')
-    parser.add_argument('--result_file', default='result.json', type=str, help='Base exps path')
+    parser.add_argument('--result_file',
+                        default='result.json',
+                        type=str,
+                        help='Base exps path')
     parser.add_argument('--dump_path',
                         type=str,
                         default='./dump.pickle',
@@ -131,5 +134,5 @@ if __name__ == '__main__':
             with open("table.tex", "a") as tf:
                 tf.write(result)
 
-    with open("dump.pickle", "wb") as dump_file:
+    with open(args.dump_path, "wb") as dump_file:
         pickle.dump(full_exps_result, dump_file)

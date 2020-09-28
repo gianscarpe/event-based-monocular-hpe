@@ -10,7 +10,7 @@ defaults:
 
 gpus: [0]
 debug: false
-root_dir: /home/gianscarpe/dev
+root_dir: /home/gscarpellini/dev
 model_zoo: /data/gscarpellini/model_zoo
 resume: false
 load_path:
