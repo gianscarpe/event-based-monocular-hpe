@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Multi eval script.')
     parser.add_argument('--summary_path', type=str)
     parser.add_argument('--dataset', type=str)
-    parser.add_argument('--metrics', nargs="+", default=['AUC'], type=str)
+    parser.add_argument('--metrics', nargs="+", default=['PCK', 'MPJPE', 'AUC'], type=str)
     parser.add_argument('--result_file', default='result.json')
     parser.add_argument('--estimate_depth', default='false')
     
