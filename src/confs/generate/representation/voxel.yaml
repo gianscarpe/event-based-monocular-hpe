@@ -1,8 +1,0 @@
-representation:
-  cls: experimenting.generator.VoxelRepresentation
-  params:
-    W: 346
-    H: 260
-    C: 8
-    num_events: 7500 
-    

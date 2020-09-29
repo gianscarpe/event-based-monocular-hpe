@@ -1,2 +1,0 @@
-extractor:
-  cls: experimenting.generator.NTU_extractor
