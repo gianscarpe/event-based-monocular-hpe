@@ -16,7 +16,7 @@ dataset:
   test_subjects: [1, 2, 3, 4, 5]
   movements: 
   cams: [0,1,2,3]
-  test_cams: 
+  test_cams: [1, 2]
   n_channels: 1
   in_shape: [260, 346]
   n_joints: 13
