@@ -5,6 +5,7 @@ src/
 *~
 .*
 !.travis.yml
+!.readthedocs.yml
 !.gitignore
 
 # Byte-compiled / optimized / DLL files
