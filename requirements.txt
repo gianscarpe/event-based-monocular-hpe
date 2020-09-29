@@ -3,12 +3,11 @@
 -e git+https://github.com/kornia/kornia#egg=kornia
 albumentations
 h5py
-hdf5
 scikit-image
 scikit-learn
 scikit-video
 scipy
-pytorch=1.5
+torch>1
 kornia
 hydra-core==1.0.0rc1
 omegaconf
