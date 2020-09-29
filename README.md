@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/gianscarpe/event-camera.svg?token=kzseEwrMqABZcmsDXSpM&branch=master)](https://travis-ci.com/gianscarpe/event-camera)
+
 # Event-camera
 
 * Train classification models based on ResNet18, Resnet34, ...
