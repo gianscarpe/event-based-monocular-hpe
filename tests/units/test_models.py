@@ -8,67 +8,6 @@ from experimenting.models.margipose import MargiPoseModel3D
 from experimenting.utils import get_feature_extractor
 
 
-class TestMargiposeAE512(unittest.TestCase):
-    def setUp(self):
-        self.hparams = {
-            'n_joints':
-                13,
-            'in_cnn':
-                get_feature_extractor({
-                    'model':
-                        'ae_resnet34_cut_512',
-                    'n_channels':
-                        1,
-                    'custom_model_path':
-                        './model_zoo/timecount/autoencoder/ae_resnet34_cut_512_no_aug.pt'
-                }),
-            'in_shape': (1, 260, 346),
-            'n_stages':
-                3
-        }
-        self.model = MargiPoseModel3D(**self.hparams)
-
-    @expectedFailure
-    def test_init(self):
-        self.assertIsNotNone(self.model)
-
-    @expectedFailure
-    def test_forward(self):
-        batch_input = torch.randn(32, 1, 260, 346)
-        out = self.model(batch_input)
-        self.assertIsNotNone(out)
-
-
-class TestMargiposeAE256(unittest.TestCase):
-    def setUp(self):
-        self.hparams = {
-            'n_joints':
-                13,
-            'in_cnn':
-                get_feature_extractor({
-                    'model':
-                        'ae_resnet34_cut_256',
-                    'n_channels':
-                        1,
-                    'custom_model_path':
-                        './model_zoo/timecount/autoencoder/ae_resnet34_cut_256_no_aug.pt'
-                }),
-            'in_shape': (1, 260, 346),
-            'n_stages':
-                3
-        }
-        self.model = MargiPoseModel3D(**self.hparams)
-
-    @expectedFailure
-    def test_init(self):
-        self.assertIsNotNone(self.model)
-
-    @expectedFailure
-    def test_forward(self):
-        batch_input = torch.randn(32, 1, 260, 346)
-        out = self.model(batch_input)
-        self.assertIsNotNone(out)
-
 
 class TestAE(unittest.TestCase):
     def setUp(self):
@@ -87,11 +26,9 @@ class TestAE(unittest.TestCase):
         }
         self.model = AutoEncoder(**self.hparams)
 
-    @expectedFailure
     def test_init(self):
         self.assertIsNotNone(self.model)
 
-    @expectedFailure
     def test_forward(self):
         batch_input = torch.randn(32, 4, 260, 346)
         out = self.model(batch_input)
@@ -115,11 +52,9 @@ class TestMargiposeResnet34(unittest.TestCase):
         }
         self.model = MargiPoseModel3D(**self.hparams)
 
-    @expectedFailure
     def test_init(self):
         self.assertIsNotNone(self.model)
 
-    @expectedFailure
     def test_forward(self):
         batch_input = torch.randn(32, 1, 260, 346)
         out = self.model(batch_input)
@@ -143,11 +78,9 @@ class TestMargiposeResnet50(unittest.TestCase):
         }
         self.model = MargiPoseModel3D(**self.hparams)
 
-    @expectedFailure
     def test_init(self):
         self.assertIsNotNone(self.model)
 
-    @expectedFailure
     def test_forward(self):
         batch_input = torch.randn(32, 1, 260, 346)
         out = self.model(batch_input)
