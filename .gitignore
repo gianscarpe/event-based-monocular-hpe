@@ -4,6 +4,7 @@
 \#*\#
 *~
 .*
+!.travis.yml
 !.gitignore
 
 # Byte-compiled / optimized / DLL files

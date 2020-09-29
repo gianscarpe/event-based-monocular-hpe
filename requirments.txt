@@ -1,3 +1,18 @@
 -e git+https://github.com/anibali/pose3d-utils.git#egg=pose3d_utils
 -e git+https://github.com/qubvel/segmentation_models.pytorch#egg=segmentation_models_pytorch
 -e git+https://github.com/kornia/kornia#egg=kornia
+albumentations
+h5py
+hdf5
+scikit-image
+scikit-learn
+scikit-video
+scipy
+pytorch=1.5
+kornia
+hydra-core==1.0.0rc1
+omegaconf
+opencv-python
+pytorch-lightning==0.8.5
+torchvision
+tqdm
