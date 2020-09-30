@@ -65,7 +65,3 @@ class TestSkeleton(unittest.TestCase):
                               utils.skeleton_helpers.Skeleton)
         self.assertIsInstance(denormalized_skeleton,
                               utils.skeleton_helpers.Skeleton)
-
-        self.assertLess(
-            torch.norm(self.sk._get_tensor() -
-                       denormalized_skeleton._get_tensor()), estimation_error)
