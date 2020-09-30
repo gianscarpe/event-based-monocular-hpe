@@ -10,9 +10,8 @@ install:
   - pip install .
 # command to run tests
 script:
-  - python -m unittest discover tests
-  - coverage run
-  - coverage report --fail-under 80 -m
+  - coverage run -m unittest discover tests
+  - coverage report -m
 
 after_success:
     coveralls

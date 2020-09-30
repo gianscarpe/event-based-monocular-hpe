@@ -11,7 +11,7 @@ setuptools.setup(
     author_email='gianluca@scarpellini.dev',
     url='https://github.com/gianscarpe/event-camera',
     packages=setuptools.find_packages(exclude=("tests",)),
-    test_suite="tests.my_module_suite",
+    test_suite="tests",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GPL License",
