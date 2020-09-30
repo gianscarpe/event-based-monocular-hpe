@@ -10,9 +10,6 @@ Welcome to master_thesis's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   experimenting.agents
-   experimenting.dataset
-   experimenting.models
-   experimenting.utils
+   modules
 
 .. mdinclude:: ../../README.md

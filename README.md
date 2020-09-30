@@ -1,3 +1,10 @@
+[![Build Status](https://travis-ci.com/gianscarpe/event-camera.svg?token=kzseEwrMqABZcmsDXSpM&branch=master)](https://travis-ci.com/gianscarpe/event-camera)
+[![Documentation
+Status](https://readthedocs.org/projects/event-camera/badge/?version=latest)](https://event-camera.readthedocs.io/en/latest/?badge=latest)
+
+[![Coverage
+Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?branch=master)](https://coveralls.io/github/gianscarpe/event-camera?branch=master)
+
 # Event-camera
 
 * Train classification models based on ResNet18, Resnet34, ...
@@ -11,7 +18,6 @@
 - [Data](#data)
 - [Model zoo](#model-zoo)
 - [Agents](#agents)
-- [Events from video](#events-from-video)
 
 
 ## Environment
@@ -113,19 +119,4 @@ python evaluate_dhp19.py training={TASK} dataset={DATASET_REPRESENTATION} load_p
 
 Experimenting implementations for classification, autoencoder, 2d joints estimation,
 heatmap prediction, and 3d joints estimation are based on  `pytorch_lighting` framework.
-
-## Events from video
-It's provided a tool for generate events frames from standard videos. Standard
-configuration is provided at `./confs/generate/config.yaml`. Currently there're
-two supported representations: `voxel` and `constant_count`.
-
-Launch using:
-
-```
-conda activate event-camera
-python generate.py input_path={YOUR_INPUT_PATH} output_path={YOUR_OUTPUT_PATH} representation={voxel|time_constant}
-```
-
-Please refer to [rpg_vid2e](https://github.com/uzh-rpg/rpg_vid2e) for more information about simulator parameters.
-
 

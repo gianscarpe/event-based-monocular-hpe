@@ -1,9 +1,11 @@
 # My rules
-
+src/
 .idea/*
 \#*\#
 *~
 .*
+!.travis.yml
+!.readthedocs.yml
 !.gitignore
 
 # Byte-compiled / optimized / DLL files
@@ -56,7 +58,6 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-data/
 /lightning_logs/
 git
 !src/tests/data
