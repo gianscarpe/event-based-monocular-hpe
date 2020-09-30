@@ -1,15 +1,15 @@
+import cv2
 import numpy as np
 import scipy
 import torch
 from matplotlib import pyplot as plt
 
-import cv2
 from pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
     'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps',
     'decompose_projection_matrix', 'reproject_xyz_onto_world_coord',
-    'get_joints_from_heatmap'
+    'get_joints_from_heatmap', 'project_xyz_onto_camera_coord'
 ]
 
 

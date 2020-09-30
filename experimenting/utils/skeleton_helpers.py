@@ -1,5 +1,5 @@
 """
-Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
+ Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
 and denormalization of skeletons joints
 
 """
@@ -12,7 +12,11 @@ from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.coords import ensure_homogeneous
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
-from .cv_helpers import _project_xyz_onto_image, reproject_xyz_onto_world_coord
+from .cv_helpers import (
+    _project_xyz_onto_image,
+    project_xyz_onto_camera_coord,
+    reproject_xyz_onto_world_coord,
+)
 
 
 class Skeleton:
@@ -100,8 +104,19 @@ class Skeleton:
         """
         return (self.get_skeleton_torso_length() / torso_length)
 
+    def project_onto_camera(self, M):
+        return Skeleton(project_xyz_onto_camera_coord(self._get_tensor(), M))
+
     def reproject_onto_world(self, M):
         return Skeleton(reproject_xyz_onto_world_coord(self._get_tensor(), M))
+
+    def normalize(self, height, width, camera, z_ref):
+        camera = CameraIntrinsics(camera)
+        homog = ensure_homogeneous(self._get_tensor(), d=Skeleton._SKELETON_D)
+
+        normalized_skeleton = self._normalizer.normalise_skeleton(
+            homog, z_ref, camera, height, width).narrow(-1, 0, 3)
+        return Skeleton(normalized_skeleton)
 
     def denormalize(self,
                     height,
