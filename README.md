@@ -1,7 +1,6 @@
 [![Build Status](https://travis-ci.com/gianscarpe/event-camera.svg?token=kzseEwrMqABZcmsDXSpM&branch=master)](https://travis-ci.com/gianscarpe/event-camera)
 [![Documentation
 Status](https://readthedocs.org/projects/event-camera/badge/?version=latest)](https://event-camera.readthedocs.io/en/latest/?badge=latest)
-
 [![Coverage
 Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?branch=master)](https://coveralls.io/github/gianscarpe/event-camera?branch=master)
 
