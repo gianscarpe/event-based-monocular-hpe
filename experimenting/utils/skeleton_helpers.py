@@ -6,7 +6,6 @@ and denormalization of skeletons joints
 
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.coords import ensure_homogeneous
@@ -50,6 +49,9 @@ class Skeleton:
 
     def _get_tensor(self):
         return self._skeleton.narrow(-1, 0, 3)
+
+    def get_z_ref(self):
+        return self.head_point[-1]
 
     def get_left_arm_length(self):
         return (torch.norm(self.left_shoulder_point - self.left_elbow_point)
@@ -110,8 +112,9 @@ class Skeleton:
     def reproject_onto_world(self, M):
         return Skeleton(reproject_xyz_onto_world_coord(self._get_tensor(), M))
 
-    def normalize(self, height, width, camera, z_ref):
+    def normalize(self, height, width, camera):
         camera = CameraIntrinsics(camera)
+        z_ref = self.get_z_ref()
         homog = ensure_homogeneous(self._get_tensor(), d=Skeleton._SKELETON_D)
 
         normalized_skeleton = self._normalizer.normalise_skeleton(

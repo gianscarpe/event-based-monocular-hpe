@@ -51,6 +51,9 @@ class BaseDataset(Dataset):
         x = self.dataset.get_frame_from_id(idx)
         return x
 
+    def _get_y(self, idx):
+        pass
+    
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
         if torch.is_tensor(idx):
@@ -73,23 +76,15 @@ class BaseDataset(Dataset):
 
 class ClassificationDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
-
-        x_indexes = indexes if indexes is not None else np.arange(
-            len(self.x_paths))
-
-        super(ClassificationDataset, self).__init__(dataset, x_indexes,
+        super(ClassificationDataset, self).__init__(dataset, indexes,
                                                     transform, False)
-
     def _get_y(self, idx):
         return self.dataset.get_label_from_id(idx)
 
 
 class AutoEncoderDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
-
-        x_indexes = indexes if indexes is not None else np.arange(
-            len(self.x_paths))
-        super(AutoEncoderDataset, self).__init__(dataset, x_indexes, transform,
+        super(AutoEncoderDataset, self).__init__(dataset, indexes, transform,
                                                  False)
 
     def __getitem__(self, idx):
