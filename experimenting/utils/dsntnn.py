@@ -1,6 +1,6 @@
 """
 Differentiable DSNT operations for use in PyTorch computation graphs.
-
+Thanks to 
 """
 
 from functools import reduce

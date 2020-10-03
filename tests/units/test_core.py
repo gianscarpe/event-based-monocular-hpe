@@ -62,6 +62,8 @@ class TestDHP19ParamsCrossSubject(TestCore):
         self.core = DHP19Core(self.hparams)
 
 
+
+
 class TestDHP19ParamsCrossView(TestCore):
     def setUp(self):
         data_dir = 'tests/data/dhp19/frames'
