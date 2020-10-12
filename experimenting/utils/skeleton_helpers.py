@@ -1,5 +1,5 @@
 """
- Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
+Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
 and denormalization of skeletons joints
 
 """
