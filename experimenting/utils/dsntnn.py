@@ -1,6 +1,8 @@
 """
 Differentiable DSNT operations for use in PyTorch computation graphs.
-Thanks to 
+Author: A. Nibali
+Url: https://github.com/anibali/margipose
+License: Apache
 """
 
 from functools import reduce

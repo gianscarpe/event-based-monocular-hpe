@@ -1,7 +1,6 @@
 """
-Implementation of Margipose Model
-Original source code: https://github.com/anibali/margipose/src/margipose
-
+Implementation of Margipose Model. Thanks to A.  Nibali --- original source
+code: https://github.com/anibali/margipose/src/margipose
 """
 
 import torch
