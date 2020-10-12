@@ -1,7 +1,7 @@
 experimenting.agents package
 ============================
 
-.. mdinclude:: ../../src/experimenting/agents/README.md
+.. mdinclude:: ../../experimenting/agents/README.md
 	       
 Submodules
 ----------
