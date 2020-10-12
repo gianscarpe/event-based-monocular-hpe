@@ -1,6 +1,5 @@
 import torch.nn as nn
-
-from ..utils import FlatSoftmax
+from kornia.geometry import spatial_softmax2d
 
 
 class DHP19Model(nn.Module):
@@ -81,7 +80,8 @@ class DHP19Model(nn.Module):
             nn.Conv2d(in_channels=16,
                       out_channels=n_joints,
                       kernel_size=3,
-                      padding=1), FlatSoftmax())
+                      padding=1))
+
     def forward(self, x):
 
         x1 = self.block1(x)
@@ -97,4 +97,4 @@ class DHP19Model(nn.Module):
         x = x6 + x1
         x7 = self.block5(x)
         out = self.head(x7)
-        return out
+        return spatial_softmax2d(out)

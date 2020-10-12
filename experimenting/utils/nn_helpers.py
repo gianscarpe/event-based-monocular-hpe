@@ -265,6 +265,7 @@ def _get_unet_resnet(resnet,
 def _get_dhp19_model(n_channels, n_classes):
     return DHP19Model(n_channels, n_classes)
 
+
 def get_cnn(model_name, params):
     switcher = {
         'resnet18': lambda **args: _get_resnet('resnet18', **args),
