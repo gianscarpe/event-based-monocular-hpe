@@ -1,5 +1,4 @@
 import unittest
-from unittest import mock
 
 import torch
 
@@ -7,7 +6,7 @@ from experimenting import utils
 
 
 class TestSkeleton(unittest.TestCase):
-    precision_error = 1e-5  # acceptable precision error in mm for algebra calculation
+    precision_error = 1e-3  # acceptable precision error in mm for algebra calculation
 
     def setUp(self):
         self.joints = torch.randn(13, 3)
@@ -31,9 +30,8 @@ class TestSkeleton(unittest.TestCase):
         camera = torch.randn(3, 4)
         height = 100
         width = 100
-        z_ref = self.joints[0, -1]
-
-        normalized_skeleton = self.sk.normalize(height, width, camera, z_ref)
+        normalized_skeleton = self.sk.normalize(height, width, camera)
+        z_ref = normalized_skeleton.get_z_ref()
         denormalized_skeleton = normalized_skeleton.denormalize(height,
                                                                 width,
                                                                 camera,
@@ -55,9 +53,8 @@ class TestSkeleton(unittest.TestCase):
         width = 100
         z_ref = self.joints[0, -1]
         torso_length = self.sk.get_skeleton_torso_length()
-        estimation_error = 20  # 20mm of estimation error
 
-        normalized_skeleton = self.sk.normalize(height, width, camera, z_ref)
+        normalized_skeleton = self.sk.normalize(height, width, camera)
         denormalized_skeleton = normalized_skeleton.denormalize(
             height, width, camera, torso_length=torso_length)
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Task dataset implementations.
 Provided:
@@ -13,15 +14,18 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+import pose3d_utils.skeleton_normaliser
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
-from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
     'Joints3DDataset', 'AutoEncoderDataset'
 ]
 
+__author__ = "Gianluca Scarpellini"
+__license__ = "GPL"
+__email__ = "gianluca@scarpellini.dev"
 
 class BaseDataset(Dataset):
     def __init__(self,
@@ -51,6 +55,9 @@ class BaseDataset(Dataset):
         x = self.dataset.get_frame_from_id(idx)
         return x
 
+    def _get_y(self, idx):
+        pass
+    
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
         if torch.is_tensor(idx):
@@ -73,23 +80,15 @@ class BaseDataset(Dataset):
 
 class ClassificationDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
-
-        x_indexes = indexes if indexes is not None else np.arange(
-            len(self.x_paths))
-
-        super(ClassificationDataset, self).__init__(dataset, x_indexes,
+        super(ClassificationDataset, self).__init__(dataset, indexes,
                                                     transform, False)
-
     def _get_y(self, idx):
         return self.dataset.get_label_from_id(idx)
 
 
 class AutoEncoderDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
-
-        x_indexes = indexes if indexes is not None else np.arange(
-            len(self.x_paths))
-        super(AutoEncoderDataset, self).__init__(dataset, x_indexes, transform,
+        super(AutoEncoderDataset, self).__init__(dataset, indexes, transform,
                                                  False)
 
     def __getitem__(self, idx):
@@ -155,7 +154,7 @@ class Joints3DDataset(BaseDataset):
                                               False)
 
         self.n_joints = dataset.N_JOINTS
-        self.normalizer = SkeletonNormaliser()
+        self.normalizer = pose3d_utils.skeleton_normaliser.SkeletonNormaliser()
         self.height = in_shape[0]
         self.width = in_shape[1]
 
@@ -163,6 +162,7 @@ class Joints3DDataset(BaseDataset):
         joints_file = self.dataset.get_joint_from_id(idx)
 
         joints = torch.tensor(joints_file['xyz_cam'].swapaxes(0, 1))
+
         xyz = torch.tensor(joints_file['xyz'].swapaxes(0, 1))
         joints_2d = torch.tensor(joints_file['joints'])
         mask = ~torch.isnan(joints[:, 0])

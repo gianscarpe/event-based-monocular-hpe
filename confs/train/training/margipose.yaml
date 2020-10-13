@@ -1,7 +1,7 @@
  training:
   epochs: 100
   early_stopping: 10
-  batch_size: 32
+  batch_size: 64
   num_workers: 12
   module: MargiposeEstimator
   model: resnet34

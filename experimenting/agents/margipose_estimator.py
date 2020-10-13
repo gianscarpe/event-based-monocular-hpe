@@ -82,7 +82,7 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
 
         Note:
             Prediction skeletons are normalized according to batch depth value
-            `z_ref` and project onto world coordinate space.
+            `z_ref` or torso length
 
         Todo:
             [] de-normalization is currently CPU only
@@ -110,8 +110,7 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
             pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
 
             pred_skeleton = pred_skeleton.denormalize(
-                **denormalization_params).reproject_onto_world(
-                    M)._get_tensor()
+                **denormalization_params)._get_tensor()
 
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension
@@ -155,7 +154,7 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
 
         if denormalize:  # denormalize skeletons batch
             pred_joints = self.denormalize_predictions(pred_joints, b_y)
-            gt_joints = b_y['xyz']  # xyz in original coord
+            gt_joints = b_y['skeleton']  # xyz in original coord
         else:
             gt_joints = b_y['normalized_skeleton']  # xyz in normalized coord
 

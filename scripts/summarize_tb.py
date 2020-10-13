@@ -3,9 +3,9 @@ import os
 from pathlib import Path  # if you haven't already done so
 
 import pandas as pd
-import tabulate
 from tqdm import tqdm
 
+import tabulate
 from experimenting.agents import MargiposeEstimator
 from experimenting.utils import get_checkpoint_path
 
@@ -32,11 +32,15 @@ def _get_existing_exps(root_path, postfix_path):
         if os.path.exists(path):
             result.append(s)
 
-    return result
+    return reversed(sorted(result))
 
 
 def _extract(path, exp_name, exp_params):
     load_path = get_checkpoint_path(path)
+    epochs = int(load_path.split('/')[-1][len('epoch=') : len('epoch=')+ 2])
+    if epochs < 20:
+        return
+
     model = MargiposeEstimator.load_from_checkpoint(load_path)
     params = model._hparams
     print("model loaded")

@@ -318,10 +318,7 @@ class NTUCore(BaseCore):
                     file_paths.append(file_path)
         return file_paths
 
-    def get_partition_function(self):
-        return lambda x: NTUCore.get_frame_info(x)['subject'] in self.subjects
-
-
+    
 def _split_set(data_indexes, split_at=0.8):
     np.random.shuffle(data_indexes)
     n_data_for_training = len(data_indexes)
