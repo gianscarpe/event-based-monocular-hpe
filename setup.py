@@ -31,7 +31,7 @@ setuptools.setup(
         'kornia',
         'hydra-core==1.0.0rc1',
         'omegaconf',
-        'opencv-python==4.2',
+        'opencv-python==4.2.0.34',
         'pytorch-lightning==0.8.5',
         'torchvision',
         'tqdm',
