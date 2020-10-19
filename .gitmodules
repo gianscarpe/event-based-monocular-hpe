@@ -1,0 +1,6 @@
+[submodule "third_parties/pose3d-utils"]
+	path = third_parties/pose3d-utils
+	url = git@github.com:anibali/pose3d-utils.git
+[submodule "third_parties/segmentation_models.pytorch"]
+	path = third_parties/segmentation_models.pytorch
+	url = git@github.com:qubvel/segmentation_models.pytorch.git
