@@ -26,6 +26,7 @@ setuptools.setup(
         'scikit-image',
         'scikit-learn',
         'scikit-video',
+        'scikit-build',
         'scipy',
         'torch>1',
         'kornia',
