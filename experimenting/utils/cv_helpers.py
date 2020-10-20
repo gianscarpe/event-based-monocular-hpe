@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import scipy
 import torch
-from matplotlib import pyplot as plt
 
 from .pose3d_utils.coords import ensure_homogeneous
 
@@ -84,16 +83,19 @@ def get_heatmap(joints, mask, heigth, width, num_joints=13):
 
 def compose_projection_matrix(K, M):
     """
-    Compose intrinsics (K) and extrinsics (M) parameters to get a 
-    projection matrix
+    Compose intrinsics (K) and extrinsics (M) parameters to get a projection
+    matrix
     """
     return torch.matmul(K[:, :3], M)
+
 
 def decompose_projection_matrix(P):
     """
     QR decomposition of world2imageplane projection matrix
+
     Args
-        P : Projection matrix word 2 image plane
+        P :
+            Projection matrix word 2 image plane
 
     Returns
         M matrix, camera matrix
