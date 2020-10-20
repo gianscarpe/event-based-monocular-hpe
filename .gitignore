@@ -7,6 +7,7 @@ src/
 !.travis.yml
 !.readthedocs.yml
 !.coveragerc
+!.gitattributes
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
