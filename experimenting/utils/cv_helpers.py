@@ -4,7 +4,7 @@ import scipy
 import torch
 from matplotlib import pyplot as plt
 
-from pose3d_utils.coords import ensure_homogeneous
+from .pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
     'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps',

@@ -10,13 +10,10 @@ Provided:
 
 """
 
-import numpy as np
 import torch
-from torch.utils.data import Dataset
-
-import pose3d_utils.skeleton_normaliser
+from experimenting.utils import pose3d_utils
 from kornia import geometry
-from pose3d_utils.camera import CameraIntrinsics
+from torch.utils.data import Dataset
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
@@ -26,6 +23,7 @@ __all__ = [
 __author__ = "Gianluca Scarpellini"
 __license__ = "GPL"
 __email__ = "gianluca@scarpellini.dev"
+
 
 class BaseDataset(Dataset):
     def __init__(self,
@@ -57,7 +55,7 @@ class BaseDataset(Dataset):
 
     def _get_y(self, idx):
         pass
-    
+
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
         if torch.is_tensor(idx):
@@ -82,6 +80,7 @@ class ClassificationDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
         super(ClassificationDataset, self).__init__(dataset, indexes,
                                                     transform, False)
+
     def _get_y(self, idx):
         return self.dataset.get_label_from_id(idx)
 
@@ -179,8 +178,8 @@ class Joints3DDataset(BaseDataset):
         # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
-            skeleton, z_ref, CameraIntrinsics(camera), self.height,
-            self.width).narrow(-1, 0, 3)
+            skeleton, z_ref, pose3d_utils.camera.CameraIntrinsics(camera),
+            self.height, self.width).narrow(-1, 0, 3)
 
         normalized_skeleton[~mask] = 0
         if torch.isnan(normalized_skeleton).any():
