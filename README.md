@@ -7,9 +7,9 @@ Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?bran
 # Event-camera
 
 * Train classification models based on ResNet18, Resnet34, ...
-* Train 3D reconstruction models (In progress)
+* Train 3D reconstruction models
 * Dataset adpatation for DHP19 dataset
-* Generate events from video dataset with different frames representations
+* Generate events from events dataset with different frames representations
   (constant-count, spatiotemporal voxelgrid)
 
 ## Table of contents
@@ -20,31 +20,19 @@ Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?bran
 
 
 ## Environment
-The following packages are required: `torch >=1.4` `cv2` `opencv` `tqdm`
-`scikit-video` `eigen` `boost` `boost-cpp` `pybind11` `albumentations` `hydra` `pytorch_lightning`. 
-Create a `conda` environment using provided `environment.yml`. `cuda_version`
+Create a `conda` environment using provided `environment.yml`
 must be adapt to your current setup.
 
 ```
 cuda_version=10.1
 
 conda env create -f ./environment.yml
-conda install -y pytorch>=1.4 torchvision cudatoolkit=$cuda_version -c pytorch
 conda activate event-camera
-```
-
-In order to use `generate.py` you must build `esim_py`. (Please
-check if you are using `event-camera` conda environment)
-```
-git clone https://github.com/uzh-rpg/rpg_vid2e
-cd esim_py
-python -m pip install .
 ```
 
 
 ## Data
 Follow DHP19 guide
-
 
 ### Download DHP19
 Up-to-date instruction to download ground truth, DAVIS data, and cameras
@@ -113,9 +101,8 @@ python eveluate.py training.load_path={YOUR_MODEL_CHECKPOINT}
 You can test your models using our multi-movement evaluation script. The tool
 generates a `result.json` file in the provided checkpoint path.
 ```
-python evaluate_dhp19.py training={TASK} dataset={DATASET_REPRESENTATION} load_path={YOUR_MODEL_CHECKPOINT}
+python evaluate_dhp19.py training={TASK} dataset={DATASET_REPRESENTATION} dataset.partition={cross-view|cross-subject} load_path={YOUR_MODEL_CHECKPOINT}
 ```
 
 Experimenting implementations for classification, autoencoder, 2d joints estimation,
 heatmap prediction, and 3d joints estimation are based on  `pytorch_lighting` framework.
-

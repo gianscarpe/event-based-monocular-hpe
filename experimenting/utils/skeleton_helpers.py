@@ -7,15 +7,14 @@ and denormalization of skeletons joints
 import numpy as np
 import torch
 
-from pose3d_utils.camera import CameraIntrinsics
-from pose3d_utils.coords import ensure_homogeneous
-from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
-
 from .cv_helpers import (
     _project_xyz_onto_image,
     project_xyz_onto_camera_coord,
     reproject_xyz_onto_world_coord,
 )
+from .pose3d_utils.camera import CameraIntrinsics
+from .pose3d_utils.coords import ensure_homogeneous
+from .pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 
 class Skeleton:

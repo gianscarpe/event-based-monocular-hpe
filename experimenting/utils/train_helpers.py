@@ -16,7 +16,7 @@ from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from .. import agents
+import experimenting
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,7 +34,7 @@ def fit(cfg) -> pl.Trainer:
         print('Loading training')
         model = load_model(cfg)
     else:
-        model = getattr(agents, cfg.training.module)(cfg)
+        model = getattr(experimenting.agents, cfg.training.module)(cfg)
 
     try:
         trainer = pl.Trainer(**trainer_configuration)
