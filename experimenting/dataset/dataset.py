@@ -11,9 +11,11 @@ Provided:
 """
 
 import torch
+
 from experimenting.utils import pose3d_utils
 from kornia import geometry
 from torch.utils.data import Dataset
+
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
@@ -21,9 +23,8 @@ __all__ = [
 ]
 
 __author__ = "Gianluca Scarpellini"
-__license__ = "GPL"
+__license__ = "GPLv3"
 __email__ = "gianluca@scarpellini.dev"
-
 
 class BaseDataset(Dataset):
     def __init__(self,
@@ -80,7 +81,6 @@ class ClassificationDataset(BaseDataset):
     def __init__(self, dataset, indexes=None, transform=None):
         super(ClassificationDataset, self).__init__(dataset, indexes,
                                                     transform, False)
-
     def _get_y(self, idx):
         return self.dataset.get_label_from_id(idx)
 

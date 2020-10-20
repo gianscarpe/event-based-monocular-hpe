@@ -11,7 +11,6 @@ from experimenting.dataset.dataset import (
 
 TEST_IMAGE_SHAPE = (224, 224)
 
-
 class TestBaseDataset(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -33,6 +32,7 @@ class TestBaseDataset(unittest.TestCase):
 
         self.mocked_dataset.get_joint_from_id.return_value.__getitem__.side_effect = self.mocked_joint.__getitem__
 
+
         self.mocked_indexes = mock.MagicMock()
         self.mocked_indexes.__len__.return_value = 10
         self.mocked_indexes.__getitem__.side_effect = range(10, 19)
@@ -48,6 +48,7 @@ class TestClassificationDataset(TestBaseDataset):
         }
         task_dataset = ClassificationDataset(**dataset_config)
         idx = 0
+
 
         x, y = task_dataset[idx]
 
@@ -68,12 +69,14 @@ class TestClassificationDataset(TestBaseDataset):
 
         x, y = task_dataset[idx]
 
+
         self.mocked_indexes.__getitem__.assert_called_once_with(idx)
         self.mocked_dataset.get_frame_from_id.assert_called_once()
         self.mocked_dataset.get_label_from_id.assert_called_once()
         self.mocked_transform.assert_called_once_with(image="image")
         self.assertEqual(x, "aug_image")
         self.assertEqual(y, "label")
+
 
 
 class TestAutoencoderDataset(TestBaseDataset):
@@ -122,6 +125,7 @@ class TestJoints3DDataset(TestBaseDataset):
         idx = 0
         expected_camera = torch.DoubleTensor(self.mocked_joint['camera'])
         expected_M = torch.DoubleTensor(self.mocked_joint['M'])
+
         expected_xyz = torch.DoubleTensor(self.mocked_joint['xyz'].swapaxes(
             1, 0))
         expected_normalized_skeleton = torch.randn((13, 3))
@@ -136,8 +140,10 @@ class TestJoints3DDataset(TestBaseDataset):
         self.assertTrue(torch.equal(y['camera'], expected_camera))
         self.assertTrue(torch.equal(y['M'], expected_M))
         self.assertTrue(torch.equal(y['xyz'], expected_xyz))
+
         self.assertTrue(
             torch.equal(y['normalized_skeleton'],
                         expected_normalized_skeleton))
         mocked_normalizer.SkeletonNormaliser.return_value.normalise_skeleton.assert_called_once(
         )
+
