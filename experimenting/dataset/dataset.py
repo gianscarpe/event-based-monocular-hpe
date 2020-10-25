@@ -10,11 +10,10 @@ Provided:
 
 """
 import torch
+from kornia import geometry
 from torch.utils.data import Dataset
 
 from experimenting.utils import pose3d_utils
-
-from kornia import geometry
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',

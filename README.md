@@ -20,14 +20,12 @@ Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?bran
 
 
 ## Environment
-Create a `conda` environment using provided `environment.yml`
-must be adapt to your current setup.
+Create a `virtualenv` environment from `requirements.txt`. 
+Using pipenv:
 
 ```
-cuda_version=10.1
-
-conda env create -f ./environment.yml
-conda activate event-camera
+pipenv install -r requirements.txt
+pipenv shell
 ```
 
 
