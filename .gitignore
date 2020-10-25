@@ -8,7 +8,6 @@ src/
 !.readthedocs.yml
 !.coveragerc
 !.gitattributes
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -68,3 +67,5 @@ config.yaml
 *.csv
 *.tex
 *.png
+Pipfile
+Pipfile.lock
