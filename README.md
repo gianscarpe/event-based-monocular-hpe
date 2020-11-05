@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/gianscarpe/event-camera.svg?token=kzseEwrMqABZcmsDXSpM&branch=master)](https://travis-ci.com/gianscarpe/event-camera)
+[![Build Status](https://travis-ci.com/gianscarpe/event-based-monocular-hpe.svg?branch=master)](https://travis-ci.com/gianscarpe/event-based-monocular-hpe)
 [![Documentation
 Status](https://readthedocs.org/projects/event-camera/badge/?version=latest)](https://event-camera.readthedocs.io/en/latest/?badge=latest)
 [![Coverage
