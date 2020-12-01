@@ -1,0 +1,10 @@
+defaults:
+  - optimizer: adam
+  - lr_scheduler: step_lr
+  - dataset: timecount
+  - loss: pixelwiseloss
+  - augmentation: no_aug
+  - training: margipose
+
+gpus: [0]
+load_path:
