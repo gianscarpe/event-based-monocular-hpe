@@ -53,6 +53,7 @@ class BaseModule(pl.LightningModule):
     @staticmethod
     def _get_feature_extractor(model, n_channels, backbone_path, pretrained):
         extractor_params = {'n_channels': n_channels, 'model': model}
+        __import__("pdb").set_trace()
 
         if backbone_path is not None and os.path.exists(backbone_path):
             extractor_params['custom_model_path'] = backbone_path

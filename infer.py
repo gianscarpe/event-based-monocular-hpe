@@ -5,10 +5,12 @@ from omegaconf import DictConfig
 import hydra
 logging.basicConfig(level=logging.INFO)
 
-@hydra.main(config_path='confs/train/', config_name='infer.yaml' )
+@hydra.main(config_path='confs/train/', config_name='infer.yaml')
 def main(cfg: DictConfig) -> None:
-    model = load_model(cfg, test_metrics=[])
     __import__("pdb").set_trace()
+    print("OK")
+    model = load_model(cfg, test_metrics=[], **cfg)
+
 
 
 if __name__ == '__main__':
