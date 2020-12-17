@@ -23,7 +23,7 @@ class BaseModule(pl.LightningModule):
 
         super(BaseModule, self).__init__()
 
-        self.hparams = flatten(hparams)
+        self.hparams = {}
         self._hparams = unflatten(hparams)
         self.dataset_constructor = dataset_constructor
 
@@ -33,6 +33,7 @@ class BaseModule(pl.LightningModule):
         self.loss_func = hydra.utils.instantiate(self._hparams.loss)
         self.train_dataset = self.val_dataset = self.test_dataset = None
         self.set_optional_params()
+
 
     def set_params(self):
         pass
@@ -53,7 +54,6 @@ class BaseModule(pl.LightningModule):
     @staticmethod
     def _get_feature_extractor(model, n_channels, backbone_path, pretrained):
         extractor_params = {'n_channels': n_channels, 'model': model}
-        __import__("pdb").set_trace()
 
         if backbone_path is not None and os.path.exists(backbone_path):
             extractor_params['custom_model_path'] = backbone_path

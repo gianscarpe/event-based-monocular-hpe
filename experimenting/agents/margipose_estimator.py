@@ -51,8 +51,6 @@ class MargiposeEstimator(BaseModule):
 
 
     def _build_model(self):
-        __import__("pdb").set_trace()
-
         in_cnn = MargiposeEstimator._get_feature_extractor(
             self._hparams.training['model'],
             self._hparams.dataset['n_channels'],
