@@ -32,8 +32,7 @@ setuptools.setup(
         'hydra-core==1.0.0rc1', 'omegaconf', 'pytorch-lightning==0.8.5',
         'torchvision', 'tqdm', 'segmentation_models_pytorch'
     ],
-    packages=setuptools.find_packages(include=["experimenting"],
-                                      exclude=("tests", )),
+    packages=setuptools.find_packages(exclude=["tests", "tests/*"]),
     test_suite="tests",
     long_description_content_type="text/markdown",
     classifiers=[

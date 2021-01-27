@@ -19,22 +19,6 @@ class MargiposeEstimator(BaseModule):
 
         super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor)
 
-        in_cnn = MargiposeEstimator._get_feature_extractor(
-            self._hparams.training['model'],
-            self._hparams.dataset['n_channels'],
-            join(self._hparams.model_zoo, self._hparams.training.backbone),
-            self._hparams.training['pretrained'])
-
-        params = {
-            'in_shape': (self._hparams.dataset['n_channels'],
-                         *self._hparams.dataset['in_shape']),
-            'in_cnn':
-            in_cnn,
-            'n_joints':
-            self._hparams.dataset['n_joints'],
-            'n_stages':
-            self._hparams.training['stages'],
-        }
         self.n_channels = self._hparams.dataset.n_channels
         self.n_joints = self._hparams.dataset.n_joints
 
@@ -45,7 +29,6 @@ class MargiposeEstimator(BaseModule):
 
         self.height, self.width = self._hparams.dataset['in_shape']
 
-        self.model = get_margipose_model(params)
         self.estimate_depth = estimate_depth
         self.torso_length = self._hparams.dataset['torso_length']
 
@@ -64,7 +47,28 @@ class MargiposeEstimator(BaseModule):
                 metrics['PCK'] = PCK(reduction=average_loss)
 
         self.metrics = metrics
+        self._build_model()
 
+
+    def _build_model(self):
+        in_cnn = MargiposeEstimator._get_feature_extractor(
+            self._hparams.training['model'],
+            self._hparams.dataset['n_channels'],
+            join(self._hparams.model_zoo, self._hparams.training.backbone),
+            self._hparams.training['pretrained'])
+
+        params = {
+            'in_shape': (self._hparams.dataset['n_channels'],
+                         *self._hparams.dataset['in_shape']),
+            'in_cnn':
+            in_cnn,
+            'n_joints':
+            self._hparams.dataset['n_joints'],
+            'n_stages':
+            self._hparams.training['stages'],
+        }        
+        self.model = get_margipose_model(params)
+        
     def forward(self, x):
         x = self.model(x)
         return x

@@ -23,7 +23,7 @@ class BaseModule(pl.LightningModule):
 
         super(BaseModule, self).__init__()
 
-        self.hparams = flatten(hparams)
+        self.hparams = {}
         self._hparams = unflatten(hparams)
         self.dataset_constructor = dataset_constructor
 
@@ -33,6 +33,7 @@ class BaseModule(pl.LightningModule):
         self.loss_func = hydra.utils.instantiate(self._hparams.loss)
         self.train_dataset = self.val_dataset = self.test_dataset = None
         self.set_optional_params()
+
 
     def set_params(self):
         pass

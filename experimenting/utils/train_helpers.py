@@ -53,7 +53,7 @@ def get_training_params(cfg: DictConfig):
     cfg: DictConfig :
         hydra configuration (examples in conf/train)
 
-    Returns
+    Returns 
     -------
 
     """
@@ -110,7 +110,7 @@ def load_model(cfg: dict, **kwargs):
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
-        model = getattr(agents,
+        model = getattr(experimenting.agents,
                         cfg['training']['module']).load_from_checkpoint(
                             load_path,
                             estimate_depth=cfg.training.estimate_depth,
