@@ -1,12 +1,13 @@
+# type: ignore
+
 from abc import ABC, abstractmethod
 
 import torch
 from PIL import Image, ImageEnhance
-from torchvision.transforms.functional import adjust_hue
-
 from pose3d_utils import mat3
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.coords import ensure_homogeneous
+from torchvision.transforms.functional import adjust_hue
 
 
 class Transformer(ABC):
@@ -56,7 +57,9 @@ class CameraTransformer(MatrixBasedTransformer):
         camera = camera.clone()
         x_0, y_0 = camera.x_0, camera.y_0
         camera.x_0, camera.y_0 = 0, 0
-        camera.matrix = torch.mm(self.matrix.inverse().type_as(camera.matrix), camera.matrix)
+        camera.matrix = torch.mm(
+            self.matrix.inverse().type_as(camera.matrix), camera.matrix
+        )
         camera.x_0, camera.y_0 = x_0 / self.sx, y_0 / self.sy
         return camera
 
@@ -114,11 +117,7 @@ class ImageTransformer(MatrixBasedTransformer):
 
     def _transform_image(self, image, inverse=False):
         # Move principle point to origin
-        matrix = torch.DoubleTensor(
-            [[1, 0, -self.x0],
-             [0, 1, -self.y0],
-             [0, 0, 1]]
-        )
+        matrix = torch.DoubleTensor([[1, 0, -self.x0], [0, 1, -self.y0], [0, 0, 1]])
 
         # Apply transformations
         matrix = self.matrix.mm(matrix)
@@ -126,7 +125,11 @@ class ImageTransformer(MatrixBasedTransformer):
         # Restore principle point
         ow, oh = self.dest_size.tolist()
         matrix = self._mm(
-            mat3.translate(self.x0 * ow / self.orig_width, self.y0 * oh / self.orig_height), matrix)
+            mat3.translate(
+                self.x0 * ow / self.orig_width, self.y0 * oh / self.orig_height
+            ),
+            matrix,
+        )
 
         output_size = self.dest_size.round().int()
         if inverse:
@@ -142,7 +145,7 @@ class ImageTransformer(MatrixBasedTransformer):
             tuple(output_size * self.msaa),
             Image.AFFINE,
             tuple(inv_matrix[0:2].view(6)),
-            Image.BILINEAR
+            Image.BILINEAR,
         )
 
         # Scale down to output size
@@ -192,7 +195,9 @@ class PointTransformer(MatrixBasedTransformer):
     def transform(self, points: torch.DoubleTensor):
         points = ensure_homogeneous(points, d=3)
         if len(self.shuffle_indices) > 0:
-            index = torch.LongTensor(self.shuffle_indices).unsqueeze(-1).expand_as(points)
+            index = (
+                torch.LongTensor(self.shuffle_indices).unsqueeze(-1).expand_as(points)
+            )
             points = points.gather(-2, index)
         return torch.mm(points, self.matrix.t())
 
@@ -202,7 +207,9 @@ class PointTransformer(MatrixBasedTransformer):
             inv_shuffle_indices = list(range(len(self.shuffle_indices)))
             for i, j in enumerate(self.shuffle_indices):
                 inv_shuffle_indices[j] = i
-            index = torch.LongTensor(inv_shuffle_indices).unsqueeze(-1).expand_as(points)
+            index = (
+                torch.LongTensor(inv_shuffle_indices).unsqueeze(-1).expand_as(points)
+            )
             points = points.gather(-2, index)
         return torch.mm(points, self.matrix.inverse().t())
 
@@ -211,7 +218,9 @@ class TransformerContext:
     def __init__(self, camera, image_width, image_height, msaa=2):
         self.orig_camera = camera
         self.camera_transformer = CameraTransformer()
-        self.image_transformer = ImageTransformer(image_width, image_height, camera.x_0, camera.y_0, msaa=msaa)
+        self.image_transformer = ImageTransformer(
+            image_width, image_height, camera.x_0, camera.y_0, msaa=msaa
+        )
         self.point_transformer = PointTransformer()
 
     def add(self, transform, camera=True, image=True, points=True):
@@ -228,4 +237,6 @@ class TransformerContext:
             (image, self.image_transformer),
             (points, self.point_transformer),
         ]
-        return tuple([t.transform(obj) if obj is not None else None for obj, t in pairs])
+        return tuple(
+            [t.transform(obj) if obj is not None else None for obj, t in pairs]
+        )

@@ -15,6 +15,7 @@ class MargiposeEstimator(BaseModule):
     Agents for training and testing multi-stage 3d joints estimator using
     marginal heatmaps (denoted as Margipose)
     """
+
     def __init__(self, hparams, estimate_depth=False, test_metrics=None):
 
         super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor)
@@ -23,14 +24,14 @@ class MargiposeEstimator(BaseModule):
         self.n_joints = self._hparams.dataset.n_joints
 
         #  Dataset parameters are used for 3d prediction
-        self.max_x = self._hparams.dataset['max_x']
-        self.max_y = self._hparams.dataset['max_y']
-        self.max_z = self._hparams.dataset['max_z']
+        self.max_x = self._hparams.dataset["max_x"]
+        self.max_y = self._hparams.dataset["max_y"]
+        self.max_z = self._hparams.dataset["max_z"]
 
-        self.height, self.width = self._hparams.dataset['in_shape']
+        self.height, self.width = self._hparams.dataset["in_shape"]
 
         self.estimate_depth = estimate_depth
-        self.torso_length = self._hparams.dataset['torso_length']
+        self.torso_length = self._hparams.dataset["torso_length"]
 
         metrics = {}
         if test_metrics is None:
@@ -38,37 +39,35 @@ class MargiposeEstimator(BaseModule):
                 "AUC": AUC(reduction=average_loss, auc_reduction=None),
             }
         else:
-            if 'AUC' in test_metrics:
-                metrics['AUC'] = AUC(reduction=average_loss,
-                                     auc_reduction=None)
-            if 'MPJPE' in test_metrics:
-                metrics['MPJPE'] = MPJPE(reduction=average_loss)
-            if 'PCK' in test_metrics:
-                metrics['PCK'] = PCK(reduction=average_loss)
+            if "AUC" in test_metrics:
+                metrics["AUC"] = AUC(reduction=average_loss, auc_reduction=None)
+            if "MPJPE" in test_metrics:
+                metrics["MPJPE"] = MPJPE(reduction=average_loss)
+            if "PCK" in test_metrics:
+                metrics["PCK"] = PCK(reduction=average_loss)
 
         self.metrics = metrics
         self._build_model()
 
-
     def _build_model(self):
         in_cnn = MargiposeEstimator._get_feature_extractor(
-            self._hparams.training['model'],
-            self._hparams.dataset['n_channels'],
+            self._hparams.training["model"],
+            self._hparams.dataset["n_channels"],
             join(self._hparams.model_zoo, self._hparams.training.backbone),
-            self._hparams.training['pretrained'])
+            self._hparams.training["pretrained"],
+        )
 
         params = {
-            'in_shape': (self._hparams.dataset['n_channels'],
-                         *self._hparams.dataset['in_shape']),
-            'in_cnn':
-            in_cnn,
-            'n_joints':
-            self._hparams.dataset['n_joints'],
-            'n_stages':
-            self._hparams.training['stages'],
-        }        
+            "in_shape": (
+                self._hparams.dataset["n_channels"],
+                *self._hparams.dataset["in_shape"],
+            ),
+            "in_cnn": in_cnn,
+            "n_joints": self._hparams.dataset["n_joints"],
+            "n_stages": self._hparams.training["stages"],
+        }
         self.model = get_margipose_model(params)
-        
+
     def forward(self, x):
         x = self.model(x)
         return x
@@ -99,22 +98,21 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
         for i in range(len(normalized_skeletons)):
 
             denormalization_params = {
-                'width': self.width,
-                'height': self.height,
-                'camera': b_y['camera'][i].cpu()
+                "width": self.width,
+                "height": self.height,
+                "camera": b_y["camera"][i].cpu(),
             }
 
             if self.estimate_depth:
-                denormalization_params['torso_length'] = self.torso_length
+                denormalization_params["torso_length"] = self.torso_length
             else:
-                denormalization_params['z_ref'] = b_y['z_ref'][i].cpu()
-
-            M = b_y['M'][i].cpu()
+                denormalization_params["z_ref"] = b_y["z_ref"][i].cpu()
 
             pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
 
             pred_skeleton = pred_skeleton.denormalize(
-                **denormalization_params)._get_tensor()
+                **denormalization_params
+            )._get_tensor()
 
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension
@@ -130,8 +128,8 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
         xy_hms = outs[0]
         zy_hms = outs[1]
         xz_hms = outs[2]
-        normalized_skeletons = b_y['normalized_skeleton']
-        b_masks = b_y['mask']
+        normalized_skeletons = b_y["normalized_skeleton"]
+        b_masks = b_y["mask"]
 
         for outs in zip(xy_hms, zy_hms, xz_hms):
             loss += self.loss_func(outs, normalized_skeletons, b_masks)
@@ -158,12 +156,12 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
 
         if denormalize:  # denormalize skeletons batch
             pred_joints = self.denormalize_predictions(pred_joints, b_y)
-            gt_joints = b_y['skeleton']  # xyz in original coord
+            gt_joints = b_y["skeleton"]  # xyz in original coord
         else:
-            gt_joints = b_y['normalized_skeleton']  # xyz in normalized coord
+            gt_joints = b_y["normalized_skeleton"]  # xyz in normalized coord
 
         results = {
-            metric_name: metric_function(pred_joints, gt_joints, b_y['mask'])
+            metric_name: metric_function(pred_joints, gt_joints, b_y["mask"])
             for metric_name, metric_function in self.metrics.items()
         }
 
@@ -179,18 +177,17 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
         return {"loss": loss, "log": logs}
 
     def validation_step(self, batch, batch_idx):
-        loss, results = self._eval(batch,
-                                   denormalize=False)  # Normalized results
+        loss, results = self._eval(batch, denormalize=False)  # Normalized results
         return {"batch_val_loss": loss, **results}
 
     def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['batch_val_loss'] for x in outputs]).mean()
-        results = self._get_aggregated_results(outputs, 'val_mean')
+        avg_loss = torch.stack([x["batch_val_loss"] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, "val_mean")
 
         self.results = results
-        logs = {'val_loss': avg_loss, 'step': self.current_epoch}
+        logs = {"val_loss": avg_loss, "step": self.current_epoch}
 
-        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
+        return {"val_loss": avg_loss, "log": logs, "progress_bar": logs}
 
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(
@@ -199,12 +196,12 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
         return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['batch_test_loss'] for x in outputs]).mean()
-        results = self._get_aggregated_results(outputs, 'test_mean')
+        avg_loss = torch.stack([x["batch_test_loss"] for x in outputs]).mean()
+        results = self._get_aggregated_results(outputs, "test_mean")
         self.results = results
 
-        logs = {'test_loss': avg_loss, 'step': self.current_epoch}
-        return {**logs, **results, 'log': logs, 'progress_bar': logs}
+        logs = {"test_loss": avg_loss, "step": self.current_epoch}
+        return {**logs, **results, "log": logs, "progress_bar": logs}
 
 
 def predict3d(xy_hm, zy_hm, xz_hm):

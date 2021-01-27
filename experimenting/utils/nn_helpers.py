@@ -2,6 +2,7 @@
 Integration toolbox for pytorch nn package
 """
 
+import os
 from math import sqrt
 
 import segmentation_models_pytorch as smp
@@ -15,9 +16,14 @@ from torchvision import models
 from ..models import DHP19Model
 
 __all__ = [
-    'FlatSoftmax', 'get_feature_extractor', '_regular_block',
-    '_up_stride_block', 'init_parameters', '_down_stride_block', 'get_cnn',
-    'get_backbone_last_dimension'
+    "FlatSoftmax",
+    "get_feature_extractor",
+    "_regular_block",
+    "_up_stride_block",
+    "init_parameters",
+    "_down_stride_block",
+    "get_cnn",
+    "get_backbone_last_dimension",
 ]
 
 
@@ -33,43 +39,47 @@ def _regular_block(in_chans, out_chans):
     return ResidualBlock(
         out_chans,
         nn.Conv2d(in_chans, out_chans, kernel_size=3, padding=1, bias=False),
-        nn.Conv2d(in_chans, out_chans, kernel_size=1, bias=False))
+        nn.Conv2d(in_chans, out_chans, kernel_size=1, bias=False),
+    )
 
 
 def _down_stride_block(in_chans, out_chans, padding=1):
     return ResidualBlock(
         out_chans,
-        nn.Conv2d(in_chans,
-                  out_chans,
-                  kernel_size=3,
-                  padding=padding,
-                  stride=2,
-                  bias=False),
-        nn.Conv2d(in_chans, out_chans, kernel_size=1, stride=2, bias=False))
+        nn.Conv2d(
+            in_chans, out_chans, kernel_size=3, padding=padding, stride=2, bias=False
+        ),
+        nn.Conv2d(in_chans, out_chans, kernel_size=1, stride=2, bias=False),
+    )
 
 
 def _up_stride_block(in_chans, out_chans, padding=(0, 1)):
     return ResidualBlock(
         out_chans,
-        nn.ConvTranspose2d(in_chans,
-                           out_chans,
-                           kernel_size=3,
-                           padding=1,
-                           stride=2,
-                           output_padding=padding,
-                           bias=False),
-        nn.ConvTranspose2d(in_chans,
-                           out_chans,
-                           kernel_size=1,
-                           stride=2,
-                           output_padding=padding,
-                           bias=False))
+        nn.ConvTranspose2d(
+            in_chans,
+            out_chans,
+            kernel_size=3,
+            padding=1,
+            stride=2,
+            output_padding=padding,
+            bias=False,
+        ),
+        nn.ConvTranspose2d(
+            in_chans,
+            out_chans,
+            kernel_size=1,
+            stride=2,
+            output_padding=padding,
+            bias=False,
+        ),
+    )
 
 
 def init_parameters(net):
     for m in net.modules():
         if isinstance(m, _ConvNd):
-            init.kaiming_normal_(m.weight, 0, 'fan_out')
+            init.kaiming_normal_(m.weight, 0, "fan_out")
             if m.bias is not None:
                 init.constant_(m.bias, 0)
         elif isinstance(m, nn.Linear):
@@ -87,6 +97,7 @@ class ResidualBlock(nn.Module):
     """
     From https://raw.githubusercontent.com/anibali/margipose/
     """
+
     def __init__(self, chans, main_conv_in, shortcut_conv_in):
         super().__init__()
         assert main_conv_in.in_channels == shortcut_conv_in.in_channels
@@ -106,53 +117,60 @@ class ResidualBlock(nn.Module):
 
 def get_feature_extractor(params):
     switch = {
-        'resnet34': _get_resnet34_cut_128,
-        'resnet50': _get_resnet50_feature_extactor,
-        'resnet34_cut_256': _get_resnet34_cut_256,
-        'resnet34_cut_512': _get_resnet34_cut_512,
-        'default': _load_as_is
+        "resnet34": _get_resnet34_cut_128,
+        "resnet50": _get_resnet50_feature_extactor,
+        "resnet34_cut_256": _get_resnet34_cut_256,
+        "resnet34_cut_512": _get_resnet34_cut_512,
+        "default": _load_as_is,
     }
 
-    if 'n_classes' not in params:
-        params['n_classes'] = 1  # just placehodler
+    if "n_classes" not in params:
+        params["n_classes"] = 1  # just placehodler
 
-    if params['model'] not in switch:
-        params['model'] = 'default'
+    if params["model"] not in switch:
+        params["model"] = "default"
+    if "custom_model_path" in params and ~os.path.exists(params["custom_model_path"]):
+        params.pop("custom_model_path")
+        raise Exception("Custom model not found!")
 
-    return switch.get(params['model'])(params)
+    return switch.get(params["model"])(params)
 
 
 def _load_as_is(params):
-    net = torch.load(params['custom_model_path'])
+    net = torch.load(params["custom_model_path"])
 
-    if 'in_cnn' in dir(net):
+    if "in_cnn" in dir(net):
         net = net.in_cnn
     return net
 
 
 def _load_resnet34(params):
-    if 'custom_model_path' in params:
-        resnet = torch.load(params['custom_model_path'])
+    if "custom_model_path" in params:
+        resnet = torch.load(params["custom_model_path"])
     else:
         resnet = get_cnn(
-            'resnet34', {
-                'n_channels': params['n_channels'],
-                'pretrained': params['pretrained'],
-                'n_classes': params['n_classes']
-            })
+            "resnet34",
+            {
+                "n_channels": params["n_channels"],
+                "pretrained": params["pretrained"],
+                "n_classes": params["n_classes"],
+            },
+        )
     return resnet
 
 
 def _load_resnet50(params):
-    if 'custom_model_path' in params:
-        resnet = torch.load(params['custom_model_path'])
+    if "custom_model_path" in params:
+        resnet = torch.load(params["custom_model_path"])
     else:
         resnet = get_cnn(
-            'resnet50', {
-                'n_channels': params['n_channels'],
-                'pretrained': params['pretrained'],
-                'n_classes': params['n_classes']
-            })
+            "resnet50",
+            {
+                "n_channels": params["n_channels"],
+                "pretrained": params["pretrained"],
+                "n_classes": params["n_classes"],
+            },
+        )
     return resnet
 
 
@@ -174,17 +192,31 @@ def _get_resnet34_cut_128(params):
 def _get_resnet34_cut_256(params):
     resnet = _load_resnet34(params)
 
-    net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
-                        resnet.layer1, resnet.layer2, resnet.layer3)
+    net = nn.Sequential(
+        resnet.conv1,
+        resnet.bn1,
+        resnet.relu,
+        resnet.maxpool,
+        resnet.layer1,
+        resnet.layer2,
+        resnet.layer3,
+    )
 
     return net
 
 
 def _get_resnet34_cut_512(params):
     resnet = _load_resnet34(params)
-    net = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
-                        resnet.layer1, resnet.layer2, resnet.layer3,
-                        resnet.layer4)
+    net = nn.Sequential(
+        resnet.conv1,
+        resnet.bn1,
+        resnet.relu,
+        resnet.maxpool,
+        resnet.layer1,
+        resnet.layer2,
+        resnet.layer3,
+        resnet.layer4,
+    )
 
     return net
 
@@ -206,12 +238,14 @@ def _get_resnet50_feature_extactor(params):
 def _get_mobilenetv2(n_channels, n_classes, pretrained=False):
     cnn = models.mobilenet_v2(pretrained)
     if n_channels != 3:
-        cnn.features[0][0] = torch.nn.Conv2d(n_channels,
-                                             32,
-                                             kernel_size=(3, 3),
-                                             stride=(2, 2),
-                                             padding=(1, 1),
-                                             bias=False)
+        cnn.features[0][0] = torch.nn.Conv2d(
+            n_channels,
+            32,
+            kernel_size=(3, 3),
+            stride=(2, 2),
+            padding=(1, 1),
+            bias=False,
+        )
 
     num_ftrs = cnn.classifier[-1].in_features
     cnn.classifier[-1] = nn.Linear(num_ftrs, n_classes, bias=True)
@@ -222,12 +256,14 @@ def _get_resnet(resnet, n_channels, n_classes, pretrained=False):
     cnn = getattr(models, resnet)(pretrained)
 
     if n_channels != 3:
-        cnn.conv1 = torch.nn.Conv2d(n_channels,
-                                    64,
-                                    kernel_size=(7, 7),
-                                    stride=(2, 2),
-                                    padding=(3, 3),
-                                    bias=False)
+        cnn.conv1 = torch.nn.Conv2d(
+            n_channels,
+            64,
+            kernel_size=(7, 7),
+            stride=(2, 2),
+            padding=(3, 3),
+            bias=False,
+        )
 
     num_ftrs = cnn.fc.in_features
     cnn.fc = nn.Linear(num_ftrs, n_classes)
@@ -235,28 +271,24 @@ def _get_resnet(resnet, n_channels, n_classes, pretrained=False):
     return cnn
 
 
-def _get_unet_resnet(resnet,
-                     n_channels,
-                     n_classes,
-                     pretrained=False,
-                     encoder_depth=3):
-    encoder_weights = 'imagenet' if pretrained else None
+def _get_unet_resnet(resnet, n_channels, n_classes, pretrained=False, encoder_depth=3):
+    encoder_weights = "imagenet" if pretrained else None
     encoder_depth = 3
     decoder_channels = tuple(
-        [16 * (2**i) for i in reversed(range(0, int(encoder_depth)))])
-    model = smp.Unet(resnet,
-                     encoder_weights=encoder_weights,
-                     encoder_depth=encoder_depth,
-                     decoder_channels=decoder_channels,
-                     classes=n_classes,
-                     activation=None)
+        [16 * (2 ** i) for i in reversed(range(0, int(encoder_depth)))]
+    )
+    model = smp.Unet(
+        resnet,
+        encoder_weights=encoder_weights,
+        encoder_depth=encoder_depth,
+        decoder_channels=decoder_channels,
+        classes=n_classes,
+        activation=None,
+    )
 
-    model.encoder.conv1 = nn.Conv2d(n_channels,
-                                    64,
-                                    kernel_size=(7, 7),
-                                    stride=(2, 2),
-                                    padding=(3, 3),
-                                    bias=False)
+    model.encoder.conv1 = nn.Conv2d(
+        n_channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+    )
     model.segmentation_head[-1] = FlatSoftmax()
 
     return model
@@ -268,12 +300,12 @@ def _get_dhp19_model(n_channels, n_classes):
 
 def get_cnn(model_name, params):
     switcher = {
-        'resnet18': lambda **args: _get_resnet('resnet18', **args),
-        'resnet34': lambda **args: _get_resnet('resnet34', **args),
-        'resnet50': lambda **args: _get_resnet('resnet50', **args),
-        'unet_resnet18': lambda **args: _get_unet_resnet('resnet18', **args),
-        'unet_resnet34': lambda **args: _get_unet_resnet('resnet34', **args),
-        'dhp19': _get_dhp19_model
+        "resnet18": lambda **args: _get_resnet("resnet18", **args),
+        "resnet34": lambda **args: _get_resnet("resnet34", **args),
+        "resnet50": lambda **args: _get_resnet("resnet50", **args),
+        "unet_resnet18": lambda **args: _get_unet_resnet("resnet18", **args),
+        "unet_resnet34": lambda **args: _get_unet_resnet("resnet34", **args),
+        "dhp19": _get_dhp19_model,
     }
     return switcher[model_name](**params)
 
