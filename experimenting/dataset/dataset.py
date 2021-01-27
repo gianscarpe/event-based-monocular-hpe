@@ -10,13 +10,18 @@ Provided:
 
 """
 
-import numpy as np
 import torch
+from kornia import geometry
 from torch.utils.data import Dataset
 
+<<<<<<< HEAD
 import pose3d_utils.skeleton_normaliser
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
+=======
+from experimenting.utils import pose3d_utils
+
+>>>>>>> 36328f5e961ae041dd37ce8382152afd67f63b71
 
 __all__ = [
     'ClassificationDataset', 'HeatmapDataset', 'JointsDataset',
@@ -24,8 +29,14 @@ __all__ = [
 ]
 
 __author__ = "Gianluca Scarpellini"
+<<<<<<< HEAD
 __license__ = "GPL"
 __email__ = "gianluca@scarpellini.dev"
+=======
+__license__ = "GPLv3"
+__email__ = "gianluca@scarpellini.dev"
+
+>>>>>>> 36328f5e961ae041dd37ce8382152afd67f63b71
 
 class BaseDataset(Dataset):
     def __init__(self,
@@ -57,7 +68,11 @@ class BaseDataset(Dataset):
 
     def _get_y(self, idx):
         pass
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 36328f5e961ae041dd37ce8382152afd67f63b71
     def __getitem__(self, idx):
         idx = self.x_indexes[idx]
         if torch.is_tensor(idx):
@@ -179,8 +194,8 @@ class Joints3DDataset(BaseDataset):
         # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
-            skeleton, z_ref, CameraIntrinsics(camera), self.height,
-            self.width).narrow(-1, 0, 3)
+            skeleton, z_ref, pose3d_utils.camera.CameraIntrinsics(camera),
+            self.height, self.width).narrow(-1, 0, 3)
 
         normalized_skeleton[~mask] = 0
         if torch.isnan(normalized_skeleton).any():

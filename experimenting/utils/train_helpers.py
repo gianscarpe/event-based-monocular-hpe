@@ -16,7 +16,7 @@ from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from .. import agents
+import experimenting
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,7 +34,7 @@ def fit(cfg) -> pl.Trainer:
         print('Loading training')
         model = load_model(cfg)
     else:
-        model = getattr(agents, cfg.training.module)(cfg)
+        model = getattr(experimenting.agents, cfg.training.module)(cfg)
 
     try:
         trainer = pl.Trainer(**trainer_configuration)
@@ -53,7 +53,7 @@ def get_training_params(cfg: DictConfig):
     cfg: DictConfig :
         hydra configuration (examples in conf/train)
 
-    Returns
+    Returns 
     -------
 
     """
@@ -110,7 +110,7 @@ def load_model(cfg: dict, **kwargs):
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
-        model = getattr(agents,
+        model = getattr(experimenting.agents,
                         cfg['training']['module']).load_from_checkpoint(
                             load_path,
                             estimate_depth=cfg.training.estimate_depth,

@@ -156,7 +156,7 @@ class DHP19Core(BaseCore):
         if ext == '.mat':
             x = DHP19Core._load_matlab_frame(path)
         elif ext == '.npy':
-            x = np.load(path) / 255.
+            x = np.load(path, allow_pickle=True) / 255.
             if len(x.shape) == 2:
                 x = np.expand_dims(x, -1)
         return x
@@ -287,7 +287,7 @@ class NTUCore(BaseCore):
 
     @staticmethod
     def load_frame(path):
-        x = np.load(path) / 255.
+        x = np.load(path, allow_pickle=True) / 255.
         if len(x.shape) == 2:
             x = np.expand_dims(x, -1)
         return x

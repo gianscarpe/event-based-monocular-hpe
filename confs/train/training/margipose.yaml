@@ -5,10 +5,10 @@
   num_workers: 12
   module: MargiposeEstimator
   model: resnet34
-  backbone: timecount/classification/resnet34.pt
+  backbone: cross_subject/timecount/classification/resnet34.pt
   stages: 3
   predict_3d: true
-  pretrained: true
+  pretrained: false
   metrics: ['AUC', 'PCK', 'MPJPE']
   estimate_depth: false
   

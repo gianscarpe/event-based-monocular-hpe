@@ -1,21 +1,27 @@
 """
- Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
+Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
 and denormalization of skeletons joints
 
 """
 
 import numpy as np
 import torch
+<<<<<<< HEAD
 
 from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.coords import ensure_homogeneous
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
+=======
+>>>>>>> 36328f5e961ae041dd37ce8382152afd67f63b71
 
 from .cv_helpers import (
     _project_xyz_onto_image,
     project_xyz_onto_camera_coord,
     reproject_xyz_onto_world_coord,
 )
+from .pose3d_utils.camera import CameraIntrinsics
+from .pose3d_utils.coords import ensure_homogeneous
+from .pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 
 class Skeleton:
