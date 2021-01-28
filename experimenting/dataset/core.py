@@ -120,6 +120,7 @@ class DHP19Core(BaseCore):
     N_JOINTS = 13
     DEFAULT_TEST_SUBJECTS = [1, 2, 3, 4, 5]
     DEFAULT_TEST_VIEW = [1, 2]
+    TORSO_LENGTH = 453.5242317
 
     def __init__(
         self,
@@ -135,8 +136,10 @@ class DHP19Core(BaseCore):
         n_classes,
         n_joints,
         partition,
+        n_channels,
         test_subjects=None,
         test_cams=None,
+        avg_torso_length=TORSO_LENGTH,
         *args,
         **kwargs,
     ):
@@ -145,6 +148,11 @@ class DHP19Core(BaseCore):
             data_dir, cams, movements
         )
 
+        self.in_shape = (DHP19Core.MAX_HEIGHT, DHP19Core.MAX_WIDTH)
+        self.n_channels = n_channels
+        self.n_joints = n_joints
+
+        self.avg_torso_length = avg_torso_length
         self.labels_dir = labels_dir
         self.classification_labels = [
             DHP19Core.get_label_from_filename(x_path) for x_path in self.file_paths
@@ -201,6 +209,7 @@ class DHP19Core(BaseCore):
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
+
         return joints_file
 
     def get_heatmap_from_id(self, idx):

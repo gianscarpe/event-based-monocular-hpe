@@ -37,7 +37,7 @@ setuptools.setup(
         'kornia',
         'hydra-core==1.0.0rc1',
         'omegaconf',
-        'pytorch-lightning==0.8.5',
+        'pytorch-lightning==1.1.6',
         'torchvision',
         'tqdm',
         'segmentation_models_pytorch',

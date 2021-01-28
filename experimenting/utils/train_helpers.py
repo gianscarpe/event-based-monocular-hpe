@@ -1,6 +1,5 @@
 """
 Toolbox for helping training and evaluation of agents
-
 """
 
 import glob
@@ -9,6 +8,7 @@ import os
 import shutil
 from pathlib import Path
 
+import hydra
 import pytorch_lightning as pl
 import torch
 from omegaconf import DictConfig, ListConfig
@@ -18,31 +18,6 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import experimenting
 
 logging.basicConfig(level=logging.INFO)
-
-
-def fit(cfg) -> pl.Trainer:
-    """
-    Launch training for a given config. Confs file can be found at /src/confs
-
-    Args:
-       cfg (omegaconf.DictConfig): Config dictionary
-
-    """
-    trainer_configuration = get_training_params(cfg)
-    if cfg.load_path:
-        print("Loading training")
-        model = load_model(cfg.load_path, cfg.training.module)
-    else:
-        model = getattr(experimenting.agents, cfg.training.module)(cfg)
-
-    try:
-        trainer = pl.Trainer(**trainer_configuration)
-        trainer.fit(model)
-        return trainer
-    except Exception as ex:
-        _safe_train_end(trainer_configuration)
-        print(ex)
-        raise ex
 
 
 def get_training_params(cfg: DictConfig):
@@ -77,27 +52,29 @@ def get_training_params(cfg: DictConfig):
     trainer_configuration = {
         "gpus": gpus,
         "benchmark": True,
-        "max_epochs": cfg["training"]["epochs"],
-        "checkpoint_callback": ckpt_cb,
+        "max_epochs": cfg["epochs"],
+        "callbacks": [ckpt_cb],
         "track_grad_norm": 2,
         "weights_summary": "top",
         "logger": logger,
         "profiler": profiler,
+        "accelerator": cfg["accelerator"],
     }
 
     torch.autograd.set_detect_anomaly(debug)
     if debug:
-        trainer_configuration["overfit_pct"] = 0.01
+        trainer_configuration["overfit_batches"] = 0.001
+        trainer_configuration["log_gpu_memory"] = True
 
-    if cfg.training.early_stopping > 0:
+    if cfg['early_stopping'] > 0:
         early_stop_callback = EarlyStopping(
             monitor="val_loss",
             min_delta=0.01,
-            patience=cfg["training"]["early_stopping"],
+            patience=cfg["early_stopping"],
             verbose=False,
             mode="min",
         )
-        trainer_configuration["early_stop_callback"] = early_stop_callback
+        trainer_configuration["callbacks"].append(early_stop_callback)
 
     if cfg.resume:
         trainer_configuration["resume_from_checkpoint"] = cfg["load_path"]
@@ -137,3 +114,46 @@ def _safe_train_end(trainer_configuration):
     error_path = os.path.join(exp_path.parent, "with_errors", exp_name)
     shutil.move(exp_path, error_path)
     logging.log(logging.ERROR, "exp moved to trash")
+
+
+def fit(cfg) -> pl.Trainer:
+    """
+    Launch training for a given config. Confs file can be found at /src/confs
+
+    Args:
+       cfg (omegaconf.DictConfig): Config dictionary
+
+    """
+    trainer_configuration = get_training_params(cfg)
+    core = hydra.utils.instantiate(cfg.dataset)
+
+    if cfg.load_path:
+        print("Loading training")
+        model = load_model(cfg.load_path, cfg.training.module)
+    else:
+        model = getattr(experimenting.agents, cfg.training.module)(
+            loss=cfg.loss,
+            optimizer=cfg.optimizer,
+            lr_scheduler=cfg.lr_scheduler,
+            model_zoo=cfg.model_zoo,
+            core=core,
+            **cfg.training
+        )
+
+    data_module = experimenting.dataset.DataModule(
+        core=core,
+        num_workers=cfg.num_workers,
+        batch_size=cfg.batch_size,
+        dataset_factory=model.get_data_factory(),
+        aug_train_config=cfg.augmentation_train,
+        aug_test_config=cfg.augmentation_test,
+    )
+
+    try:
+        trainer = pl.Trainer(**trainer_configuration)
+        trainer.fit(model, datamodule=data_module)
+        return trainer
+    except Exception as ex:
+        _safe_train_end(trainer_configuration)
+        print(ex)
+        raise ex

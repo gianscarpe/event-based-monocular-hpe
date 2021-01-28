@@ -1,4 +1,5 @@
 from os.path import join
+from typing import Tuple
 
 import torch
 
@@ -16,22 +17,41 @@ class MargiposeEstimator(BaseModule):
     marginal heatmaps (denoted as Margipose)
     """
 
-    def __init__(self, hparams, estimate_depth=False, test_metrics=None):
+    def __init__(
+        self,
+        optimizer,
+        lr_scheduler,
+        loss,
+        stages,
+        core,
+        model_zoo,
+        backbone,
+        model,
+        pretrained,
+        estimate_depth=False,
+        test_metrics=None,
+        *args,
+        **kwargs
+    ):
 
-        super(MargiposeEstimator, self).__init__(hparams, Joints3DConstructor)
+        super().__init__(
+            optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
+            loss=loss,
+            dataset_constructor=Joints3DConstructor,
+        )
 
-        self.n_channels = self._hparams.dataset.n_channels
-        self.n_joints = self._hparams.dataset.n_joints
+        self.core = core
+        self.pretrained = pretrained
+        self.model_zoo = model_zoo
+        self.backbone = backbone
+        self.backbone_model = model
 
         #  Dataset parameters are used for 3d prediction
-        self.max_x = self._hparams.dataset["max_x"]
-        self.max_y = self._hparams.dataset["max_y"]
-        self.max_z = self._hparams.dataset["max_z"]
-
-        self.height, self.width = self._hparams.dataset["in_shape"]
 
         self.estimate_depth = estimate_depth
-        self.torso_length = self._hparams.dataset["torso_length"]
+        self.torso_length = core.avg_torso_length
+        self.stages = stages
 
         metrics = {}
         if test_metrics is None:
@@ -51,30 +71,37 @@ class MargiposeEstimator(BaseModule):
 
     def _build_model(self):
         in_cnn = MargiposeEstimator._get_feature_extractor(
-            self._hparams.training["model"],
-            self._hparams.dataset["n_channels"],
-            join(self._hparams.model_zoo, self._hparams.training.backbone),
-            self._hparams.training["pretrained"],
+            self.backbone_model,
+            self.core.n_channels,
+            join(self.model_zoo, self.backbone),
+            self.pretrained,
         )
 
         params = {
-            "in_shape": (
-                self._hparams.dataset["n_channels"],
-                *self._hparams.dataset["in_shape"],
-            ),
+            "in_shape": (self.core.n_channels, *self.core.in_shape),
             "in_cnn": in_cnn,
-            "n_joints": self._hparams.dataset["n_joints"],
-            "n_stages": self._hparams.training["stages"],
+            "n_joints": self.core.n_joints,
+            "n_stages": self.stages,
         }
         self.model = get_margipose_model(params)
 
     def forward(self, x):
-        x = self.model(x)
-        return x
+        """
+        For inference. Return normalized skeletons
+        """
+        outs = self.model(x)
+
+        xy_hm = outs[0][-1]
+        zy_hm = outs[1][-1]
+        xz_hm = outs[2][-1]
+
+        pred_joints = predict3d(xy_hm, zy_hm, xz_hm)
+
+        return pred_joints, outs
 
     def denormalize_predictions(self, normalized_predictions, b_y):
         """
-b        Denormalize skeleton prediction and reproject onto original coord system
+        Denormalize skeleton prediction and reproject onto original coord system
 
         Args:
             normalized_predictions (torch.Tensor): normalized predictions
@@ -124,10 +151,10 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
 
     def _calculate_loss3d(self, outs, b_y):
         loss = 0
-
         xy_hms = outs[0]
         zy_hms = outs[1]
         xz_hms = outs[2]
+
         normalized_skeletons = b_y["normalized_skeleton"]
         b_masks = b_y["mask"]
 
@@ -144,15 +171,8 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
             de-normalized skeletons
         """
         b_x, b_y = batch
-
-        outs = self.model(b_x)
+        pred_joints, outs = self(b_x)
         loss = self._calculate_loss3d(outs, b_y)
-
-        xy_hm = outs[0][-1]
-        zy_hm = outs[1][-1]
-        xz_hm = outs[2][-1]
-
-        pred_joints = predict3d(xy_hm, zy_hm, xz_hm)
 
         if denormalize:  # denormalize skeletons batch
             pred_joints = self.denormalize_predictions(pred_joints, b_y)
@@ -170,29 +190,36 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
 
-        outs = self.forward(b_x)  # cnn output
+        outs = self.model(b_x)  # cnn output
 
         loss = self._calculate_loss3d(outs, b_y)
-        logs = {"loss": loss}
-        return {"loss": loss, "log": logs}
+
+        self.log("train_loss", loss)
+        return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
         loss, results = self._eval(batch, denormalize=False)  # Normalized results
+        for key, val in results.items():
+            self.log(key, val)
         return {"batch_val_loss": loss, **results}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["batch_val_loss"] for x in outputs]).mean()
         results = self._get_aggregated_results(outputs, "val_mean")
 
-        self.results = results
-        logs = {"val_loss": avg_loss, "step": self.current_epoch}
+        self.log("val_loss", avg_loss)
+        self.log("step", self.current_epoch)
+        self.log_dict(results)
 
-        return {"val_loss": avg_loss, "log": logs, "progress_bar": logs}
+        return avg_loss
 
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(
             batch, denormalize=True
         )  # Compare denormalized skeletons for test evaluation only
+        for key, val in results.items():
+            self.log(key, val)
+
         return {"batch_test_loss": loss, **results}
 
     def test_epoch_end(self, outputs):
@@ -200,8 +227,9 @@ b        Denormalize skeleton prediction and reproject onto original coord syste
         results = self._get_aggregated_results(outputs, "test_mean")
         self.results = results
 
-        logs = {"test_loss": avg_loss, "step": self.current_epoch}
-        return {**logs, **results, "log": logs, "progress_bar": logs}
+        self.log("test_loss", avg_loss)
+
+        return avg_loss
 
 
 def predict3d(xy_hm, zy_hm, xz_hm):

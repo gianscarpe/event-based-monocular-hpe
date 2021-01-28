@@ -10,13 +10,15 @@ Provided:
 
 """
 
-import pose3d_utils.skeleton_normaliser
 import torch
 from kornia import geometry
 from pose3d_utils.camera import CameraIntrinsics
+from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 from torch.utils.data import Dataset
 
 from experimenting.utils import pose3d_utils
+
+from .core import BaseCore
 
 __all__ = [
     "ClassificationDataset",
@@ -32,7 +34,9 @@ __email__ = "gianluca@scarpellini.dev"
 
 
 class BaseDataset(Dataset):
-    def __init__(self, dataset, indexes=None, transform=None, augment_label=False):
+    def __init__(
+        self, dataset: BaseCore, indexes=None, transform=None, augment_label=False
+    ):
 
         self.dataset = dataset
         self.x_indexes = indexes
@@ -148,16 +152,17 @@ class JointsDataset(BaseDataset):
 
 
 class Joints3DDataset(BaseDataset):
-    def __init__(self, dataset, in_shape, indexes=None, transform=None):
+    def __init__(self, dataset, indexes=None, transform=None):
 
         super(Joints3DDataset, self).__init__(dataset, indexes, transform, False)
 
         self.n_joints = dataset.N_JOINTS
-        self.normalizer = pose3d_utils.skeleton_normaliser.SkeletonNormaliser()
-        self.height = in_shape[0]
-        self.width = in_shape[1]
+        self.normalizer = SkeletonNormaliser()
+        self.height = dataset.in_shape[0]
+        self.width = dataset.in_shape[1]
 
     def _get_y(self, idx):
+
         joints_file = self.dataset.get_joint_from_id(idx)
 
         joints = torch.tensor(joints_file["xyz_cam"].swapaxes(0, 1))
@@ -177,11 +182,7 @@ class Joints3DDataset(BaseDataset):
         # TODO: select a standard format for joints (better 3xnum_joints)
 
         normalized_skeleton = self.normalizer.normalise_skeleton(
-            skeleton,
-            z_ref,
-            pose3d_utils.camera.CameraIntrinsics(camera),
-            self.height,
-            self.width,
+            skeleton, z_ref, CameraIntrinsics(camera), self.height, self.width,
         ).narrow(-1, 0, 3)
 
         normalized_skeleton[~mask] = 0
