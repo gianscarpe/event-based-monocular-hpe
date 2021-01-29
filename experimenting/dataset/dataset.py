@@ -162,7 +162,6 @@ class Joints3DDataset(BaseDataset):
         self.width = dataset.in_shape[1]
 
     def _get_y(self, idx):
-
         joints_file = self.dataset.get_joint_from_id(idx)
 
         joints = torch.tensor(joints_file["xyz_cam"].swapaxes(0, 1))

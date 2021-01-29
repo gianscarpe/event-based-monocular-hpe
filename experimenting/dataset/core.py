@@ -209,7 +209,6 @@ class DHP19Core(BaseCore):
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
-
         return joints_file
 
     def get_heatmap_from_id(self, idx):

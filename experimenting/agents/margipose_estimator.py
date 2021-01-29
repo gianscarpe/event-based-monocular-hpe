@@ -209,16 +209,13 @@ class MargiposeEstimator(BaseModule):
 
         self.log("val_loss", avg_loss)
         self.log("step", self.current_epoch)
-        self.log_dict(results)
 
-        return avg_loss
+        self.log_dict(results)
 
     def test_step(self, batch, batch_idx):
         loss, results = self._eval(
             batch, denormalize=True
         )  # Compare denormalized skeletons for test evaluation only
-        for key, val in results.items():
-            self.log(key, val)
 
         return {"batch_test_loss": loss, **results}
 
@@ -227,9 +224,10 @@ class MargiposeEstimator(BaseModule):
         results = self._get_aggregated_results(outputs, "test_mean")
         self.results = results
 
-        self.log("test_loss", avg_loss)
+        for key, val in results.items():
+            self.log(key, val)
 
-        return avg_loss
+        self.log("test_loss", avg_loss)
 
 
 def predict3d(xy_hm, zy_hm, xz_hm):

@@ -63,7 +63,7 @@ def get_training_params(cfg: DictConfig):
 
     torch.autograd.set_detect_anomaly(debug)
     if debug:
-        trainer_configuration["overfit_batches"] = 0.001
+        trainer_configuration["overfit_batches"] = 0.0005
         trainer_configuration["log_gpu_memory"] = True
 
     if cfg['early_stopping'] > 0:

@@ -21,7 +21,7 @@ from .dataset import (
 )
 
 __all__ = [
-    "BaseConstructor",
+    "BaseDataFactory",
     "ClassificationConstructor",
     "AutoEncoderConstructor",
     "Joints3DConstructor",
@@ -30,9 +30,17 @@ __all__ = [
 ]
 
 
-class BaseConstructor(ABC):
+class BaseDataFactory(ABC):
     def __init__(self, dataset_task):
         self.dataset_task = dataset_task
+
+    def get_dataset(
+        self, core_dataset, indexes, augmentation_config, **kwargs
+    ) -> Dataset:
+        preprocess = get_augmentation(augmentation_config)
+        return self.dataset_task(
+            dataset=core_dataset, indexes=indexes, transform=preprocess, **kwargs
+        )
 
     def get_datasets(
         self, core_dataset, augmentation_train, augmentation_test, **kwargs
@@ -63,26 +71,26 @@ class BaseConstructor(ABC):
         )
 
 
-class ClassificationConstructor(BaseConstructor):
+class ClassificationConstructor(BaseDataFactory):
     def __init__(self, hparams):
         super(ClassificationConstructor, self).__init__(hparams, ClassificationDataset)
 
 
-class JointsConstructor(BaseConstructor):
+class JointsConstructor(BaseDataFactory):
     def __init__(self, hparams):
         super(JointsConstructor, self).__init__(hparams, JointsDataset)
 
 
-class Joints3DConstructor(BaseConstructor):
+class Joints3DConstructor(BaseDataFactory):
     def __init__(self):
         super(Joints3DConstructor, self).__init__(dataset_task=Joints3DDataset,)
 
 
-class HeatmapConstructor(BaseConstructor):
+class HeatmapConstructor(BaseDataFactory):
     def __init__(self, hparams):
         super(HeatmapConstructor, self).__init__(hparams, HeatmapDataset)
 
 
-class AutoEncoderConstructor(BaseConstructor):
+class AutoEncoderConstructor(BaseDataFactory):
     def __init__(self):
         super(AutoEncoderConstructor, self).__init__(AutoEncoderDataset)

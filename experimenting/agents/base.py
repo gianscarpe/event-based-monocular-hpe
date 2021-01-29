@@ -10,6 +10,7 @@ import hydra
 import pytorch_lightning as pl
 import torch
 
+from ..dataset import BaseDataFactory
 from ..utils import get_feature_extractor
 
 
@@ -30,7 +31,7 @@ class BaseModule(pl.LightningModule):
     def set_params(self):
         pass
 
-    def get_data_factory(self):
+    def get_data_factory(self) -> BaseDataFactory:
         return self.dataset_constructor()
 
     @staticmethod
@@ -70,17 +71,16 @@ class BaseModule(pl.LightningModule):
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
         logs = {"avg_train_loss": avg_loss, "step": self.current_epoch}
-
-        return {"train_loss": avg_loss, "log": logs, "progress_bar": logs}
+        self.log_dict(logs)
 
     def _get_aggregated_results(self, outputs, prefix):
         results = {}
 
         for metric_key in self.metrics.keys():
             # mean along batch axis
-            tensor_result = torch.stack([x[metric_key] for x in outputs]).mean(axis=0)
-
-            if len(tensor_result.shape) > 0:  # list of values cannot be
+            tensor_result = torch.stack([x[metric_key] for x in outputs]).mean()
+            if len(tensor_result.shape) > 0:
+                # list of values cannot be
                 # converted to python numeric!
                 tensor_result = tensor_result.tolist()
             else:
