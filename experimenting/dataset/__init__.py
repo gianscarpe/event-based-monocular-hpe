@@ -34,7 +34,7 @@ class DataModule(pl.LightningDataModule):
         pass
 
     def transfer_batch_to_device(self, batch, device):
-        return super().transfer_batch_to_device(batch, device)
+        return batch
 
     def setup(self, stage=None):
         (

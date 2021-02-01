@@ -8,12 +8,18 @@ import os
 import shutil
 from pathlib import Path
 
+import comet_ml
 import hydra
 import pytorch_lightning as pl
 import torch
 from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import (
+    CometLogger,
+    LightningLoggerBase,
+    TensorBoardLogger,
+    WandbLogger,
+)
 
 import experimenting
 
@@ -33,7 +39,11 @@ def get_training_params(cfg: DictConfig):
     """
 
     exp_path = os.getcwd()
-    logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+    # logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+    #  logger = _get_comet_logger(cfg.exp_name, cfg.project_name)
+    logger = _get_comet_logger(
+        cfg.exp_name, cfg.project_name, os.path.join(exp_path, "tb_logs")
+    )
 
     debug = cfg["debug"]
 
@@ -114,6 +124,24 @@ def _safe_train_end(trainer_configuration):
     error_path = os.path.join(exp_path.parent, "with_errors", exp_name)
     shutil.move(exp_path, error_path)
     logging.log(logging.ERROR, "exp moved to trash")
+
+
+def _get_comet_logger(
+    exp_name: str, project_name: str, save_dir: str
+) -> LightningLoggerBase:
+    # arguments made to CometLogger are passed on to the comet_ml.Experiment class
+    comet_logger = CometLogger(
+        api_key=os.environ.get('COMET_API_KEY'),
+        experiment_name=exp_name,
+        project_name=project_name,
+        save_dir=save_dir,
+    )
+    return comet_logger
+
+
+def _get_wandb_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
+    logger = WandbLogger(name=exp_name, project=project_name,)
+    return logger
 
 
 def fit(cfg) -> pl.Trainer:

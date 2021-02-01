@@ -1,5 +1,6 @@
 import logging
 
+import comet_ml
 import hydra
 from omegaconf import DictConfig
 

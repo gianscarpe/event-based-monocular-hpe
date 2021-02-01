@@ -23,8 +23,7 @@ class BaseCore(ABC):
         self._set_partition_function(partition)
         self.name = name
 
-    def _set_partition_function(self, hparams_dataset):
-        partition_param = hparams_dataset.partition
+    def _set_partition_function(self, partition_param):
         if partition_param is None:
             partition_param = "cross-subject"
 
@@ -302,14 +301,16 @@ class HumanCore(BaseCore):
 class NTUCore(BaseCore):
     DEFAULT_TEST_SUBJECTS = [18, 19, 20]
 
-    def __init__(self, hparams_dataset):
-        super(NTUCore, self).__init__(hparams_dataset)
-        self.file_paths = NTUCore._get_file_paths(hparams_dataset.data_dir)
+    def __init__(
+        self, name, data_dir, labels_dir, test_subjects, partition, *args, **kwargs,
+    ):
+        super(NTUCore, self).__init__(name, partition)
+        self.file_paths = NTUCore._get_file_paths(data_dir)
 
-        if hparams_dataset.test_subjects is None:
+        if test_subjects is None:
             self.subjects = NTUCore.DEFAULT_TEST_SUBJECTS
         else:
-            self.subjects = hparams_dataset.test_subjects
+            self.subjects = test_subjects
 
     @staticmethod
     def load_frame(path):
