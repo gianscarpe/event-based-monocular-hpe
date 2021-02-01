@@ -2,13 +2,16 @@ import cv2
 import numpy as np
 import scipy
 import torch
-
-from .pose3d_utils.coords import ensure_homogeneous
+from pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
-    'load_heatmap', 'decay_heatmap', 'get_heatmaps_steps',
-    'decompose_projection_matrix', 'reproject_xyz_onto_world_coord',
-    'get_joints_from_heatmap', 'project_xyz_onto_camera_coord'
+    'load_heatmap',
+    'decay_heatmap',
+    'get_heatmaps_steps',
+    'decompose_projection_matrix',
+    'reproject_xyz_onto_world_coord',
+    'get_joints_from_heatmap',
+    'project_xyz_onto_camera_coord',
 ]
 
 
@@ -74,10 +77,11 @@ def get_heatmap(joints, mask, heigth, width, num_joints=13):
     # initialize, fill and smooth the heatmaps
     label_heatmaps = np.zeros((heigth, width, num_joints))
     for fmidx, zipd in enumerate(zip(v, u, mask)):
-        if zipd[2] == 1:  # write joint position only when projection within frame boundaries
+        if (
+            zipd[2] == 1
+        ):  # write joint position only when projection within frame boundaries
             label_heatmaps[zipd[0], zipd[1], fmidx] = 1
-            label_heatmaps[:, :, fmidx] = decay_heatmap(label_heatmaps[:, :,
-                                                                       fmidx])
+            label_heatmaps[:, :, fmidx] = decay_heatmap(label_heatmaps[:, :, fmidx])
     return label_heatmaps
 
 
@@ -218,9 +222,9 @@ def get_joints_from_heatmap(y_pr):
     device = y_pr.device
     confidence = torch.zeros((batch_size, n_joints), device=device)
 
-    p_coords_max = torch.zeros((batch_size, n_joints, 2),
-                               dtype=torch.float32,
-                               device=device)
+    p_coords_max = torch.zeros(
+        (batch_size, n_joints, 2), dtype=torch.float32, device=device
+    )
     for b in range(batch_size):
         for j in range(n_joints):
             pred_joint = y_pr[b, j]
