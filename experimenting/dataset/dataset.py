@@ -16,8 +16,6 @@ from pose3d_utils.camera import CameraIntrinsics
 from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 from torch.utils.data import Dataset
 
-from experimenting.utils import pose3d_utils
-
 from .core import BaseCore
 
 __all__ = [

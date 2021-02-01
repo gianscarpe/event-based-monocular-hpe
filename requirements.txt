@@ -16,3 +16,4 @@ numpy
 matplotlib
 segmentation_models_pytorch
 sklearn
+-e git+https://github.com/anibali/pose3d-utils#egg=pose3d_utils

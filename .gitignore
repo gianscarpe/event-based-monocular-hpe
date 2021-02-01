@@ -7,11 +7,8 @@ src/
 !.travis.yml
 !.readthedocs.yml
 !.coveragerc
-<<<<<<< HEAD
-
-=======
 !.gitattributes
->>>>>>> 36328f5e961ae041dd37ce8382152afd67f63b71
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
