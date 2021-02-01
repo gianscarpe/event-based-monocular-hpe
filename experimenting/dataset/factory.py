@@ -72,25 +72,27 @@ class BaseDataFactory(ABC):
 
 
 class ClassificationConstructor(BaseDataFactory):
-    def __init__(self, hparams):
-        super(ClassificationConstructor, self).__init__(hparams, ClassificationDataset)
+    def __init__(self):
+        super(ClassificationConstructor, self).__init__(
+            dataset_task=ClassificationDataset
+        )
 
 
 class JointsConstructor(BaseDataFactory):
-    def __init__(self, hparams):
-        super(JointsConstructor, self).__init__(hparams, JointsDataset)
+    def __init__(self):
+        super(JointsConstructor, self).__init__(dataset_task=JointsDataset)
 
 
 class Joints3DConstructor(BaseDataFactory):
     def __init__(self):
-        super(Joints3DConstructor, self).__init__(dataset_task=Joints3DDataset,)
+        super(Joints3DConstructor, self).__init__(dataset_task=Joints3DDataset)
 
 
 class HeatmapConstructor(BaseDataFactory):
-    def __init__(self, hparams):
-        super(HeatmapConstructor, self).__init__(hparams, HeatmapDataset)
+    def __init__(self):
+        super(HeatmapConstructor, self).__init__(dataset_task=HeatmapDataset)
 
 
 class AutoEncoderConstructor(BaseDataFactory):
     def __init__(self):
-        super(AutoEncoderConstructor, self).__init__(AutoEncoderDataset)
+        super(AutoEncoderConstructor, self).__init__(dataset_task=AutoEncoderDataset)

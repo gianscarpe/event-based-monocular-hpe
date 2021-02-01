@@ -49,10 +49,10 @@ def flatten(d):
     return out
 
 
-def get_augmentation(augmentation_specifics):
+def get_augmentation(augmentation_specifics: dict) -> albumentations.Compose:
     augmentations = []
 
-    for _, aug_spec in augmentation_specifics.apply.items():
+    for _, aug_spec in augmentation_specifics['apply'].items():
         aug = hydra.utils.instantiate(aug_spec)
 
         augmentations.append(aug)

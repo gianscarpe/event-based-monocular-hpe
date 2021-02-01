@@ -142,7 +142,6 @@ class TestJoints3DDataset(TestBaseDataset):
         self.assertTrue(torch.equal(y['M'], expected_M))
         self.assertTrue(torch.equal(y['xyz'], expected_xyz))
 
-        breakpoint()
         self.assertTrue(
             torch.equal(y['normalized_skeleton'].float(), expected_normalized_skeleton)
         )
