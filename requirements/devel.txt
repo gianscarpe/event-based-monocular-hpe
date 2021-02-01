@@ -1,3 +1,4 @@
 pre-commit
 flake8
 isort
+mypy
