@@ -1,4 +1,4 @@
-exp_dir: exps_${training.module}/${dataset.partition}
+exp_dir: exps_${training.module}/${dataset.params.partition}
 exp_name: ${now:%m-%d-%H-%M}_exp_${training.model}_pretrained_${training.pretrained}
 
 hydra:
@@ -10,7 +10,7 @@ hydra:
         item_sep: '__'
         exclude_keys: []
   sweep:
-    dir: ${root_dir}/exps/${dataset.name}/${exp_dir}
+    dir: ${root_dir}/exps/${dataset.params.name}/${exp_dir}
     subdir: ${exp_name}_${now:%m-%d-%H-%M}
     
   run:

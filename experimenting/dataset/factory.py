@@ -5,11 +5,15 @@ functionalities to get train, val, and test dataset
 """
 
 from abc import ABC
+from typing import Tuple
+
+from torch.utils.data import Dataset
 
 from ..utils import get_augmentation
 from . import core
 from .dataset import (
     AutoEncoderDataset,
+    BaseDataset,
     ClassificationDataset,
     HeatmapDataset,
     Joints3DDataset,
@@ -17,86 +21,78 @@ from .dataset import (
 )
 
 __all__ = [
-    'ClassificationConstructor', 'AutoEncoderConstructor',
-    'Joints3DConstructor', 'JointsConstructor', 'HeatmapConstructor'
+    "BaseDataFactory",
+    "ClassificationConstructor",
+    "AutoEncoderConstructor",
+    "Joints3DConstructor",
+    "JointsConstructor",
+    "HeatmapConstructor",
 ]
 
 
-class BaseConstructor(ABC):
-    def __init__(self, hparams, dataset_task):
-
-        self.core = BaseConstructor._get_core(hparams)
+class BaseDataFactory(ABC):
+    def __init__(self, dataset_task):
         self.dataset_task = dataset_task
-        self.train_params = {}
-        self.val_params = {}
-        self.test_params = {}
 
-        preprocess_train, self.train_aug_info = get_augmentation(
-            hparams.augmentation_train)
-        preprocess_val, self.val_aug_info = get_augmentation(
-            hparams.augmentation_test)
-
-        train_indexes, val_indexes, test_indexes = self.core.get_train_test_split(
+    def get_dataset(
+        self, core_dataset, indexes, augmentation_config, **kwargs
+    ) -> Dataset:
+        preprocess = get_augmentation(augmentation_config)
+        return self.dataset_task(
+            dataset=core_dataset, indexes=indexes, transform=preprocess, **kwargs
         )
-        
-        self._set_for_all('dataset', self.core)
-        self._set_for_train('indexes', train_indexes)
-        self._set_for_val('indexes', val_indexes)
-        self._set_for_test('indexes', test_indexes)
 
-        self._set_for_train('transform', preprocess_train)
-        self._set_for_val('transform', preprocess_val)
-        self._set_for_test('transform', preprocess_val)
+    def get_datasets(
+        self, core_dataset, augmentation_train, augmentation_test, **kwargs
+    ) -> Tuple[Dataset, Dataset, Dataset]:
+        train_indexes, val_indexes, test_indexes = core_dataset.get_train_test_split()
+        preprocess_train = get_augmentation(augmentation_train)
+        preprocess_val = get_augmentation(augmentation_test)
 
-    def _get_core(hparams):
-        if hparams.dataset.core_class is None:
-            dataset = "DHP19Core"
-        else:
-            dataset = hparams.dataset.core_class
-        return getattr(core, dataset)(hparams.dataset)
-
-    def _set_for_all(self, key, value):
-        self._set_for_train(key, value)
-        self._set_for_val(key, value)
-        self._set_for_test(key, value)
-
-    def _set_for_train(self, key, value):
-        self.train_params[key] = value
-
-    def _set_for_val(self, key, value):
-        self.val_params[key] = value
-
-    def _set_for_test(self, key, value):
-        self.test_params[key] = value
-
-    def get_datasets(self):
-        return self.dataset_task(**self.train_params), self.dataset_task(
-            **self.val_params), self.dataset_task(**self.test_params)
+        return (
+            self.dataset_task(
+                dataset=core_dataset,
+                indexes=train_indexes,
+                transform=preprocess_train,
+                **kwargs
+            ),
+            self.dataset_task(
+                dataset=core_dataset,
+                indexes=val_indexes,
+                transform=preprocess_val,
+                **kwargs
+            ),
+            self.dataset_task(
+                dataset=core_dataset,
+                indexes=test_indexes,
+                transform=preprocess_val,
+                **kwargs
+            ),
+        )
 
 
-class ClassificationConstructor(BaseConstructor):
-    def __init__(self, hparams):
-        super(ClassificationConstructor,
-              self).__init__(hparams, ClassificationDataset)
+class ClassificationConstructor(BaseDataFactory):
+    def __init__(self):
+        super(ClassificationConstructor, self).__init__(
+            dataset_task=ClassificationDataset
+        )
 
 
-class JointsConstructor(BaseConstructor):
-    def __init__(self, hparams):
-        super(JointsConstructor, self).__init__(hparams, JointsDataset)
+class JointsConstructor(BaseDataFactory):
+    def __init__(self):
+        super(JointsConstructor, self).__init__(dataset_task=JointsDataset)
 
 
-class Joints3DConstructor(BaseConstructor):
-    def __init__(self, hparams):
-        super(Joints3DConstructor, self).__init__(hparams, Joints3DDataset)
-        self._set_for_all('in_shape', self.train_aug_info.in_shape)
+class Joints3DConstructor(BaseDataFactory):
+    def __init__(self):
+        super(Joints3DConstructor, self).__init__(dataset_task=Joints3DDataset)
 
 
-class HeatmapConstructor(BaseConstructor):
-    def __init__(self, hparams):
-        super(HeatmapConstructor, self).__init__(hparams, HeatmapDataset)
+class HeatmapConstructor(BaseDataFactory):
+    def __init__(self):
+        super(HeatmapConstructor, self).__init__(dataset_task=HeatmapDataset)
 
 
-class AutoEncoderConstructor(BaseConstructor):
-    def __init__(self, hparams):
-        super(AutoEncoderConstructor, self).__init__(hparams,
-                                                     AutoEncoderDataset)
+class AutoEncoderConstructor(BaseDataFactory):
+    def __init__(self):
+        super(AutoEncoderConstructor, self).__init__(dataset_task=AutoEncoderDataset)

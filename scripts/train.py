@@ -1,8 +1,10 @@
 import logging
 
+import comet_ml
 import hydra
-from experimenting.utils import fit
 from omegaconf import DictConfig
+
+from experimenting.utils.train_helpers import fit
 
 logging.basicConfig(level=logging.INFO)
 

@@ -1,14 +1,10 @@
  training:
-  epochs: 100
-  early_stopping: 10
-  batch_size: 64
-  num_workers: 12
-  module: MargiposeEstimator
-  model: resnet34
-  backbone: cross_subject/timecount/classification/resnet34.pt
-  stages: 3
-  predict_3d: true
-  pretrained: false
-  metrics: ['AUC', 'PCK', 'MPJPE']
-  estimate_depth: false
-  
+   module: MargiposeEstimator
+   model: resnet34
+   backbone: cross_subject/timecount/classification/resnet34.pt
+   stages: 3
+   predict_3d: true
+   pretrained: false
+   metrics: ['AUC', 'PCK', 'MPJPE']
+   estimate_depth: false
+   

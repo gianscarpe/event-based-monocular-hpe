@@ -1,7 +1,8 @@
 import unittest
 
-from experimenting.dataset.core import DHP19Core, NTUCore
 from omegaconf import DictConfig
+
+from experimenting.dataset.core import DHP19Core, NTUCore
 
 
 class TestCore(unittest.TestCase):
@@ -31,70 +32,97 @@ class TestDHP19ParamsDefaultPartition(TestCore):
     def setUp(self):
         data_dir = 'tests/data/dhp19/frames'
         labels_dir = 'tests/data/dhp19/labels'
-        self.hparams = DictConfig({
-            'data_dir': data_dir,
-            'save_split': False,
-            'labels_dir': labels_dir,
-            'joints_dir': labels_dir,
-            'hm_dir': labels_dir,
-            'test_subjects': [1, 2, 3, 4, 5],
-            'split_at': 0.8,
-            'cams': [3]
-        })
-        self.core = DHP19Core(self.hparams)
+        self.hparams = DictConfig(
+            {
+                'data_dir': data_dir,
+                'save_split': False,
+                'labels_dir': labels_dir,
+                'joints_dir': labels_dir,
+                'hm_dir': labels_dir,
+                'test_subjects': [1, 2, 3, 4, 5],
+                'split_at': 0.8,
+                'cams': [3],
+                'name': "test",
+                'base_path': None,
+                'movements': None,
+                'preload_dir': None,
+                'n_classes': 10,
+                'n_joints': 10,
+                'partition': None,
+                'n_channels': 3,
+            }
+        )
+        self.core = DHP19Core(**self.hparams)
 
 
 class TestDHP19ParamsCrossSubject(TestCore):
     def setUp(self):
         data_dir = 'tests/data/dhp19/frames'
         labels_dir = 'tests/data/dhp19/labels'
-        self.hparams = DictConfig({
-            'data_dir': data_dir,
-            'save_split': False,
-            'labels_dir': labels_dir,
-            'joints_dir': labels_dir,
-            'hm_dir': labels_dir,
-            'test_subjects': [1, 2, 3, 4, 5],
-            'split_at': 0.8,
-            'cams': [3],
-            'partition': 'cross-subject'
-        })
-        self.core = DHP19Core(self.hparams)
-
-
+        self.hparams = DictConfig(
+            {
+                'data_dir': data_dir,
+                'save_split': False,
+                'labels_dir': labels_dir,
+                'joints_dir': labels_dir,
+                'hm_dir': labels_dir,
+                'test_subjects': [1, 2, 3, 4, 5],
+                'split_at': 0.8,
+                'cams': [3],
+                'partition': 'cross-subject',
+                'name': "test",
+                'base_path': None,
+                'movements': None,
+                'preload_dir': None,
+                'n_classes': 10,
+                'n_joints': 10,
+                'n_channels': 3,
+            }
+        )
+        self.core = DHP19Core(**self.hparams)
 
 
 class TestDHP19ParamsCrossView(TestCore):
     def setUp(self):
         data_dir = 'tests/data/dhp19/frames'
         labels_dir = 'tests/data/dhp19/labels'
-        self.hparams = DictConfig({
-            'data_dir': data_dir,
-            'save_split': False,
-            'labels_dir': labels_dir,
-            'joints_dir': labels_dir,
-            'hm_dir': labels_dir,
-            'test_subjects': [1, 2, 3, 4, 5],
-            'split_at': 0.8,
-            'cams': [0, 1, 2, 3],
-            'partition': 'cross-view'
-        })
-        self.core = DHP19Core(self.hparams)
+        self.hparams = DictConfig(
+            {
+                'data_dir': data_dir,
+                'save_split': False,
+                'labels_dir': labels_dir,
+                'joints_dir': labels_dir,
+                'hm_dir': labels_dir,
+                'test_subjects': [1, 2, 3, 4, 5],
+                'split_at': 0.8,
+                'cams': [0, 1, 2, 3],
+                'partition': 'cross-view',
+                'name': "test",
+                'base_path': None,
+                'movements': None,
+                'preload_dir': None,
+                'n_classes': 10,
+                'n_joints': 10,
+                'n_channels': 3,
+            }
+        )
+        self.core = DHP19Core(**self.hparams)
 
 
 class TestNTUParams(TestCore):
     def setUp(self):
         data_dir = 'tests/data/ntu/frames'
         labels_dir = 'tests/data/ntu/labels'
-        self.hparams = DictConfig({
-            'data_dir': data_dir,
-            'save_split': False,
-            'labels_dir': labels_dir,
-            'test_subjects': [19],
-            'split_at': 0.8,
-            'partition': 'cross-subject'
-        })
-        self.core = NTUCore(self.hparams)
+        self.hparams = DictConfig(
+            {
+                'name': 'test',
+                'data_dir': data_dir,
+                'labels_dir': labels_dir,
+                'test_subjects': [19],
+                'partition': 'cross-subject',
+            }
+        )
+        self.core = NTUCore(**self.hparams)
 
 
 if __name__ == '__main__':

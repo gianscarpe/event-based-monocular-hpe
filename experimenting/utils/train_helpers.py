@@ -1,6 +1,5 @@
 """
 Toolbox for helping training and evaluation of agents
-
 """
 
 import glob
@@ -9,40 +8,22 @@ import os
 import shutil
 from pathlib import Path
 
-import torch
-
+import comet_ml
+import hydra
 import pytorch_lightning as pl
+import torch
 from omegaconf import DictConfig, ListConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import (
+    CometLogger,
+    LightningLoggerBase,
+    TensorBoardLogger,
+    WandbLogger,
+)
 
 import experimenting
 
 logging.basicConfig(level=logging.INFO)
-
-
-def fit(cfg) -> pl.Trainer:
-    """
-    Launch training for a given config. Confs file can be found at /src/confs
-
-    Args:
-       cfg (omegaconf.DictConfig): Config dictionary
-
-    """
-    trainer_configuration = get_training_params(cfg)
-    if cfg.load_path:
-        print('Loading training')
-        model = load_model(cfg)
-    else:
-        model = getattr(experimenting.agents, cfg.training.module)(cfg)
-
-    try:
-        trainer = pl.Trainer(**trainer_configuration)
-        trainer.fit(model)
-        return trainer
-    except Exception as ex:
-        _safe_train_end(trainer_configuration)
-        raise ex
 
 
 def get_training_params(cfg: DictConfig):
@@ -53,68 +34,73 @@ def get_training_params(cfg: DictConfig):
     cfg: DictConfig :
         hydra configuration (examples in conf/train)
 
-    Returns 
     -------
 
     """
 
     exp_path = os.getcwd()
-    logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+    # logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+    #  logger = _get_comet_logger(cfg.exp_name, cfg.project_name)
+    logger = _get_comet_logger(
+        cfg.exp_name, cfg.project_name, os.path.join(exp_path, "tb_logs")
+    )
 
-    debug = cfg['debug']
+    debug = cfg["debug"]
 
     checkpoint_dir = os.path.join(exp_path, "checkpoints")
-    log_profiler = os.path.join(exp_path, 'profile.txt')
+    log_profiler = os.path.join(exp_path, "profile.txt")
     os.makedirs(checkpoint_dir, exist_ok=True)
     ckpt_cb = ModelCheckpoint(
-        filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}"))
+        filepath=os.path.join(checkpoint_dir, "{epoch:02d}-{val_loss:.2f}")
+    )
 
     profiler = pl.profiler.AdvancedProfiler(log_profiler)
-    gpus = cfg['gpus']
+    gpus = cfg["gpus"]
     if type(gpus) == list or type(gpus) == ListConfig:
         gpus = [int(x) for x in gpus]
 
     trainer_configuration = {
-        'gpus': gpus,
-        'benchmark': True,
-        'max_epochs': cfg['training']['epochs'],
-        'checkpoint_callback': ckpt_cb,
-        'track_grad_norm': 2,
-        'weights_summary': 'top',
-        'logger': logger,
-        'profiler': profiler,
+        "gpus": gpus,
+        "benchmark": True,
+        "max_epochs": cfg["epochs"],
+        "callbacks": [ckpt_cb],
+        "track_grad_norm": 2,
+        "weights_summary": "top",
+        "logger": logger,
+        "profiler": profiler,
+        "accelerator": cfg["accelerator"],
     }
 
     torch.autograd.set_detect_anomaly(debug)
     if debug:
-        trainer_configuration['overfit_pct'] = 0.01
+        trainer_configuration["overfit_batches"] = 0.0005
+        trainer_configuration["log_gpu_memory"] = True
 
-    if cfg.training.early_stopping > 0:
+    if cfg['early_stopping'] > 0:
         early_stop_callback = EarlyStopping(
-            monitor='val_loss',
+            monitor="val_loss",
             min_delta=0.01,
-            patience=cfg['training']['early_stopping'],
+            patience=cfg["early_stopping"],
             verbose=False,
-            mode='min')
-        trainer_configuration['early_stop_callback'] = early_stop_callback
+            mode="min",
+        )
+        trainer_configuration["callbacks"].append(early_stop_callback)
 
     if cfg.resume:
-        trainer_configuration['resume_from_checkpoint'] = cfg['load_path']
+        trainer_configuration["resume_from_checkpoint"] = cfg["load_path"]
 
     return trainer_configuration
 
 
-def load_model(cfg: dict, **kwargs):
-    print('Loading training')
-    load_path = get_checkpoint_path(cfg.load_path)
+def load_model(load_path, module, **kwargs):
+    print("Loading training")
+    load_path = get_checkpoint_path(load_path)
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
-        model = getattr(experimenting.agents,
-                        cfg['training']['module']).load_from_checkpoint(
-                            load_path,
-                            estimate_depth=cfg.training.estimate_depth,
-                            **kwargs)
+        model = getattr(experimenting.agents, module).load_from_checkpoint(
+            load_path, **kwargs
+        )
     else:
         raise FileNotFoundError()
 
@@ -129,12 +115,73 @@ def get_checkpoint_path(checkpoint_dir):
 
 
 def get_result_path(load_path):
-    return os.path.join(load_path, 'result.json')
+    return os.path.join(load_path, "result.json")
 
 
 def _safe_train_end(trainer_configuration):
     exp_path = Path(os.getcwd())
     exp_name = exp_path.name
-    error_path = os.path.join(exp_path.parent, 'with_errors', exp_name)
+    error_path = os.path.join(exp_path.parent, "with_errors", exp_name)
     shutil.move(exp_path, error_path)
-    logging.log(logging.ERROR, 'exp moved to trash')
+    logging.log(logging.ERROR, "exp moved to trash")
+
+
+def _get_comet_logger(
+    exp_name: str, project_name: str, save_dir: str
+) -> LightningLoggerBase:
+    # arguments made to CometLogger are passed on to the comet_ml.Experiment class
+    comet_logger = CometLogger(
+        api_key=os.environ.get('COMET_API_KEY'),
+        experiment_name=exp_name,
+        project_name=project_name,
+        save_dir=save_dir,
+    )
+    return comet_logger
+
+
+def _get_wandb_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
+    logger = WandbLogger(name=exp_name, project=project_name,)
+    return logger
+
+
+def fit(cfg) -> pl.Trainer:
+    """
+    Launch training for a given config. Confs file can be found at /src/confs
+
+    Args:
+       cfg (omegaconf.DictConfig): Config dictionary
+
+    """
+    trainer_configuration = get_training_params(cfg)
+    core = hydra.utils.instantiate(cfg.dataset)
+
+    if cfg.load_path:
+        print("Loading training")
+        model = load_model(cfg.load_path, cfg.training.module)
+    else:
+        model = getattr(experimenting.agents, cfg.training.module)(
+            loss=cfg.loss,
+            optimizer=cfg.optimizer,
+            lr_scheduler=cfg.lr_scheduler,
+            model_zoo=cfg.model_zoo,
+            core=core,
+            **cfg.training
+        )
+
+    data_module = experimenting.dataset.DataModule(
+        core=core,
+        num_workers=cfg.num_workers,
+        batch_size=cfg.batch_size,
+        dataset_factory=model.get_data_factory(),
+        aug_train_config=cfg.augmentation_train,
+        aug_test_config=cfg.augmentation_test,
+    )
+
+    try:
+        trainer = pl.Trainer(**trainer_configuration)
+        trainer.fit(model, datamodule=data_module)
+        return trainer
+    except Exception as ex:
+        _safe_train_end(trainer_configuration)
+        print(ex)
+        raise ex
