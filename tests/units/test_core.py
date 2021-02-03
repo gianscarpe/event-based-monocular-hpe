@@ -1,8 +1,10 @@
 import unittest
+from unittest import mock
 
+import numpy as np
 from omegaconf import DictConfig
 
-from experimenting.dataset.core import DHP19Core, NTUCore
+from experimenting.dataset.core import DHP19Core, HumanCore, NTUCore
 
 
 class TestCore(unittest.TestCase):
@@ -123,6 +125,66 @@ class TestNTUParams(TestCore):
             }
         )
         self.core = NTUCore(**self.hparams)
+
+
+class TestHumanCore(TestCore):
+    @mock.patch(
+        "experimenting.dataset.core.h3mcore.HumanCore.get_pose_data", mock.Mock()
+    )
+    def setUp(self):
+        data_dir = 'tests/data/h3m/'
+        joints_path = 'tests/data/h3m/labels'
+        self.hparams = DictConfig(
+            {
+                'name': 'test',
+                'data_dir': data_dir,
+                'joints_path': joints_path,
+                'n_channels': 1,
+                'partition': 'cross-subject',
+            }
+        )
+
+        self.core = HumanCore(**self.hparams)
+
+    def test_get_frame_info(self):
+        file_path = 'tests/data/h3m/S1/Directions 1.54138969S1/frame0000001.npy'
+        expected_info = {
+            'cam': 0,
+            'action': 'Directions',
+            'subject': 1,
+            'frame': '0000001',
+        }
+
+        result_info = HumanCore.get_frame_info(file_path)
+
+        self.assertEqual(expected_info, result_info)
+
+    def test_get_label(self):
+        file_path = 'tests/data/h3m/S1/Directions 1.54138969S1/frame0000001.npy'
+
+        expected = 0
+
+        self.assertEqual(HumanCore.get_label_from_filename(file_path), expected)
+
+    @mock.patch("numpy.load")
+    def test_get_labels(self, numpy_load_mocked):
+        mocked_data = mock.Mock()
+        n_frames = 10
+        n_joints = 17
+        sub_n = 1
+        mocked_poses = np.random.rand(n_frames, n_joints, 3)
+        mocked_data.item.return_value = {f'S{sub_n}': {'Directions': mocked_poses}}
+        mocked_pose_loaded = {'positions_3d': mocked_data}
+        numpy_load_mocked.return_value = mocked_pose_loaded
+        path = "path/to/data.npz"
+
+        data = HumanCore.get_pose_data(path)
+
+        self.assertIsNotNone(data)
+        self.assertTrue(sub_n in data)
+        self.assertTrue("Directions" in data[sub_n])
+        self.assertTrue("positions" in data[sub_n]["Directions"])
+        self.assertTrue("cameras" in data[sub_n]["Directions"])
 
 
 if __name__ == '__main__':

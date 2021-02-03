@@ -5,45 +5,12 @@ import torch
 from pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
-    'load_heatmap',
-    'decay_heatmap',
     'get_heatmaps_steps',
     'decompose_projection_matrix',
     'reproject_xyz_onto_world_coord',
     'get_joints_from_heatmap',
     'project_xyz_onto_camera_coord',
 ]
-
-
-def load_heatmap(path, n_joints):
-    joints = np.load(path)
-    h, w = joints.shape
-    y = np.zeros((h, w, n_joints))
-
-    for joint_id in range(1, n_joints + 1):
-        heatmap = (joints == joint_id).astype('float')
-        if heatmap.sum() > 0:
-            y[:, :, joint_id - 1] = decay_heatmap(heatmap)
-
-    return y
-
-
-def decay_heatmap(heatmap, sigma2=10):
-    """
-
-    Args
-        heatmap :
-           WxH matrix to decay
-        sigma2 :
-             (Default value = 1)
-
-    Returns
-
-        Heatmap obtained by gaussian-blurring the input
-    """
-    heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
-    heatmap /= np.max(heatmap)  # keep the max to 1
-    return heatmap
 
 
 def get_heatmaps_steps(xyz, p_mat, width, height):

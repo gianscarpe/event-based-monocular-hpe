@@ -6,10 +6,11 @@ DatasetCore. DHP19 and NTU cores are provided
 import os
 from abc import ABC, abstractmethod
 
+import cv2
 import numpy as np
 from scipy import io
 
-from ..utils import get_file_paths, load_heatmap
+from ..utils import get_file_paths
 from .base import BaseCore
 
 
@@ -30,7 +31,6 @@ class DHP19Core(BaseCore):
     def __init__(
         self,
         name,
-        base_path,
         data_dir,
         hm_dir,
         labels_dir,
@@ -197,3 +197,34 @@ class DHP19Core(BaseCore):
             for x in self.file_paths
         ]
         return labels_hm
+
+
+def load_heatmap(path, n_joints):
+    joints = np.load(path)
+    h, w = joints.shape
+    y = np.zeros((h, w, n_joints))
+
+    for joint_id in range(1, n_joints + 1):
+        heatmap = (joints == joint_id).astype('float')
+        if heatmap.sum() > 0:
+            y[:, :, joint_id - 1] = decay_heatmap(heatmap)
+
+    return y
+
+
+def decay_heatmap(heatmap, sigma2=10):
+    """
+
+    Args
+        heatmap :
+           WxH matrix to decay
+        sigma2 :
+             (Default value = 1)
+
+    Returns
+
+        Heatmap obtained by gaussian-blurring the input
+    """
+    heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
+    heatmap /= np.max(heatmap)  # keep the max to 1
+    return heatmap

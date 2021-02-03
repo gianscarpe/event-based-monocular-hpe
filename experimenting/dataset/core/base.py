@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 from scipy import io
 
-from ..utils import get_file_paths, load_heatmap
-
 
 class BaseCore(ABC):
     """

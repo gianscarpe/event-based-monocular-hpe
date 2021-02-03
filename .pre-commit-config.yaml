@@ -20,7 +20,7 @@ repos:
 
       - id: flake8
         name: flake8
-        stages: [commit]
+        stages: [push]
         language: system
         entry: pipenv run flake8
         types: [python]
@@ -28,7 +28,7 @@ repos:
 
       - id: mypy
         name: mypy
-        stages: [commit]
+        stages: [push]
         language: system
         entry: pipenv run mypy experimenting
         types: [python]

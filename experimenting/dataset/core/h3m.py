@@ -6,9 +6,6 @@
 #
 
 # type: ignore
-import copy
-
-import numpy as np
 
 # h36m_skeleton = Skeleton(
 #     parents=[
@@ -383,54 +380,3 @@ h36m_cameras_extrinsic_params = {
         },
     ],
 }
-
-
-def get_labels_data(path):
-    cameras = copy.deepcopy(h36m_cameras_extrinsic_params)
-    for cameras in cameras.values():
-        for i, cam in enumerate(cameras):
-            cam.update(h36m_cameras_intrinsic_params[i])
-            for k, v in cam.items():
-                if k not in ['id', 'res_w', 'res_h']:
-                    cam[k] = np.array(v, dtype='float32')
-
-                # # Normalize camera frame
-                # cam['center'] = normalize_screen_coordinates(
-                #     cam['center'], w=cam['res_w'], h=cam['res_h']
-                # ).astype('float32')
-                # cam['focal_length'] = cam['focal_length'] / cam['res_w'] * 2  #
-                # if 'translation' in cam:
-                #     cam['translation'] = cam['translation'] / 1000  # mm to meters
-
-                # Add intrinsic parameters vector
-                cam['intrinsic'] = np.concatenate(
-                    (
-                        cam['focal_length'],
-                        cam['center'],
-                        cam['radial_distortion'],
-                        cam['tangential_distortion'],
-                    )
-                )
-
-        # Load serialized dataset
-        data = np.load(path, allow_pickle=True)['positions_3d'].item()
-
-        result = {}
-        for subject, actions in data.items():
-            result[subject] = {}
-            for action_name, positions in actions.items():
-                result[subject][action_name] = {
-                    'positions': positions,
-                    'cameras': cameras[subject],
-                }
-
-        # if remove_static_joints:
-        #     # Bring the skeleton to 17 joints instead of the original 32
-        #     self.remove_joints(
-        #         [4, 5, 9, 10, 11, 16, 20, 21, 22, 23, 24, 28, 29, 30, 31]
-        #     )
-
-        #     # Rewire shoulders to the correct parents
-        #     self._skeleton._parents[11] = 8
-        #     self._skeleton._parents[14] = 8
-        return data
