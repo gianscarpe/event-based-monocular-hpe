@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 import cv2
 import numpy as np
+import torch
 from scipy import io
 
 from experimenting.utils import Skeleton

@@ -134,7 +134,6 @@ def _get_comet_logger(
         api_key=os.environ.get('COMET_API_KEY'),
         experiment_name=exp_name,
         project_name=project_name,
-        save_dir=save_dir,
     )
     return comet_logger
 
