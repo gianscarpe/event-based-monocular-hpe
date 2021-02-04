@@ -10,6 +10,7 @@ __all__ = [
     'reproject_xyz_onto_world_coord',
     'get_joints_from_heatmap',
     'project_xyz_onto_camera_coord',
+    'compose_projection_matrix',
 ]
 
 

@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 from scipy import io
 
+from experimenting.utils import Skeleton
+
 from ..utils import get_file_paths
 from .base import BaseCore
 
@@ -114,7 +116,10 @@ class DHP19Core(BaseCore):
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
-        return joints_file
+        xyz = torch.tensor(joints_file["xyz"].swapaxes(0, 1))
+        intrinsic_matrix = torch.tensor(joints_file["camera"])
+        extrinsic_matrix = torch.tensor(joints_file["M"])
+        return Skeleton(xyz), intrinsic_matrix, extrinsic_matrix
 
     def get_heatmap_from_id(self, idx):
         hm_path = self.heatmaps[idx]

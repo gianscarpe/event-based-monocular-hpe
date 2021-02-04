@@ -1,8 +1,12 @@
 import os
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 import numpy as np
+import torch
 from scipy import io
+
+from experimenting.utils import Skeleton
 
 
 class BaseCore(ABC):
@@ -74,7 +78,7 @@ class BaseCore(ABC):
     def get_label_from_id(self, idx):
         raise NotImplementedError()
 
-    def get_joint_from_id(self, idx):
+    def get_joint_from_id(self, idx) -> Tuple[Skeleton, torch.Tensor, torch.Tensor]:
         raise NotImplementedError()
 
     def get_heatmap_from_id(self, idx):
