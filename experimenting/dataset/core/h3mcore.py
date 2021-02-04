@@ -2,7 +2,12 @@ import copy
 import os
 import re
 
+import kornia
 import numpy as np
+import torch
+from pose3d_utils.camera import CameraIntrinsics
+
+from experimenting.utils import Skeleton
 
 from ..utils import get_file_paths
 from .base import BaseCore
@@ -16,6 +21,7 @@ class HumanCore(BaseCore):
     """
 
     CAMS_ID_MAP = {'54138969': 0, '55011271': 1, '58860488': 2, '60457274': 3}
+    JOINTS = [15, 25, 17, 26, 18, 1, 6, 27, 19, 2, 7, 3, 8]
     LABELS_MAP = {
         'Directions': 0,
         'Discussion': 1,
@@ -137,7 +143,7 @@ class HumanCore(BaseCore):
 
     @staticmethod
     def get_pose_data(path):
-        cameras = copy.deepcopy(h36m_cameras_extrinsic_params)
+        extrinsics = copy.deepcopy(h36m_cameras_extrinsic_params)
 
         # for cameras in cameras.values():
         #     for i, cam in enumerate(cameras):
@@ -169,13 +175,14 @@ class HumanCore(BaseCore):
 
         result = {}
         for subject, actions in data.items():
+
             subject_n = int(re.search(r"\d+", subject).group(0))
             result[subject_n] = {}
             for action_name, positions in actions.items():
 
                 result[subject_n][action_name] = {
                     'positions': positions,
-                    'cameras': cameras[subject],
+                    'extrinsics': extrinsics[subject],
                 }
 
         # if remove_static_joints:
@@ -189,13 +196,61 @@ class HumanCore(BaseCore):
         #     self._skeleton._parents[14] = 8
         return result
 
+    def _build_intrinsic(intr: dict) -> CameraIntrinsics:
+        # scale to DVS frame dimension
+        w_ratio = HumanCore.MAX_WIDTH / intr['res_w']
+        h_ratio = HumanCore.MAX_HEIGHT / intr['res_h']
+        intr_linear_matrix = CameraIntrinsics(
+            torch.tensor(
+                [
+                    [
+                        w_ratio * intr['focal_length'][0],
+                        0,
+                        w_ratio * intr['center'][0],
+                        0,
+                    ],
+                    [
+                        0,
+                        h_ratio * intr['focal_length'][1],
+                        h_ratio * intr['center'][1],
+                        0,
+                    ],
+                    [0, 0, 1, 0],
+                ]
+            )
+        )
+        return intr_linear_matrix
+
+    def _build_extrinsic(extr: dict) -> torch.tensor:
+
+        R = kornia.conversions.quaternion_to_rotation_matrix(
+            torch.tensor(extr['orientation'])
+        )
+        t = torch.tensor(extr['translation'])
+        tr = -torch.matmul(R.t(), t)
+
+        return torch.cat(
+            [
+                torch.cat((R.t(), tr.unsqueeze(1)), axis=1),
+                torch.tensor([0, 0, 0, 1]).unsqueeze(0),
+            ],
+            axis=0,
+        )
+
     def get_joint_from_id(self, idx):
         frame_info = self.frames_info[idx]
         frame_n = int(frame_info['frame'])
         joints_data = self.joints[frame_info['subject']][frame_info['action']][
             'positions'
         ][frame_n]
-        camera_data = self.joints[frame_info['subject']][frame_info['action']][
-            'cameras'
+        intr_matrix = HumanCore._build_intrinsic(
+            h36m_cameras_intrinsic_params[frame_info['cam']]
+        )
+
+        extr = self.joints[frame_info['subject']][frame_info['action']]['extrinsics'][
+            frame_info['cam']
         ]
-        return joints_data, camera_data
+
+        extr_matrix = HumanCore._build_extrinsic(extr)
+
+        return Skeleton(joints_data), intr_matrix, extr_matrix
