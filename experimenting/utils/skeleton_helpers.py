@@ -47,7 +47,7 @@ class Skeleton:
         return self._skeleton.narrow(-1, 0, 3)
 
     def get_z_ref(self):
-        return self.left_shoulder_point[-1]
+        return self.left_shoulder_point[-2]
 
     def get_left_arm_length(self):
         return (torch.norm(self.left_shoulder_point - self.left_elbow_point)) + (

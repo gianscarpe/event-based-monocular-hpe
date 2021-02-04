@@ -2,9 +2,9 @@ import copy
 import os
 import re
 
-import kornia
 import numpy as np
 import torch
+from kornia import quaternion_to_rotation_matrix
 from pose3d_utils.camera import CameraIntrinsics
 
 from experimenting.utils import Skeleton
@@ -105,7 +105,6 @@ class HumanCore(BaseCore):
 
         Examples:
             >>> HumanCore.get_label_from_filename("S1_session_2_mov_1_frame_249_cam_2.npy")
-            
         """
 
         info = HumanCore.get_frame_info(filepath)
@@ -123,9 +122,9 @@ class HumanCore(BaseCore):
 
         result = {
             "subject": int(re.search(r'(?<=S)\d+', filepath).group(0)),
-            "action": re.search("\D+", infos[0]).group(0).strip(),
-            "cam": HumanCore.CAMS_ID_MAP[re.search(f"(?<=\.)\d+", infos[0]).group(0)],
-            "frame": re.search("\d+", infos[-1]).group(0),
+            "action": re.search(r"\D+", infos[0]).group(0).strip(),
+            "cam": HumanCore.CAMS_ID_MAP[re.search(r"(?<=\.)\d+", infos[0]).group(0)],
+            "frame": re.search(r"\d+", infos[-1]).group(0),
         }
 
         return result
@@ -185,18 +184,10 @@ class HumanCore(BaseCore):
                     'extrinsics': extrinsics[subject],
                 }
 
-        # if remove_static_joints:
-        #     # Bring the skeleton to 17 joints instead of the original 32
-        #     self.remove_joints(
-        #         [4, 5, 9, 10, 11, 16, 20, 21, 22, 23, 24, 28, 29, 30, 31]
-        #     )
-
-        #     # Rewire shoulders to the correct parents
-        #     self._skeleton._parents[11] = 8
-        #     self._skeleton._parents[14] = 8
         return result
 
-    def _build_intrinsic(intr: dict) -> CameraIntrinsics:
+    @staticmethod
+    def _build_intrinsic(intr: dict) -> torch.Tensor:
         # scale to DVS frame dimension
         w_ratio = HumanCore.MAX_WIDTH / intr['res_w']
         h_ratio = HumanCore.MAX_HEIGHT / intr['res_h']
@@ -221,20 +212,19 @@ class HumanCore(BaseCore):
         )
         return intr_linear_matrix
 
-    def _build_extrinsic(extr: dict) -> torch.tensor:
+    @staticmethod
+    def _build_extrinsic(extr: dict) -> torch.Tensor:
 
-        R = kornia.conversions.quaternion_to_rotation_matrix(
-            torch.tensor(extr['orientation'])
-        )
+        R = quaternion_to_rotation_matrix(torch.tensor(extr['orientation']))
         t = torch.tensor(extr['translation'])
         tr = -torch.matmul(R.t(), t)
 
         return torch.cat(
             [
-                torch.cat((R.t(), tr.unsqueeze(1)), axis=1),
+                torch.cat([R.t(), tr.unsqueeze(1)], dim=1),
                 torch.tensor([0, 0, 0, 1]).unsqueeze(0),
             ],
-            axis=0,
+            dim=0,
         )
 
     def get_joint_from_id(self, idx):

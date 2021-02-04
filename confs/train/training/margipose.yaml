@@ -1,4 +1,5 @@
- training:
+
+training:
    module: MargiposeEstimator
    model: resnet34
    backbone: cross_subject/timecount/classification/resnet34.pt

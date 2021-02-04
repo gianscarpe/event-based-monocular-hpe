@@ -169,6 +169,7 @@ class Joints3DDataset(BaseDataset):
 
         joints_3d_normalized = sk_normalized._get_tensor()
         joints_3d_onto_cam = sk_onto_cam._get_tensor()
+
         mask = ~torch.isnan(joints_3d_normalized[:, 0])
 
         joints_3d_onto_cam[~mask] = 0
