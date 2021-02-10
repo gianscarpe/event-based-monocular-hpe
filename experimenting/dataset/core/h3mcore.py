@@ -40,8 +40,8 @@ class HumanCore(BaseCore):
         'WalkTogether': 14,
         '_ALL': 15,
     }
-    MAX_WIDTH = 346  # DVS resolution
-    MAX_HEIGHT = 260  # DVS resolution
+    MAX_WIDTH = 260  # DVS resolution
+    MAX_HEIGHT = 346  # DVS resolution
     N_JOINTS = 17
     N_CLASSES = 2
     TORSO_LENGTH = 453.5242317  # TODO
@@ -122,7 +122,7 @@ class HumanCore(BaseCore):
 
         result = {
             "subject": int(re.search(r'(?<=S)\d+', filepath).group(0)),
-            "action": re.search(r"\D+", infos[0]).group(0).strip(),
+            "action": re.search(r"\w+", infos[0]).group(0).strip(),
             "cam": HumanCore.CAMS_ID_MAP[re.search(r"(?<=\.)\d+", infos[0]).group(0)],
             "frame": re.search(r"\d+", infos[-1]).group(0),
         }
@@ -143,31 +143,6 @@ class HumanCore(BaseCore):
     @staticmethod
     def get_pose_data(path):
         extrinsics = copy.deepcopy(h36m_cameras_extrinsic_params)
-
-        # for cameras in cameras.values():
-        #     for i, cam in enumerate(cameras):
-        #         cam.update(h36m_cameras_intrinsic_params[i])
-        #         for k, v in cam.items():
-        #             if k not in ['id', 'res_w', 'res_h']:
-        #                 cam[k] = np.array(v, dtype='float32')
-
-        #             # # Normalize camera frame
-        #             # cam['center'] = normalize_screen_coordinates(
-        #             #     cam['center'], w=cam['res_w'], h=cam['res_h']
-        #             # ).astype('float32')
-        #             # cam['focal_length'] = cam['focal_length'] / cam['res_w'] * 2  #
-        #             # if 'translation' in cam:
-        #             #     cam['translation'] = cam['translation'] / 1000  # mm to meters
-
-        #             # Add intrinsic parameters vector
-        #             cam['intrinsic'] = np.concatenate(
-        #                 (
-        #                     cam['focal_length'],
-        #                     cam['center'],
-        #                     cam['radial_distortion'],
-        #                     cam['tangential_distortion'],
-        #                 )
-        #             )
 
         # Load serialized dataset
         data = np.load(path, allow_pickle=True)['positions_3d'].item()
@@ -191,41 +166,28 @@ class HumanCore(BaseCore):
         # scale to DVS frame dimension
         w_ratio = HumanCore.MAX_WIDTH / intr['res_w']
         h_ratio = HumanCore.MAX_HEIGHT / intr['res_h']
-        intr_linear_matrix = CameraIntrinsics(
-            torch.tensor(
-                [
-                    [
-                        w_ratio * intr['focal_length'][0],
-                        0,
-                        w_ratio * intr['center'][0],
-                        0,
-                    ],
-                    [
-                        0,
-                        h_ratio * intr['focal_length'][1],
-                        h_ratio * intr['center'][1],
-                        0,
-                    ],
-                    [0, 0, 1, 0],
-                ]
-            )
+
+        intr_linear_matrix = torch.tensor(
+            [
+                [w_ratio * intr['focal_length'][0], 0, w_ratio * intr['center'][0], 0],
+                [0, h_ratio * intr['focal_length'][1], h_ratio * intr['center'][1], 0],
+                [0, 0, 1, 0],
+            ]
         )
+
         return intr_linear_matrix
 
     @staticmethod
     def _build_extrinsic(extr: dict) -> torch.Tensor:
 
-        R = quaternion_to_rotation_matrix(torch.tensor(extr['orientation']))
-        t = torch.tensor(extr['translation'])
-        tr = -torch.matmul(R.t(), t)
+        quaternion = torch.tensor(extr['orientation'])[[1, 2, 3, 0]]
+        quaternion[:3] *= -1
 
-        return torch.cat(
-            [
-                torch.cat([R.t(), tr.unsqueeze(1)], dim=1),
-                torch.tensor([0, 0, 0, 1]).unsqueeze(0),
-            ],
-            dim=0,
-        )
+        R = quaternion_to_rotation_matrix(quaternion)
+        t = torch.tensor(extr['translation'])
+        tr = -torch.matmul(R, t)
+
+        return torch.cat([torch.cat([R, tr.unsqueeze(1)], dim=1)], dim=0,)
 
     def get_joint_from_id(self, idx):
         frame_info = self.frames_info[idx]
@@ -233,6 +195,8 @@ class HumanCore(BaseCore):
         joints_data = self.joints[frame_info['subject']][frame_info['action']][
             'positions'
         ][frame_n]
+
+        joints_data = joints_data[HumanCore.JOINTS]
         intr_matrix = HumanCore._build_intrinsic(
             h36m_cameras_intrinsic_params[frame_info['cam']]
         )
@@ -242,5 +206,11 @@ class HumanCore(BaseCore):
         ]
 
         extr_matrix = HumanCore._build_extrinsic(extr)
-
         return Skeleton(joints_data), intr_matrix, extr_matrix
+
+    def get_frame_from_id(self, idx):
+        path = self.file_paths[idx]
+        x = np.load(path, allow_pickle=True) / 255.0
+        if len(x.shape) == 2:
+            x = np.expand_dims(x, -1)
+        return x

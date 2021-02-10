@@ -58,7 +58,7 @@ def plot_2d_from_3d(dvs_frame, gt_skeleton, p_mat, pred_skeleton=None):
     fig = plt.figure()
 
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.axis('off')    
+    ax.axis('off')
     ax.imshow(dvs_frame)
     H, W = dvs_frame.shape
 
@@ -66,11 +66,7 @@ def plot_2d_from_3d(dvs_frame, gt_skeleton, p_mat, pred_skeleton=None):
     ax.plot(gt_joints[:, 0], gt_joints[:, 1], '.', c='red', label='gt')
     if pred_skeleton is not None:
         pred_joints = pred_skeleton.get_2d_points(p_mat, 346, 260)
-        ax.plot(pred_joints[:, 0],
-                pred_joints[:, 1],
-                '.',
-                c='blue',
-                label='pred')
+        ax.plot(pred_joints[:, 0], pred_joints[:, 1], '.', c='blue', label='pred')
 
     plt.legend()
 

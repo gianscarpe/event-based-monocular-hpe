@@ -43,7 +43,7 @@ class Skeleton:
 
         self.pelvic_point = skeleton.index_select(0, torch.LongTensor([5, 6])).mean(0)
 
-    def _get_tensor(self):
+    def _get_tensor(self) -> torch.Tensor:
         return self._skeleton.narrow(-1, 0, 3)
 
     def get_z_ref(self):
@@ -328,10 +328,10 @@ class Skeleton:
         self, height, width, p_mat=None, extrinsic_matrix=None, intrinsic_matrix=None
     ):
         if p_mat is None:
-            p_mat = compose_projection_matrix(intrinsic_matrix, extrinsic_matrix)
+            p_mat = compose_projection_matrix(intrinsic_matrix[:3], extrinsic_matrix)
         points = self._get_tensor()[:, :3].transpose(1, 0)
-        xj, yj, _ = _project_xyz_onto_image(
+        xj, yj, mask = _project_xyz_onto_image(
             points.numpy(), p_mat.numpy(), height, width
         )
-        joints = np.array([xj, yj]).transpose(1, 0)
+        joints = np.array([xj * mask, yj * mask]).transpose(1, 0)
         return joints

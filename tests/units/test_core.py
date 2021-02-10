@@ -133,7 +133,7 @@ class TestHumanCore(TestCore):
     )
     def setUp(self):
         data_dir = 'tests/data/h3m/'
-        joints_path = 'tests/data/h3m/labels'
+        joints_path = 'tests/data/h3m/labels.npz'
         self.hparams = DictConfig(
             {
                 'name': 'test',
@@ -184,7 +184,8 @@ class TestHumanCore(TestCore):
         self.assertTrue(sub_n in data)
         self.assertTrue("Directions" in data[sub_n])
         self.assertTrue("positions" in data[sub_n]["Directions"])
-        self.assertTrue("cameras" in data[sub_n]["Directions"])
+
+        self.assertTrue("extrinsics" in data[sub_n]["Directions"])
 
 
 if __name__ == '__main__':

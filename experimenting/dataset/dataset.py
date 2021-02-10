@@ -14,6 +14,8 @@ import torch
 from kornia import geometry
 from torch.utils.data import Dataset
 
+from experimenting.utils import Skeleton
+
 from .core import BaseCore
 
 __all__ = [
@@ -159,7 +161,22 @@ class Joints3DDataset(BaseDataset):
     def _get_y(self, idx):
         sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)
         sk_onto_cam = sk.project_onto_camera(extrinsic_matrix)
-        sk_normalized = sk_onto_cam.normalize(self.height, self.width, intrinsic_matrix)
+
+        joints_3d_world = sk._get_tensor()
+        joints_3d_onto_cam = sk_onto_cam._get_tensor()
+
+        mask = ~torch.isnan(joints_3d_onto_cam[:, 0])
+
+        # Set to zero unavailable points
+        joints_3d_onto_cam[~mask] = 0
+
+        sk_normalized = Skeleton(joints_3d_onto_cam).normalize(
+            self.height, self.width, intrinsic_matrix
+        )
+
+        joints_3d_normalized = sk_normalized._get_tensor()
+        joints_3d_normalized[~mask] = 0
+
         joints_2d = sk.get_2d_points(
             self.height,
             self.width,
@@ -167,16 +184,8 @@ class Joints3DDataset(BaseDataset):
             intrinsic_matrix=intrinsic_matrix,
         )
 
-        joints_3d_normalized = sk_normalized._get_tensor()
-        joints_3d_onto_cam = sk_onto_cam._get_tensor()
-
-        mask = ~torch.isnan(joints_3d_normalized[:, 0])
-
-        joints_3d_onto_cam[~mask] = 0
-        joints_3d_normalized[~mask] = 0
-
         label = {
-            "xyz": sk._get_tensor(),
+            "xyz": joints_3d_world,
             "skeleton": joints_3d_onto_cam,
             "normalized_skeleton": joints_3d_normalized,
             "z_ref": sk_onto_cam.get_z_ref(),

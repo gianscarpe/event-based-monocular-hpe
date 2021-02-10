@@ -49,7 +49,7 @@ def get_heatmap(joints, mask, heigth, width, num_joints=13):
             zipd[2] == 1
         ):  # write joint position only when projection within frame boundaries
             label_heatmaps[zipd[0], zipd[1], fmidx] = 1
-            label_heatmaps[:, :, fmidx] = decay_heatmap(label_heatmaps[:, :, fmidx])
+            # label_heatmaps[:, :, fmidx] = decay_heatmap(label_heatmaps[:, :, fmidx])
     return label_heatmaps
 
 
@@ -109,8 +109,9 @@ def _project_xyz_onto_image(xyz, p_mat, width, height):
     coord_pix_homog_norm = coord_pix_homog / coord_pix_homog[-1]
 
     u = coord_pix_homog_norm[0]
+    v = coord_pix_homog_norm[1]
     # flip v coordinate to match the  image direction
-    v = height - coord_pix_homog_norm[1]
+    # v = height - v
 
     # pixel coordinates
     u = u.astype(np.int32)
