@@ -1,4 +1,3 @@
-
 training:
    module: MargiposeEstimator
    model: resnet34

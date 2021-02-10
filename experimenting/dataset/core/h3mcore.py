@@ -1,4 +1,3 @@
-import copy
 import os
 import re
 
@@ -142,7 +141,6 @@ class HumanCore(BaseCore):
 
     @staticmethod
     def get_pose_data(path):
-        extrinsics = copy.deepcopy(h36m_cameras_extrinsic_params)
 
         # Load serialized dataset
         data = np.load(path, allow_pickle=True)['positions_3d'].item()
@@ -156,35 +154,44 @@ class HumanCore(BaseCore):
 
                 result[subject_n][action_name] = {
                     'positions': positions,
-                    'extrinsics': extrinsics[subject],
+                    'extrinsics': h36m_cameras_extrinsic_params[subject],
                 }
 
         return result
 
     @staticmethod
-    def _build_intrinsic(intr: dict) -> torch.Tensor:
+    def _build_intrinsic(intrinsic_matrix_params: dict) -> torch.Tensor:
         # scale to DVS frame dimension
-        w_ratio = HumanCore.MAX_WIDTH / intr['res_w']
-        h_ratio = HumanCore.MAX_HEIGHT / intr['res_h']
+        w_ratio = HumanCore.MAX_WIDTH / intrinsic_matrix_params['res_w']
+        h_ratio = HumanCore.MAX_HEIGHT / intrinsic_matrix_params['res_h']
 
         intr_linear_matrix = torch.tensor(
             [
-                [w_ratio * intr['focal_length'][0], 0, w_ratio * intr['center'][0], 0],
-                [0, h_ratio * intr['focal_length'][1], h_ratio * intr['center'][1], 0],
+                [
+                    w_ratio * intrinsic_matrix_params['focal_length'][0],
+                    0,
+                    w_ratio * intrinsic_matrix_params['center'][0],
+                    0,
+                ],
+                [
+                    0,
+                    h_ratio * intrinsic_matrix_params['focal_length'][1],
+                    h_ratio * intrinsic_matrix_params['center'][1],
+                    0,
+                ],
                 [0, 0, 1, 0],
             ]
         )
-
         return intr_linear_matrix
 
     @staticmethod
-    def _build_extrinsic(extr: dict) -> torch.Tensor:
+    def _build_extrinsic(extrinsic_matrix_params: dict) -> torch.Tensor:
 
-        quaternion = torch.tensor(extr['orientation'])[[1, 2, 3, 0]]
+        quaternion = torch.tensor(extrinsic_matrix_params['orientation'])[[1, 2, 3, 0]]
         quaternion[:3] *= -1
 
         R = quaternion_to_rotation_matrix(quaternion)
-        t = torch.tensor(extr['translation'])
+        t = torch.tensor(extrinsic_matrix_params['translation'])
         tr = -torch.matmul(R, t)
 
         return torch.cat([torch.cat([R, tr.unsqueeze(1)], dim=1)], dim=0,)
