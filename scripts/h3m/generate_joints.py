@@ -43,7 +43,10 @@ def constant_count_joint_generator(
         t = event[2]
         event_count_frame[x, y] += 1
         if (ind + 1) % num_events == 0:
-            end_joint_data_index = int((t - start_time) * joint_data_fps) + 1
+
+            end_joint_data_index = (
+                start_joint_data_index + int((t - start_time) * joint_data_fps) + 1
+            )
             joints_per_frame = np.nanmean(
                 joints[start_joint_data_index:end_joint_data_index, :], 0
             )
@@ -101,7 +104,6 @@ if __name__ == '__main__':
             f"S{info['subject']:01d}",
             f"{info['action']}.{cam_index_to_id_map[info['cam']]}",
         )
-        breakpoint()
 
         os.makedirs(output_dir, exist_ok=True)
         joints = []

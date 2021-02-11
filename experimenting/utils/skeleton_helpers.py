@@ -46,6 +46,21 @@ class Skeleton:
     def _get_tensor(self) -> torch.Tensor:
         return self._skeleton.narrow(-1, 0, 3)
 
+    def get_mask(self) -> torch.Tensor:
+        """
+        Get mask for `nan` joints
+
+        """
+        return ~torch.isnan(self._get_tensor()[:, 0])
+
+    def get_masked_skeleton(self, mask: torch.Tensor):
+        """
+        Return a new skeleton with masked joints set to 0
+        """
+        joints_masked = self._get_tensor()
+        joints_masked[~mask] = 0
+        return Skeleton(joints_masked)
+
     def get_z_ref(self):
         return self.left_shoulder_point[-2]
 

@@ -119,10 +119,12 @@ class HumanCore(BaseCore):
         base_subject_dir = filepath[re.search(r'(?<=S)\d+/', filepath).span()[1] :]
         infos = base_subject_dir.split('/')
 
+        cam = re.search(r"(?<=\.)\d+", infos[0])
+        cam = HumanCore.CAMS_ID_MAP[cam.group(0)] if cam is not None else None
         result = {
             "subject": int(re.search(r'(?<=S)\d+', filepath).group(0)),
             "action": re.search(r"\w+", infos[0]).group(0).strip(),
-            "cam": HumanCore.CAMS_ID_MAP[re.search(r"(?<=\.)\d+", infos[0]).group(0)],
+            "cam": cam,
             "frame": re.search(r"\d+", infos[-1]).group(0),
         }
 

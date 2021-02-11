@@ -162,20 +162,11 @@ class Joints3DDataset(BaseDataset):
         sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)
         sk_onto_cam = sk.project_onto_camera(extrinsic_matrix)
 
-        joints_3d_world = sk._get_tensor()
-        joints_3d_onto_cam = sk_onto_cam._get_tensor()
+        mask = sk_onto_cam.get_mask()
+        sk_onto_cam = sk_onto_cam.get_masked_skeleton(mask)
 
-        mask = ~torch.isnan(joints_3d_onto_cam[:, 0])
-
-        # Set to zero unavailable points
-        joints_3d_onto_cam[~mask] = 0
-
-        sk_normalized = Skeleton(joints_3d_onto_cam).normalize(
-            self.height, self.width, intrinsic_matrix
-        )
-
-        joints_3d_normalized = sk_normalized._get_tensor()
-        joints_3d_normalized[~mask] = 0
+        sk_normalized = sk_onto_cam.normalize(self.height, self.width, intrinsic_matrix)
+        sk_normalized = sk_normalized.get_masked_skeleton(mask)
 
         joints_2d = sk.get_2d_points(
             self.height,
@@ -185,9 +176,9 @@ class Joints3DDataset(BaseDataset):
         )
 
         label = {
-            "xyz": joints_3d_world,
-            "skeleton": joints_3d_onto_cam,
-            "normalized_skeleton": joints_3d_normalized,
+            "xyz": sk._get_tensor(),
+            "skeleton": sk_onto_cam._get_tensor(),
+            "normalized_skeleton": sk_normalized._get_tensor(),
             "z_ref": sk_onto_cam.get_z_ref(),
             "2d_joints": joints_2d,
             "M": extrinsic_matrix,

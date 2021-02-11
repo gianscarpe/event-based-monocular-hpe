@@ -21,21 +21,54 @@ class TestBaseDataset(unittest.TestCase):
             raise unittest.SkipTest("Skip TestCore tests")
         super(TestBaseDataset, cls).setUpClass()
 
+    def _get_mocked_skeleton(self):
+        mocked_skeleton = mock.MagicMock()
+        mocked_tensor = torch.rand((13, 3))
+        mocked_skeleton._get_tensor.return_value = mocked_tensor
+        mocked_skeleton.get_masked_skeleton.return_value = mocked_skeleton
+        return mocked_skeleton, mocked_tensor
+
+    def _get_skeletons(self):
+        mocked_skeleton, mocked_skeleton_tensor = self._get_mocked_skeleton()
+        (
+            mocked_skeleton_projected,
+            mocked_skeleton_projected_tensor,
+        ) = self._get_mocked_skeleton()
+
+        (
+            mocked_skeleton_normalized,
+            mocked_skeleton_normalized_tensor,
+        ) = self._get_mocked_skeleton()
+
+        mocked_skeleton.project_onto_camera.return_value = mocked_skeleton_projected
+
+        mocked_skeleton_projected.normalize.return_value = mocked_skeleton_normalized
+
+        return (
+            mocked_skeleton,
+            mocked_skeleton_tensor,
+            mocked_skeleton_normalized_tensor,
+            mocked_skeleton_projected_tensor,
+        )
+
     def setUp(self):
         self.mocked_dataset = mock.MagicMock(N_JOINTS=13, in_shape=(224, 224))
         self.mocked_dataset.get_frame_from_id.return_value = "image"
         self.mocked_dataset.get_label_from_id.return_value = "label"
-        self.mocked_joint = {
-            'xyz_cam': np.random.random((3, 13)),
-            'xyz': np.random.random((3, 13)),
-            'joints': np.random.randint(0, 255, (13, 2)),
-            'camera': np.random.random((3, 4)),
-            'M': np.random.random((3, 4)),
-        }
+        (
+            self.mocked_skeleton,
+            self.mocked_skeleton_tensor,
+            self.mocked_skeleton_normalized_tensor,
+            self.mocked_skeleton_projected_tensor,
+        ) = self._get_skeletons()
 
-        self.mocked_dataset.get_joint_from_id.return_value.__getitem__.side_effect = (
-            self.mocked_joint.__getitem__
+        self.mocked_joint = (
+            self.mocked_skeleton,
+            torch.rand((3, 4)),
+            torch.rand((3, 4)),
         )
+
+        self.mocked_dataset.get_joint_from_id.return_value = self.mocked_joint
 
         self.mocked_indexes = mock.MagicMock()
         self.mocked_indexes.__len__.return_value = 10
@@ -125,12 +158,8 @@ class TestJoints3DDataset(TestBaseDataset):
         mocked_normalizer = mock.Mock()
         task_dataset.normalizer = mocked_normalizer
         idx = 0
-        expected_camera = torch.DoubleTensor(self.mocked_joint['camera'])
-        expected_M = torch.DoubleTensor(self.mocked_joint['M'])
-
-        expected_xyz = torch.DoubleTensor(self.mocked_joint['xyz'].swapaxes(1, 0))
-        expected_normalized_skeleton = torch.randn((13, 3))
-        mocked_normalizer.normalise_skeleton.return_value = expected_normalized_skeleton
+        expected_camera = self.mocked_joint[1]
+        expected_M = self.mocked_joint[2]
 
         x, y = task_dataset[idx]
 
@@ -140,9 +169,12 @@ class TestJoints3DDataset(TestBaseDataset):
         self.assertEqual(x, "image")
         self.assertTrue(torch.equal(y['camera'], expected_camera))
         self.assertTrue(torch.equal(y['M'], expected_M))
-        self.assertTrue(torch.equal(y['xyz'], expected_xyz))
+        self.assertTrue(torch.equal(self.mocked_skeleton_tensor, y['xyz']))
 
         self.assertTrue(
-            torch.equal(y['normalized_skeleton'].float(), expected_normalized_skeleton)
+            torch.equal(
+                y['normalized_skeleton'], self.mocked_skeleton_normalized_tensor
+            )
         )
-        mocked_normalizer.normalise_skeleton.assert_called_once()
+
+        self.mocked_skeleton.project_onto_camera.assert_called_once()

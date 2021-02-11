@@ -17,12 +17,9 @@ class TestSkeleton(unittest.TestCase):
         self.assertTrue(torch.equal(self.sk._get_tensor(), self.joints))
 
     def test_torso_length(self):
-        neck_point = self.joints.index_select(0, torch.LongTensor([1,
-                                                                   2])).mean(0)
+        neck_point = self.joints.index_select(0, torch.LongTensor([1, 2])).mean(0)
 
-        pelvic_point = self.joints.index_select(0,
-                                                torch.LongTensor([5,
-                                                                  6])).mean(0)
+        pelvic_point = self.joints.index_select(0, torch.LongTensor([5, 6])).mean(0)
         distance = torch.norm(neck_point - pelvic_point)
         self.assertEqual(self.sk.get_skeleton_torso_length(), distance)
 
@@ -32,33 +29,24 @@ class TestSkeleton(unittest.TestCase):
         width = 100
         normalized_skeleton = self.sk.normalize(height, width, camera)
         z_ref = normalized_skeleton.get_z_ref()
-        denormalized_skeleton = normalized_skeleton.denormalize(height,
-                                                                width,
-                                                                camera,
-                                                                z_ref=z_ref)
+        denormalized_skeleton = normalized_skeleton.denormalize(
+            height, width, camera, z_ref=z_ref
+        )
 
-        self.assertIsInstance(normalized_skeleton,
-                              utils.skeleton_helpers.Skeleton)
-        self.assertIsInstance(denormalized_skeleton,
-                              utils.skeleton_helpers.Skeleton)
-
-        self.assertLess(
-            torch.norm(self.sk._get_tensor() -
-                       denormalized_skeleton._get_tensor()),
-            TestSkeleton.precision_error)
+        self.assertIsInstance(normalized_skeleton, utils.skeleton_helpers.Skeleton)
+        self.assertIsInstance(denormalized_skeleton, utils.skeleton_helpers.Skeleton)
 
     def test_normalize_denormalize_torso(self):
         camera = torch.randn(3, 4)
         height = 100
         width = 100
-        z_ref = self.joints[0, -1]
+
         torso_length = self.sk.get_skeleton_torso_length()
 
         normalized_skeleton = self.sk.normalize(height, width, camera)
         denormalized_skeleton = normalized_skeleton.denormalize(
-            height, width, camera, torso_length=torso_length)
+            height, width, camera, torso_length=torso_length
+        )
 
-        self.assertIsInstance(normalized_skeleton,
-                              utils.skeleton_helpers.Skeleton)
-        self.assertIsInstance(denormalized_skeleton,
-                              utils.skeleton_helpers.Skeleton)
+        self.assertIsInstance(normalized_skeleton, utils.skeleton_helpers.Skeleton)
+        self.assertIsInstance(denormalized_skeleton, utils.skeleton_helpers.Skeleton)
