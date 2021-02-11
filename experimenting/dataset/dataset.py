@@ -12,9 +12,9 @@ Provided:
 
 import torch
 from kornia import geometry
-from pose3d_utils.camera import CameraIntrinsics
-from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 from torch.utils.data import Dataset
+
+from experimenting.utils import Skeleton
 
 from .core import BaseCore
 
@@ -155,46 +155,34 @@ class Joints3DDataset(BaseDataset):
         super(Joints3DDataset, self).__init__(dataset, indexes, transform, False)
 
         self.n_joints = dataset.N_JOINTS
-        self.normalizer = SkeletonNormaliser()
         self.height = dataset.in_shape[0]
         self.width = dataset.in_shape[1]
 
     def _get_y(self, idx):
-        joints_file = self.dataset.get_joint_from_id(idx)
+        sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)
+        sk_onto_cam = sk.project_onto_camera(extrinsic_matrix)
 
-        joints = torch.tensor(joints_file["xyz_cam"].swapaxes(0, 1))
+        mask = sk_onto_cam.get_mask()
+        sk_onto_cam = sk_onto_cam.get_masked_skeleton(mask)
 
-        xyz = torch.tensor(joints_file["xyz"].swapaxes(0, 1))
-        joints_2d = torch.tensor(joints_file["joints"])
-        mask = ~torch.isnan(joints[:, 0])
-        joints[~mask] = 0
-        xyz[~mask] = 0
-        skeleton = torch.cat(
-            [joints, torch.ones((self.n_joints, 1), dtype=joints.dtype)], axis=1
+        sk_normalized = sk_onto_cam.normalize(self.height, self.width, intrinsic_matrix)
+        sk_normalized = sk_normalized.get_masked_skeleton(mask)
+
+        joints_2d = sk.get_2d_points(
+            self.height,
+            self.width,
+            extrinsic_matrix=extrinsic_matrix,
+            intrinsic_matrix=intrinsic_matrix,
         )
 
-        z_ref = joints[4][2]
-        camera = torch.tensor(joints_file["camera"])
-        extrinsic_matrix = torch.tensor(joints_file["M"])
-        # TODO: select a standard format for joints (better 3xnum_joints)
-
-        normalized_skeleton = self.normalizer.normalise_skeleton(
-            skeleton, z_ref, CameraIntrinsics(camera), self.height, self.width,
-        ).narrow(-1, 0, 3)
-
-        normalized_skeleton[~mask] = 0
-        if torch.isnan(normalized_skeleton).any():
-            breakpoint()
-
         label = {
-            "xyz": xyz,
-            "skeleton": joints,
-            "normalized_skeleton": normalized_skeleton,
-            "z_ref": z_ref,
+            "xyz": sk._get_tensor(),
+            "skeleton": sk_onto_cam._get_tensor(),
+            "normalized_skeleton": sk_normalized._get_tensor(),
+            "z_ref": sk_onto_cam.get_z_ref(),
             "2d_joints": joints_2d,
             "M": extrinsic_matrix,
-            "camera": camera,
+            "camera": intrinsic_matrix,
             "mask": mask,
-            "path": self.dataset.file_paths[idx],
         }
         return label

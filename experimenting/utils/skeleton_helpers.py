@@ -12,6 +12,7 @@ from pose3d_utils.skeleton_normaliser import SkeletonNormaliser
 
 from .cv_helpers import (
     _project_xyz_onto_image,
+    compose_projection_matrix,
     project_xyz_onto_camera_coord,
     reproject_xyz_onto_world_coord,
 )
@@ -42,11 +43,26 @@ class Skeleton:
 
         self.pelvic_point = skeleton.index_select(0, torch.LongTensor([5, 6])).mean(0)
 
-    def _get_tensor(self):
+    def _get_tensor(self) -> torch.Tensor:
         return self._skeleton.narrow(-1, 0, 3)
 
+    def get_mask(self) -> torch.Tensor:
+        """
+        Get mask for `nan` joints
+
+        """
+        return ~torch.isnan(self._get_tensor()[:, 0])
+
+    def get_masked_skeleton(self, mask: torch.Tensor):
+        """
+        Return a new skeleton with masked joints set to 0
+        """
+        joints_masked = self._get_tensor()
+        joints_masked[~mask] = 0
+        return Skeleton(joints_masked)
+
     def get_z_ref(self):
-        return self.head_point[-1]
+        return self.left_shoulder_point[-2]
 
     def get_left_arm_length(self):
         return (torch.norm(self.left_shoulder_point - self.left_elbow_point)) + (
@@ -323,10 +339,14 @@ class Skeleton:
         ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
-    def get_2d_points(self, p_mat, height, width):
+    def get_2d_points(
+        self, height, width, p_mat=None, extrinsic_matrix=None, intrinsic_matrix=None
+    ):
+        if p_mat is None:
+            p_mat = compose_projection_matrix(intrinsic_matrix[:3], extrinsic_matrix)
         points = self._get_tensor()[:, :3].transpose(1, 0)
-        xj, yj, _ = _project_xyz_onto_image(
+        xj, yj, mask = _project_xyz_onto_image(
             points.numpy(), p_mat.numpy(), height, width
         )
-        joints = np.array([xj, yj]).transpose(1, 0)
+        joints = np.array([xj * mask, yj * mask]).transpose(1, 0)
         return joints

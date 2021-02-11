@@ -6,105 +6,15 @@ DatasetCore. DHP19 and NTU cores are provided
 import os
 from abc import ABC, abstractmethod
 
+import cv2
 import numpy as np
+import torch
 from scipy import io
 
-from ..utils import get_file_paths, load_heatmap
+from experimenting.utils import Skeleton
 
-
-class BaseCore(ABC):
-    """
-    Base class for dataset cores. Each core should implement get_frame_info and
-    load_frame_from_id for base functionalities. Labels, heatmaps, and joints
-    loading may be implemented as well to use the relative task implementations
-    """
-
-    def __init__(self, name, partition):
-        self._set_partition_function(partition)
-        self.name = name
-
-    def _set_partition_function(self, partition_param):
-        if partition_param is None:
-            partition_param = "cross-subject"
-
-        if partition_param == "cross-subject":
-            self.partition_function = self.get_cross_subject_partition_function()
-        else:
-            self.partition_function = self.get_cross_view_partition_function()
-
-    @staticmethod
-    @abstractmethod
-    def get_frame_info(path):
-        """
-        Get frame attributes given the path
-
-        Args:
-          path: frame path
-
-        Returns:
-          Frame attributes as a subscriptable object
-        """
-
-    def get_cross_subject_partition_function(self):
-        """
-        Get partition function for cross-subject evaluation method
-
-        Note:
-          Core class must implement get_test_subjects
-          get_frame_info must provide frame's subject
-        """
-        return (
-            lambda x: type(self).get_frame_info(x)["subject"]
-            in self.get_test_subjects()
-        )
-
-    def get_cross_view_partition_function(self):
-        """
-        Get partition function for cross-view evaluation method
-
-        Note:
-          Core class must implement get_test_view
-          get_frame_info must provide frame's cam
-        """
-
-        return lambda x: type(self).get_frame_info(x)["cam"] in self.get_test_view()
-
-    def get_test_subjects(self):
-        raise NotImplementedError()
-
-    def get_test_view(self):
-        raise NotImplementedError()
-
-    def get_frame_from_id(self, idx):
-        raise NotImplementedError()
-
-    def get_label_from_id(self, idx):
-        raise NotImplementedError()
-
-    def get_joint_from_id(self, idx):
-        raise NotImplementedError()
-
-    def get_heatmap_from_id(self, idx):
-        raise NotImplementedError()
-
-    def get_train_test_split(self, split_at=0.8):
-        """
-        Get train, val, and test indexes accordingly to partition function
-
-        Args:
-            split_at: Split train/val according to a given percentage
-        Returns:
-            Train, val, and test indexes as numpy vectors
-        """
-        data_indexes = np.arange(len(self.file_paths))
-        test_subject_indexes_mask = [
-            self.partition_function(x) for x in self.file_paths
-        ]
-
-        test_indexes = data_indexes[test_subject_indexes_mask]
-        data_index = data_indexes[~np.in1d(data_indexes, test_indexes)]
-        train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
-        return train_indexes, val_indexes, test_indexes
+from ..utils import get_file_paths
+from .base import BaseCore
 
 
 class DHP19Core(BaseCore):
@@ -124,7 +34,6 @@ class DHP19Core(BaseCore):
     def __init__(
         self,
         name,
-        base_path,
         data_dir,
         hm_dir,
         labels_dir,
@@ -208,7 +117,10 @@ class DHP19Core(BaseCore):
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
-        return joints_file
+        xyz = torch.tensor(joints_file["xyz"].swapaxes(0, 1))
+        intrinsic_matrix = torch.tensor(joints_file["camera"])
+        extrinsic_matrix = torch.tensor(joints_file["M"])
+        return Skeleton(xyz), intrinsic_matrix, extrinsic_matrix
 
     def get_heatmap_from_id(self, idx):
         hm_path = self.heatmaps[idx]
@@ -293,65 +205,32 @@ class DHP19Core(BaseCore):
         return labels_hm
 
 
-class HumanCore(BaseCore):
-    def __init__(self, hparams_dataset):
-        pass
+def load_heatmap(path, n_joints):
+    joints = np.load(path)
+    h, w = joints.shape
+    y = np.zeros((h, w, n_joints))
+
+    for joint_id in range(1, n_joints + 1):
+        heatmap = (joints == joint_id).astype('float')
+        if heatmap.sum() > 0:
+            y[:, :, joint_id - 1] = decay_heatmap(heatmap)
+
+    return y
 
 
-class NTUCore(BaseCore):
-    DEFAULT_TEST_SUBJECTS = [18, 19, 20]
+def decay_heatmap(heatmap, sigma2=10):
+    """
 
-    def __init__(
-        self, name, data_dir, labels_dir, test_subjects, partition, *args, **kwargs,
-    ):
-        super(NTUCore, self).__init__(name, partition)
-        self.file_paths = NTUCore._get_file_paths(data_dir)
+    Args
+        heatmap :
+           WxH matrix to decay
+        sigma2 :
+             (Default value = 1)
 
-        if test_subjects is None:
-            self.subjects = NTUCore.DEFAULT_TEST_SUBJECTS
-        else:
-            self.subjects = test_subjects
+    Returns
 
-    @staticmethod
-    def load_frame(path):
-        x = np.load(path, allow_pickle=True) / 255.0
-        if len(x.shape) == 2:
-            x = np.expand_dims(x, -1)
-        return x
-
-    def get_frame_from_id(self, idx):
-        img_name = self.file_paths[idx]
-        x = self.load_frame(img_name)
-        return x
-
-    @staticmethod
-    def get_frame_info(path):
-
-        dir_name = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(path)))
-        )
-        info = {"subject": int(dir_name[-2:])}
-        return info
-
-    def get_test_subjects(self):
-        return self.subjects
-
-    @staticmethod
-    def _get_file_paths(data_dir):
-        file_paths = []
-        for root, dirs, files in os.walk(data_dir):
-            if "part_" in root:
-                for f in files:
-                    file_path = os.path.join(root, f)
-                    file_paths.append(file_path)
-        return file_paths
-
-
-def _split_set(data_indexes, split_at=0.8):
-    np.random.shuffle(data_indexes)
-    n_data_for_training = len(data_indexes)
-    train_split = int(split_at * n_data_for_training)
-    train_indexes = data_indexes[:train_split]
-    val_indexes = data_indexes[train_split:]
-
-    return train_indexes, val_indexes
+        Heatmap obtained by gaussian-blurring the input
+    """
+    heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
+    heatmap /= np.max(heatmap)  # keep the max to 1
+    return heatmap

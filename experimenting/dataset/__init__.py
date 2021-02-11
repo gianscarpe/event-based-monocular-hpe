@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .core import BaseCore
+from .core import BaseCore, DHP19Core, HumanCore, NTUCore
 from .factory import (
     AutoEncoderConstructor,
     BaseDataFactory,

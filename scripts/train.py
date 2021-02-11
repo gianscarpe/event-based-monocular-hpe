@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
     trainer = fit(cfg)
-    trainer.test()
+    results = trainer.test()
+    logging.info("RESULTS: ", results)
 
 
 if __name__ == '__main__':

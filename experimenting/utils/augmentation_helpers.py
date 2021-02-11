@@ -18,17 +18,6 @@ def get_files_paths_in_subtree(path, extensions):
     return sorted(video_files)
 
 
-def get_file_paths(path, extensions):
-    extension_regex = "|".join(extensions)
-    print(extension_regex)
-    res = [
-        os.path.join(path, f)
-        for f in os.listdir(path)
-        if re.search(r'({})$'.format(extension_regex), f)
-    ]
-    return sorted(res)
-
-
 def flatten(d):
     out = {}
     for key, val in d.items():
