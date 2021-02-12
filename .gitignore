@@ -62,9 +62,7 @@ docs/_build/
 /lightning_logs/
 git
 !src/tests/data
-config.yaml
 /src/model_zoo/
-config.yaml
 *.csv
 *.tex
 *.png
