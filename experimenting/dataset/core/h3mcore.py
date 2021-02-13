@@ -108,7 +108,7 @@ class HumanCore(BaseCore):
 
         info = HumanCore.get_frame_info(filepath)
 
-        return HumanCore.LABELS_MAP[info['action']]
+        return HumanCore.LABELS_MAP[info['action'].split(" ")[0]]
 
     @staticmethod
     def get_frame_info(filepath):
@@ -118,12 +118,13 @@ class HumanCore(BaseCore):
         """
         base_subject_dir = filepath[re.search(r'(?<=S)\d+/', filepath).span()[1] :]
         infos = base_subject_dir.split('/')
+        
 
-        cam = re.search(r"(?<=\.)\d+", infos[0])
+        cam = re.search(r"(?<=\.)\d+", base_subject_dir)
         cam = HumanCore.CAMS_ID_MAP[cam.group(0)] if cam is not None else None
         result = {
             "subject": int(re.search(r'(?<=S)\d+', filepath).group(0)),
-            "action": re.search(r"\w+", infos[0]).group(0).strip(),
+            "action": re.findall(r"(\w+\s?\d?)\.\d+", base_subject_dir)[0],
             "cam": cam,
             "frame": re.search(r"\d+", infos[-1]).group(0),
         }

@@ -150,9 +150,35 @@ class TestHumanCore(TestCore):
         file_path = 'tests/data/h3m/S1/Directions 1.54138969S1/frame0000001.npy'
         expected_info = {
             'cam': 0,
-            'action': 'Directions',
+            'action': 'Directions 1',
             'subject': 1,
             'frame': '0000001',
+        }
+
+        result_info = HumanCore.get_frame_info(file_path)
+
+        self.assertEqual(expected_info, result_info)
+
+    def test_get_frame_info_noisy(self):
+        file_path = 'tests/data/h3m/S1/Videos/Directions 1.55011271/frame0000001.npy'
+        expected_info = {
+            'cam': 1,
+            'action': 'Directions 1',
+            'subject': 1,
+            'frame': '0000001',
+        }
+
+        result_info = HumanCore.get_frame_info(file_path)
+
+        self.assertEqual(expected_info, result_info)
+
+    def test_get_frame_info_different_values(self):
+        file_path = 'tests/data/h3m/S1/Videos/Directions.60457274/frame0000010.npy'
+        expected_info = {
+            'cam': 3,
+            'action': 'Directions',
+            'subject': 1,
+            'frame': '0000010',
         }
 
         result_info = HumanCore.get_frame_info(file_path)

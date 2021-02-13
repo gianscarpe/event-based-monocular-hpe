@@ -83,22 +83,28 @@ if __name__ == '__main__':
     joint_gt = {}
     output_joint_path = os.path.join(output_base_dir, "3d_joints")
 
-    for event_file in event_files:
+    for event_file in tqdm(event_files):
         events = el.utils.load_from_file(event_file)
-        data = HumanCore.get_pose_data(joints_file)
+        
+
         info = HumanCore.get_frame_info(event_file)
         if info['subject'] == 11 and info['action'] == "Directions":
             print("Discard")
             continue
 
-        joints = data[info['subject']][info['action']]['positions']
+        if "_ALL" in info['action']:
+            print(f"Discard {info}")
+            continue
 
+        joints = data[info['subject']][info['action']]['positions']
+        
         cam_index_to_id_map = dict(
             zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
         )
         frame_and_gt_generator = constant_count_joint_generator(
             events, joints, 7500, hw_info.size
         )
+
         output_dir = os.path.join(
             output_base_dir,
             f"S{info['subject']:01d}",
