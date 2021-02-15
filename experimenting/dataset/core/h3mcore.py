@@ -32,11 +32,12 @@ class HumanCore(BaseCore):
         'Sitting': 7,
         'SittingDown': 8,
         'Smoking': 9,
-        'TakingPhoto': 10,
+        'Photo': 10,
         'Waiting': 11,
         'Walking': 12,
-        'WalkingDog': 13,
+        'WalkDog': 13,
         'WalkTogether': 14,
+        'Purchases': 15,
         '_ALL': 15,
     }
     MAX_WIDTH = 260  # DVS resolution
@@ -73,7 +74,7 @@ class HumanCore(BaseCore):
         self.classification_labels = [
             HumanCore.get_label_from_filename(x_path) for x_path in self.file_paths
         ]
-
+        self.n_joints = HumanCore.N_JOINTS
         self.joints = HumanCore.get_pose_data(joints_path)
         self.frames_info = [HumanCore.get_frame_info(x) for x in self.file_paths]
         # self.heatmaps = self._retrieve_2hm_files(hm_dir, "npy")
@@ -150,7 +151,7 @@ class HumanCore(BaseCore):
 
         result = {}
         for subject, actions in data.items():
-
+            
             subject_n = int(re.search(r"\d+", subject).group(0))
             result[subject_n] = {}
             for action_name, positions in actions.items():
@@ -200,12 +201,14 @@ class HumanCore(BaseCore):
         return torch.cat([torch.cat([R, tr.unsqueeze(1)], dim=1)], dim=0,)
 
     def get_joint_from_id(self, idx):
+        print(self.file_paths[idx])
         frame_info = self.frames_info[idx]
         frame_n = int(frame_info['frame'])
         joints_data = self.joints[frame_info['subject']][frame_info['action']][
             'positions'
         ][frame_n]
 
+        
         joints_data = joints_data[HumanCore.JOINTS]
         intr_matrix = HumanCore._build_intrinsic(
             h36m_cameras_intrinsic_params[frame_info['cam']]

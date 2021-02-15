@@ -1,3 +1,4 @@
 pytest
 pre-commit
 pytest-cov
+coveralls

@@ -1,7 +1,7 @@
 defaults:
   - optimizer: adam
   - lr_scheduler: step_lr
-  - dataset: timecount
+  - dataset: constantcount_h3m
   - loss: pixelwiseloss
   - augmentation: no_aug
   - training: margipose
@@ -14,7 +14,7 @@ early_stopping: 10
 batch_size: 64
 num_workers: 12
 debug: false
-root_dir: /home/gianscarpe/dev
+root_dir: /data/gscarpellini/exps
 model_zoo: /data/gscarpellini/model_zoo
 project_name: event_hpe
 resume: false
