@@ -68,11 +68,13 @@ def get_training_params(cfg: DictConfig):
         "weights_summary": "top",
         "logger": logger,
         "profiler": profiler,
-        "accelerator": cfg["accelerator"],
     }
 
-    torch.autograd.set_detect_anomaly(debug)
+    if "accelerator" in cfg:
+        trainer_configuration['accelerator'] = cfg["accelerator"]
+
     if debug:
+        torch.autograd.set_detect_anomaly(debug)
         trainer_configuration["overfit_batches"] = 0.0005
         trainer_configuration["log_gpu_memory"] = True
 

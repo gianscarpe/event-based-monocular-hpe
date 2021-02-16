@@ -10,6 +10,7 @@ Provided:
 
 """
 
+import albumentations
 import torch
 from kornia import geometry
 from torch.utils.data import Dataset
@@ -35,7 +36,6 @@ class BaseDataset(Dataset):
     def __init__(
         self, dataset: BaseCore, indexes=None, transform=None, augment_label=False
     ):
-
         self.dataset = dataset
         self.x_indexes = indexes
         self.transform = transform
@@ -160,6 +160,7 @@ class Joints3DDataset(BaseDataset):
 
     def _get_y(self, idx):
         sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)
+
         sk_onto_cam = sk.project_onto_camera(extrinsic_matrix)
 
         mask = sk_onto_cam.get_mask()

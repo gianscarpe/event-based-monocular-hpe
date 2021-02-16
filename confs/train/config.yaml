@@ -11,8 +11,9 @@ defaults:
 gpus: [0]
 epochs: 100
 early_stopping: 10
-batch_size: 64
+batch_size: 32
 num_workers: 12
+
 debug: false
 root_dir: /data/gscarpellini/exps
 model_zoo: /data/gscarpellini/model_zoo
@@ -20,4 +21,3 @@ project_name: event_hpe
 resume: false
 load_path:
 result_file: aucs.json 
-accelerator: 'ddp'
