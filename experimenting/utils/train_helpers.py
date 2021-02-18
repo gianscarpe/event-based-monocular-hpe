@@ -69,8 +69,9 @@ def get_training_params(cfg: DictConfig):
         "profiler": profiler,
     }
 
-    if "accelerator" in cfg:
-        trainer_configuration['accelerator'] = cfg["accelerator"]
+    if (isinstance(gpus, list) and len(gpus) > 1) or gpus > 1:
+        if "accelerator" in cfg:
+            trainer_configuration['accelerator'] = cfg["accelerator"]
 
     if debug:
         torch.autograd.set_detect_anomaly(debug)

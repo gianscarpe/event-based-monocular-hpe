@@ -62,7 +62,7 @@ class Skeleton:
         return Skeleton(joints_masked)
 
     def get_z_ref(self):
-        return self.left_shoulder_point[-2]
+        return self.head_point[-2]
 
     def get_left_arm_length(self):
         return (torch.norm(self.left_shoulder_point - self.left_elbow_point)) + (

@@ -16,9 +16,9 @@ params:
   n_classes: 33
   test_subjects: [1, 2, 3, 4, 5]
   movements: 
-    cams: [0,1,2,3]
-    test_cams: [1, 2]
-    n_channels: 1
-    n_joints: 13
-    partition: cross-view
-    torso_length: 453.5242317
+  cams: [0,1,2,3]
+  test_cams: [1, 2]
+  n_channels: 1
+  n_joints: 13
+  partition: cross-subject
+  torso_length: 453.5242317
