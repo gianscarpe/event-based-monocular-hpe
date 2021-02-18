@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import scipy
 import torch
-from pose3d_utils.coords import ensure_homogeneous
 
 __all__ = [
     'get_heatmaps_steps',
@@ -205,3 +204,18 @@ def get_joints_from_heatmap(y_pr):
             confidence[b, j] = max_value
 
     return p_coords_max, confidence
+
+
+def ensure_homogeneous(coords, d):
+    if isinstance(coords, np.ndarray):
+        coords = torch.tensor(coords)
+
+    if coords.size(-1) == d + 1:
+        return coords
+    assert coords.size(-1) == d
+    return cartesian_to_homogeneous(coords)
+
+
+def cartesian_to_homogeneous(cart):
+    hom = torch.cat([cart, torch.ones_like(cart.narrow(-1, 0, 1))], -1)
+    return hom

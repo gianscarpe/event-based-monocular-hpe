@@ -157,7 +157,7 @@ class HumanCore(BaseCore):
             for action_name, positions in actions.items():
 
                 result[subject_n][action_name] = {
-                    'positions': torch.tensor(positions),
+                    'positions': positions,
                     'extrinsics': h36m_cameras_extrinsic_params[subject],
                 }
 
@@ -218,7 +218,7 @@ class HumanCore(BaseCore):
         ]
 
         extr_matrix = HumanCore._build_extrinsic(extr)
-        return Skeleton(joints_data.clone().detach()), intr_matrix, extr_matrix
+        return Skeleton(joints_data), intr_matrix, extr_matrix
 
     def get_frame_from_id(self, idx):
         path = self.file_paths[idx]
