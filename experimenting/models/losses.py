@@ -4,11 +4,15 @@ Losses implementations
 
 import torch
 import torch.nn as nn
-
 from kornia.geometry import spatial_expectation2d
 
 from ..agents.margipose_estimator import predict3d
-from ..utils import SoftArgmax2D, average_loss, get_joints_from_heatmap, js_reg_losses
+from ..utils import (
+    SoftArgmax2D,
+    average_loss,
+    get_joints_from_heatmap,
+    js_reg_losses,
+)
 from .metrics import MPJPE
 
 __all__ = ['HeatmapLoss', 'PixelWiseLoss', 'MultiPixelWiseLoss']
@@ -18,6 +22,7 @@ class HeatmapLoss(nn.Module):
     """
     from https://github.com/anibali/margipose
     """
+
     def __init__(self, reduction='mask_mean', n_joints=13):
         """
         Args:
@@ -50,8 +55,7 @@ class HeatmapLoss(nn.Module):
         ndims = 2
         n_joints = pred.shape[1]
 
-        loss = torch.add(self._mpjpe(pred, gt),
-                         self.divergence(pred, gt, ndims))
+        loss = torch.add(self._mpjpe(pred, gt), self.divergence(pred, gt, ndims))
         gt_mask = gt.view(gt.size()[0], -1, n_joints).sum(1) > 0
 
         return self.reduction(loss, gt_mask)
@@ -61,6 +65,7 @@ class PixelWiseLoss(nn.Module):
     """
     from https://github.com/anibali/margipose/
     """
+
     def __init__(self, reduction='mask_mean', divergence=True):
         super(PixelWiseLoss, self).__init__()
         self.divergence = divergence
@@ -84,6 +89,7 @@ class MultiPixelWiseLoss(PixelWiseLoss):
     """
     from https://github.com/anibali/margipose
     """
+
     def __init__(self, reduction='mask_mean', divergence=True):
         """
         Args:
@@ -98,11 +104,11 @@ class MultiPixelWiseLoss(PixelWiseLoss):
 
         target_xy = gt_joints.narrow(-1, 0, 2)
         target_zy = torch.cat(
-            [gt_joints.narrow(-1, 2, 1),
-             gt_joints.narrow(-1, 1, 1)], -1)
+            [gt_joints.narrow(-1, 2, 1), gt_joints.narrow(-1, 1, 1)], -1
+        )
         target_xz = torch.cat(
-            [gt_joints.narrow(-1, 0, 1),
-             gt_joints.narrow(-1, 2, 1)], -1)
+            [gt_joints.narrow(-1, 0, 1), gt_joints.narrow(-1, 2, 1)], -1
+        )
 
         pred_joints = predict3d(pred_xy_hm, pred_zy_hm, pred_xz_hm)
 

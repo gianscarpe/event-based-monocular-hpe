@@ -39,11 +39,11 @@ def get_training_params(cfg: DictConfig):
     """
 
     exp_path = os.getcwd()
-    # logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
+    logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
     #  logger = _get_comet_logger(cfg.exp_name, cfg.project_name)
-    logger = _get_comet_logger(
-        cfg.exp_name, cfg.project_name, os.path.join(exp_path, "tb_logs")
-    )
+    # logger = _get_comet_logger(
+    # cfg.exp_name, cfg.project_name, os.path.join(exp_path, "tb_logs")
+    # )
 
     debug = cfg["debug"]
 
@@ -68,11 +68,13 @@ def get_training_params(cfg: DictConfig):
         "weights_summary": "top",
         "logger": logger,
         "profiler": profiler,
-        "accelerator": cfg["accelerator"],
     }
 
-    torch.autograd.set_detect_anomaly(debug)
+    if "accelerator" in cfg:
+        trainer_configuration['accelerator'] = cfg["accelerator"]
+
     if debug:
+        torch.autograd.set_detect_anomaly(debug)
         trainer_configuration["overfit_batches"] = 0.0005
         trainer_configuration["log_gpu_memory"] = True
 

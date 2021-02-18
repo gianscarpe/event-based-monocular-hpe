@@ -27,34 +27,46 @@ def normalized_3sigma(input_img: np.ndarray) -> np.ndarray:
 
 
 def constant_count_joint_generator(
-    events: np.array, joints: np.array, num_events: int, frame_size: Tuple[int, int]
+    events: np.array,
+    joints: np.array,
+    num_events: int,
+    frame_size: Tuple[int, int],
+    n_cameras: int = 4,
 ) -> np.array:
     """
     Generate constant_count frames and corresponding gt 3D joints labels. 3D joints labels were acquired at 200fps
     """
-    event_count_frame = np.zeros((frame_size[0], frame_size[1], 1), dtype="int")
+    event_count_frame = np.zeros((n_cameras, frame_size[0], frame_size[1]), dtype="int")
+
     start_joint_data_index = 0
-    start_time = events[0][2]
     joint_data_fps = 200
+    upper_bound = len(joints) * 1 / 200
 
     for ind, event in enumerate(events):
         y = int(event[0])
         x = int(event[1])
         t = event[2]
-        event_count_frame[x, y] += 1
+        cam = int(event[-1])  # using camera info similar to DHP19
+
+        event_count_frame[cam, x, y] += 1
+
+        if t > upper_bound:
+            # Recording ends here
+            return
+
         if (ind + 1) % num_events == 0:
 
-            end_joint_data_index = (
-                start_joint_data_index + int((t - start_time) * joint_data_fps) + 1
-            )
+            end_joint_data_index = int(t * joint_data_fps) + 1
             joints_per_frame = np.nanmean(
                 joints[start_joint_data_index:end_joint_data_index, :], 0
             )
 
-            yield normalized_3sigma(event_count_frame), joints_per_frame
+            for idx in range(n_cameras):
+                event_count_frame[idx] = normalized_3sigma(event_count_frame[idx])
+
+            yield event_count_frame, joints_per_frame
             event_count_frame = np.zeros_like(event_count_frame)
 
-            start_time = t
             start_joint_data_index = end_joint_data_index
 
 
@@ -66,7 +78,7 @@ def parse_args():
     parser.add_argument("--joints_file", type=str, help="file of .npz joints")
     parser.add_argument("--output_base_dir", type=str, help="output_dir")
     parser.add_argument(
-        "--num_events", type=int, default=5000, help="num events to accumulate"
+        "--num_events", type=int, default=30000, help="num events to accumulate"
     )
 
     args = parser.parse_args()
@@ -77,48 +89,70 @@ if __name__ == '__main__':
     args = parse_args()
     event_files = args.event_files
     joints_file = args.joints_file
+    num_events = args.num_events
     data = HumanCore.get_pose_data(joints_file)
     output_base_dir = args.output_base_dir
     hw_info = el.utils.get_hw_property('dvs')
-    joint_gt = {}
+    n_cameras = 4  # Number of parallel cameras
+
     output_joint_path = os.path.join(output_base_dir, "3d_joints")
 
-    for event_file in tqdm(event_files):
-        events = el.utils.load_from_file(event_file)
-        
+    joint_gt = {f"S{s:01d}": {} for s in range(1, 12)}
 
-        info = HumanCore.get_frame_info(event_file)
-        if info['subject'] == 11 and info['action'] == "Directions":
+    cam_index_to_id_map = dict(
+        zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
+    )
+
+    for idx in tqdm(range(0, len(event_files), n_cameras)):
+        info = HumanCore.get_frame_info(event_files[idx])
+        action = info['action']
+        action = action.replace("TakingPhoto", "Photo").replace("WalkingDog", "WalkDog")
+
+        if info['subject'] == 11 and action == "Directions":
             print("Discard")
             continue
 
-        if "_ALL" in info['action']:
+        if "_ALL" in action:
             print(f"Discard {info}")
             continue
 
-        joints = data[info['subject']][info['action']]['positions']
-        
-        cam_index_to_id_map = dict(
-            zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
-        )
+        events = []
+        for offset_id in range(0, n_cameras):
+            events.append(el.utils.load_from_file(event_files[idx + offset_id]))
+
+        events = [
+            np.concatenate(
+                [events[index], index * np.ones((len(events[index]), 1))], axis=1
+            )
+            for index in range(4)
+        ]
+
+        events = np.concatenate(events)
+        sort_index = np.argsort(events[:, 2])
+        events = events[sort_index]
+        joints = data[info['subject']][action]['positions']
+
         frame_and_gt_generator = constant_count_joint_generator(
-            events, joints, 7500, hw_info.size
+            events, joints, num_events, hw_info.size
         )
 
         output_dir = os.path.join(
-            output_base_dir,
-            f"S{info['subject']:01d}",
-            f"{info['action']}.{cam_index_to_id_map[info['cam']]}",
+            output_base_dir, f"S{info['subject']:01d}", f"{action}" + ".{}",
         )
 
-        os.makedirs(output_dir, exist_ok=True)
         joints = []
-        for ind, event_and_joint_frame in tqdm(enumerate(frame_and_gt_generator)):
-            event_frame, joint_frame = event_and_joint_frame
-            joints.append(joint_frame)
-            np.save(os.path.join(output_dir, f"frame{ind:07d}.npy"), event_frame)
+        for ind_frame, event_and_joint_frame in tqdm(enumerate(frame_and_gt_generator)):
+            event_frame_per_cams, joint_frame = event_and_joint_frame
 
-        joint_gt[f"S{info['subject']:01d}"] = {}
-        joint_gt[f"S{info['subject']:01d}"][info['action']] = np.stack(joints)
+            joints.append(joint_frame)
+            for id_camera in range(n_cameras):
+                cam = cam_index_to_id_map[id_camera]
+                os.makedirs(output_dir.format(cam), exist_ok=True)
+                np.save(
+                    os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
+                    event_frame_per_cams[id_camera],
+                )
+
+        joint_gt[f"S{info['subject']:01d}"][action] = np.stack(joints)
 
     np.savez_compressed(output_joint_path, positions_3d=joint_gt)

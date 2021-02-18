@@ -134,7 +134,9 @@ def _project_xyz(xyz, M):
     return result.transpose(1, 0)
 
 
-def project_xyz_onto_camera_coord(xyz, M, invert_z_axis=True):
+def project_xyz_onto_camera_coord(
+    xyz: torch.Tensor, M: torch.Tensor, invert_z_axis=True
+) -> torch.Tensor:
     """
 
     Args

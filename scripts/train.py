@@ -9,7 +9,7 @@ from experimenting.utils.train_helpers import fit
 logging.basicConfig(level=logging.INFO)
 
 
-@hydra.main(config_path='../confs/train/config.yaml')
+@hydra.main(config_path='../confs/train', config_name='config.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
     trainer = fit(cfg)

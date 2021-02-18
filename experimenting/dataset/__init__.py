@@ -12,6 +12,7 @@ from .factory import (
 )
 
 
+# type: ignore
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
@@ -32,9 +33,6 @@ class DataModule(pl.LightningDataModule):
 
     def prepare_data(self, *args, **kwargs):
         pass
-
-    def transfer_batch_to_device(self, batch, device):
-        return batch
 
     def setup(self, stage=None):
         (
