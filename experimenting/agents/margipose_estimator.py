@@ -28,6 +28,7 @@ class MargiposeEstimator(BaseModule):
         backbone,
         model,
         pretrained,
+        use_lr_scheduler=False,
         estimate_depth=False,
         test_metrics=None,
         *args,
@@ -39,6 +40,7 @@ class MargiposeEstimator(BaseModule):
             lr_scheduler=lr_scheduler,
             loss=loss,
             dataset_constructor=Joints3DConstructor,
+            use_lr_scheduler=use_lr_scheduler,
         )
 
         self.core = core

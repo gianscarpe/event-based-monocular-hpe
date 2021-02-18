@@ -15,7 +15,9 @@ from ..utils import get_feature_extractor
 
 
 class BaseModule(pl.LightningModule):
-    def __init__(self, optimizer, lr_scheduler, loss, dataset_constructor):
+    def __init__(
+        self, optimizer, lr_scheduler, loss, dataset_constructor, use_lr_scheduler
+    ):
         """
         Base agent module
         """
@@ -25,6 +27,7 @@ class BaseModule(pl.LightningModule):
         self.dataset_constructor = dataset_constructor
         self.optimizer_config = optimizer
         self.scheduler_config = lr_scheduler
+        self.use_lr_scheduler = use_lr_scheduler
 
         self.loss_func = hydra.utils.instantiate(loss)
 
@@ -60,7 +63,7 @@ class BaseModule(pl.LightningModule):
         )
 
         scheduler = None
-        if self.optimizer_config.use_lr_scheduler:
+        if self.use_lr_scheduler:
             scheduler = getattr(
                 torch.optim.lr_scheduler, self.scheduler_config["type"]
             )(optimizer, **self.scheduler_config["params"])

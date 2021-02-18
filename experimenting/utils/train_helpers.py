@@ -30,7 +30,7 @@ def get_training_params(cfg: DictConfig):
     """
 
     Parameters
-    ----------
+
     cfg: DictConfig :
         hydra configuration (examples in conf/train)
 
@@ -39,11 +39,10 @@ def get_training_params(cfg: DictConfig):
     """
 
     exp_path = os.getcwd()
-    logger = TensorBoardLogger(os.path.join(exp_path, "tb_logs"))
-    #  logger = _get_comet_logger(cfg.exp_name, cfg.project_name)
-    # logger = _get_comet_logger(
-    # cfg.exp_name, cfg.project_name, os.path.join(exp_path, "tb_logs")
-    # )
+    logger = [
+        TensorBoardLogger(os.path.join(exp_path, "tb_logs")),
+        _get_comet_logger(cfg.exp_name, cfg.project_name),
+    ]
 
     debug = cfg["debug"]
 
@@ -128,9 +127,7 @@ def _safe_train_end(trainer_configuration):
     logging.log(logging.ERROR, "exp moved to trash")
 
 
-def _get_comet_logger(
-    exp_name: str, project_name: str, save_dir: str
-) -> LightningLoggerBase:
+def _get_comet_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
     # arguments made to CometLogger are passed on to the comet_ml.Experiment class
     comet_logger = CometLogger(
         api_key=os.environ.get('COMET_API_KEY'),
@@ -154,6 +151,7 @@ def fit(cfg) -> pl.Trainer:
 
     """
     trainer_configuration = get_training_params(cfg)
+
     core = hydra.utils.instantiate(cfg.dataset)
 
     if cfg.load_path:

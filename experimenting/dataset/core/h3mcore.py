@@ -201,7 +201,6 @@ class HumanCore(BaseCore):
         return torch.cat([torch.cat([R, tr.unsqueeze(1)], dim=1)], dim=0,)
 
     def get_joint_from_id(self, idx):
-        print(self.file_paths[idx])
         frame_info = self.frames_info[idx]
         frame_n = int(frame_info['frame'])
         joints_data = self.joints[frame_info['subject']][frame_info['action']][

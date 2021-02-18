@@ -1,21 +1,21 @@
-dataset:
-  cls: experimenting.dataset.core.DHP19Core
-  params:
-    name: timecount_dhp19
-    base_path: /data/gscarpellini/dhp19/time_count_dataset
-    data_dir: ${dataset.params.base_path}/movements_per_frame
-    hm_dir: ${dataset.params.base_path}/labels
-    labels_dir: ${dataset.params.base_path}/labels
-    joints_dir: ${dataset.params.base_path}/labels_full_joints
+# @package _group_
+cls: experimenting.dataset.core.DHP19Core
+params:
+  name: timecount_dhp19
+  base_path: /data/gscarpellini/dhp19/time_count_dataset
+  data_dir: ${dataset.params.base_path}/movements_per_frame
+  hm_dir: ${dataset.params.base_path}/labels
+  labels_dir: ${dataset.params.base_path}/labels
+  joints_dir: ${dataset.params.base_path}/labels_full_joints
 
-    load_split: false
-    save_split: false
-    split_at: 0.8
-    preload_dir : ${dataset.params.base_path}/preload
+  load_split: false
+  save_split: false
+  split_at: 0.8
+  preload_dir : ${dataset.params.base_path}/preload
 
-    n_classes: 33
-    test_subjects: [1, 2, 3, 4, 5]
-    movements: 
+  n_classes: 33
+  test_subjects: [1, 2, 3, 4, 5]
+  movements: 
     cams: [0,1,2,3]
     test_cams: [1, 2]
     n_channels: 1

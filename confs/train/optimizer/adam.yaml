@@ -1,7 +1,6 @@
-optimizer:
-  type: Adam
-  params:
-    lr: 0.0003
-  use_lr_scheduler: false
-
-    
+# @package _group_
+type: Adam
+params:
+  lr: 0.0003
+  
+  
