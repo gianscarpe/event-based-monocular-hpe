@@ -1,9 +1,7 @@
 [![Build Status](https://travis-ci.com/gianscarpe/event-based-monocular-hpe.svg?branch=master)](https://travis-ci.com/gianscarpe/event-based-monocular-hpe)
 [![Documentation
 Status](https://readthedocs.org/projects/event-camera/badge/?version=latest)](https://event-camera.readthedocs.io/en/latest/?badge=latest)
-[![Coverage
-Status](https://coveralls.io/repos/github/gianscarpe/event-camera/badge.svg?branch=master)](https://coveralls.io/github/gianscarpe/event-camera?branch=master)
-
+[![Coverage Status](https://coveralls.io/repos/github/gianscarpe/event-based-monocular-hpe/badge.svg?branch=master)](https://coveralls.io/github/gianscarpe/event-based-monocular-hpe?branch=master)
 # Event-camera
 
 * Train classification models based on ResNet18, Resnet34, ...

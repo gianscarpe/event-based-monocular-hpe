@@ -117,7 +117,7 @@ class DHP19Core(BaseCore):
 
     def get_joint_from_id(self, idx):
         joints_file = np.load(self.joints[idx])
-        xyz = torch.tensor(joints_file["xyz"].swapaxes(0, 1))
+        xyz = joints_file["xyz"].swapaxes(0, 1)
         intrinsic_matrix = torch.tensor(joints_file["camera"])
         extrinsic_matrix = torch.tensor(joints_file["M"])
         return Skeleton(xyz), intrinsic_matrix, extrinsic_matrix

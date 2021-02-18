@@ -1,5 +1,6 @@
 import os
 import re
+from typing import List
 
 import numpy as np
 import torch
@@ -42,10 +43,10 @@ class HumanCore(BaseCore):
     }
     MAX_WIDTH = 260  # DVS resolution
     MAX_HEIGHT = 346  # DVS resolution
-    N_JOINTS = 17
+    N_JOINTS = 13
     N_CLASSES = 2
     TORSO_LENGTH = 453.5242317  # TODO
-    DEFAULT_TEST_SUBJECTS = [5]
+    DEFAULT_TEST_SUBJECTS: List[int] = []
     DEFAULT_TEST_VIEW = [1, 2]
 
     def __init__(
@@ -119,7 +120,6 @@ class HumanCore(BaseCore):
         """
         base_subject_dir = filepath[re.search(r'(?<=S)\d+/', filepath).span()[1] :]
         infos = base_subject_dir.split('/')
-        
 
         cam = re.search(r"(?<=\.)\d+", base_subject_dir)
         cam = HumanCore.CAMS_ID_MAP[cam.group(0)] if cam is not None else None
@@ -151,13 +151,13 @@ class HumanCore(BaseCore):
 
         result = {}
         for subject, actions in data.items():
-            
+
             subject_n = int(re.search(r"\d+", subject).group(0))
             result[subject_n] = {}
             for action_name, positions in actions.items():
 
                 result[subject_n][action_name] = {
-                    'positions': positions,
+                    'positions': torch.tensor(positions),
                     'extrinsics': h36m_cameras_extrinsic_params[subject],
                 }
 
@@ -208,8 +208,8 @@ class HumanCore(BaseCore):
             'positions'
         ][frame_n]
 
-        
-        joints_data = joints_data[HumanCore.JOINTS]
+        joints_data = joints_data[HumanCore.JOINTS] * 1000  # Scale to cm
+
         intr_matrix = HumanCore._build_intrinsic(
             h36m_cameras_intrinsic_params[frame_info['cam']]
         )
@@ -219,7 +219,7 @@ class HumanCore(BaseCore):
         ]
 
         extr_matrix = HumanCore._build_extrinsic(extr)
-        return Skeleton(joints_data), intr_matrix, extr_matrix
+        return Skeleton(joints_data.detach()), intr_matrix, extr_matrix
 
     def get_frame_from_id(self, idx):
         path = self.file_paths[idx]
