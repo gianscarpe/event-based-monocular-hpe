@@ -16,8 +16,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 PATH_HERE = os.path.abspath(os.path.dirname(__file__))
 PATH_ROOT = os.path.join(PATH_HERE, '..', '..')
-SPHINX_MOCK_REQUIREMENTS = int(os.environ.get('SPHINX_MOCK_REQUIREMENTS',
-                                              True))
+SPHINX_MOCK_REQUIREMENTS = int(os.environ.get('SPHINX_MOCK_REQUIREMENTS', True))
 
 import experimenting  # noqa: E402
 
@@ -26,9 +25,7 @@ import experimenting  # noqa: E402
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-     'sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'm2r'
-]
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'm2r']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -50,14 +47,15 @@ html_theme = 'sphinx_rtd_theme'  #
 html_static_path = ['_static']
 
 
-
 # -- Other
 def package_list_from_file(file):
     mocked_packages = []
     with open(file, 'r') as fp:
         for ln in fp.readlines():
             found = [ln.index(ch) for ch in list(',=<>#') if ch in ln]
-            pkg = ln[:min(found)] if found else ln
+            pkg = ln[: min(found)] if found else ln
+            if "git+" in pkg:
+                continue
             if pkg.rstrip():
                 mocked_packages.append(pkg.rstrip())
     return mocked_packages
@@ -66,15 +64,14 @@ def package_list_from_file(file):
 MOCK_PACKAGES = []
 if SPHINX_MOCK_REQUIREMENTS:
     # mock also base packages when we are on RTD since we don't install them there
-    MOCK_PACKAGES += package_list_from_file(
-        os.path.join(PATH_ROOT, 'requirements.txt'))
+    MOCK_PACKAGES += package_list_from_file(os.path.join(PATH_ROOT, 'requirements.txt'))
 
 MOCK_MANUAL_PACKAGES = [
     # packages with different package name compare to import name
     'hydra',
     'cv2',
     'pytorch_lightning',
-
+    'pose3d_utils',
 ]
 autodoc_mock_imports = MOCK_PACKAGES + MOCK_MANUAL_PACKAGES
 
@@ -84,4 +81,3 @@ project = 'master_thesis'
 copyright = experimenting.__copyright__
 author = experimenting.__author__
 version = experimenting.__version__
-
