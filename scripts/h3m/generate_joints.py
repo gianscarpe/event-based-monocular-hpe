@@ -69,13 +69,16 @@ def constant_count_joint_generator(
 
             start_joint_data_index = end_joint_data_index
 
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Accumulates events to an event-frame."
     )
     parser.add_argument("--event_files", nargs="+", help="file(s) to convert to output")
-    parser.add_argument("--joints_file", type=str, help="file of .npz joints")
+    parser.add_argument(
+        "--joints_file",
+        type=str,
+        help="file of .npz joints containing joints data. Generate it using `prepare_data_h3m`",
+    )
     parser.add_argument("--output_base_dir", type=str, help="output_dir")
     parser.add_argument(
         "--num_events", type=int, default=30000, help="num events to accumulate"
