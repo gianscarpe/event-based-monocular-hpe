@@ -69,7 +69,7 @@ for idx = 1:length(timeStamp)
     img(coordx,coordy, 1) = img(coordx,coordy, 1) + 1;
     t = double(B -1 ) / dt * double(ti - t0) + 1;
     for tn=1:B
-        voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) +  uint8(pi) * max(0, 1 - abs(tn - t));
+        voxel(coordx,coordy, tn) = voxel(coordx,coordy, tn) +  pi * max(0, 1 - abs(tn - t));
     end
     
     
