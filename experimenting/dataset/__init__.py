@@ -12,7 +12,6 @@ from .factory import (
 )
 
 
-# type: ignore
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
