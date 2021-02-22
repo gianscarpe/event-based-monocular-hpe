@@ -69,7 +69,9 @@ def get_training_params(cfg: DictConfig):
         "profiler": profiler,
     }
 
-    if (isinstance(gpus, list) and len(gpus) > 1) or gpus > 1:
+    if ((isinstance(gpus, list) and len(gpus) > 1)) or (
+        (isinstance(gpus, int) and gpus > 1)
+    ):
         if "accelerator" in cfg:
             trainer_configuration['accelerator'] = cfg["accelerator"]
 

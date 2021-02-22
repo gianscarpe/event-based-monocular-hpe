@@ -69,6 +69,7 @@ def constant_count_joint_generator(
 
             start_joint_data_index = end_joint_data_index
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Accumulates events to an event-frame."
