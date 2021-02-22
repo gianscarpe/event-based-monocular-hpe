@@ -30,6 +30,7 @@ repos:
         name: mypy
         stages: [push]
         language: system
-        entry: pipenv run mypy experimenting
+        verbose: true
+        entry: bash -c 'pipenv run mypy experimenting || true'
         types: [python]
         pass_filenames: false
