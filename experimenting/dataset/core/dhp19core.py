@@ -96,6 +96,7 @@ class DHP19Core(BaseCore):
                 x = np.expand_dims(x, -1)
         return x
 
+    @staticmethod
     def _load_matlab_frame(path):
         """
         Matlab files contain voxelgrid frames and must be loaded properly.
@@ -126,6 +127,7 @@ class DHP19Core(BaseCore):
         hm_path = self.heatmaps[idx]
         return load_heatmap(hm_path, self.N_JOINTS)
 
+    @staticmethod
     def _get_file_paths_with_cam_and_mov(data_dir, cams=None, movs=None):
         if cams is None:
             cams = [3]
@@ -168,6 +170,7 @@ class DHP19Core(BaseCore):
     def get_test_view(self):
         return self.view
 
+    @staticmethod
     def _get_info_from_string(filename, info, split_symbol="_"):
         return int(filename[filename.find(info) :].split(split_symbol)[1])
 

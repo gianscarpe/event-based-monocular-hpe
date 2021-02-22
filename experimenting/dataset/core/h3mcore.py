@@ -46,8 +46,8 @@ class HumanCore(BaseCore):
     N_JOINTS = 13
     N_CLASSES = 2
     TORSO_LENGTH = 453.5242317  # TODO
-    DEFAULT_TEST_SUBJECTS: List[int] = []
-    DEFAULT_TEST_VIEW = [1, 2]
+    DEFAULT_TEST_SUBJECTS: List[int] = [6, 7]
+    DEFAULT_TEST_VIEW = [1, 3]
 
     def __init__(
         self,
@@ -92,6 +92,9 @@ class HumanCore(BaseCore):
 
     def get_test_subjects(self):
         return self.subjects
+
+    def get_test_view(self):
+        return self.view
 
     @staticmethod
     def get_label_from_filename(filepath) -> int:
