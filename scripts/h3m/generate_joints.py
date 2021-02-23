@@ -4,7 +4,7 @@ import os
 import event_library as el
 import numpy as np
 from tqdm import tqdm
-from tqdm.contrib.concurrent import thread_map
+from tqdm.contrib.concurrent import process_map
 from utils import (
     constant_count_joint_generator,
     joint_generator,
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         action = action.replace("TakingPhoto", "Photo").replace("WalkingDog", "WalkDog")
 
         if info['subject'] == 11 and action == "Directions":
-            print("Discard")
+            print(f"Discard {info}")
             return
 
         if "_ALL" in action:
@@ -136,6 +136,6 @@ if __name__ == '__main__':
                 events, joints
             )
 
-    thread_map(_fun, range(0, len(event_files), n_cameras))
+    process_map(_fun, list(range(0, len(event_files), n_cameras)))
     if args.joint_generation:
         np.savez_compressed(output_joint_path, positions_3d=joint_gt)

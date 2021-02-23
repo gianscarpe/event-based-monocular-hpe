@@ -39,10 +39,7 @@ def get_training_params(cfg: DictConfig):
     """
 
     exp_path = os.getcwd()
-    logger = [
-        TensorBoardLogger(os.path.join(exp_path, "tb_logs")),
-        _get_comet_logger(cfg.exp_name, cfg.project_name),
-    ]
+    logger = [TensorBoardLogger(os.path.join(exp_path, "tb_logs"))]
 
     debug = cfg["debug"]
 
