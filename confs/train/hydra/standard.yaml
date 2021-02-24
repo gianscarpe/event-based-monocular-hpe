@@ -2,6 +2,7 @@ exp_dir: exps_${training.module}/${dataset.params.partition}
 exp_name: ${now:%m-%d-%H-%M}_exp_${training.model}_pretrained_${training.pretrained}
 
 hydra:
+  output_subdir: reproduce
   job:
     config:
       # configuration for the ${hydra.job.override_dirname} runtime variable

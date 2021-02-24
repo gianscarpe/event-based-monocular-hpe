@@ -4,7 +4,7 @@ from typing import Tuple
 import torch
 
 from ..agents.base import BaseModule
-from ..dataset import Joints3DConstructor
+from ..dataset import BaseCore, Joints3DConstructor
 from ..models.margipose import get_margipose_model
 from ..models.metrics import AUC, MPJPE, PCK
 from ..utils import Skeleton, average_loss
@@ -19,15 +19,15 @@ class MargiposeEstimator(BaseModule):
 
     def __init__(
         self,
-        optimizer,
-        lr_scheduler,
-        loss,
-        stages,
-        core,
-        model_zoo,
-        backbone,
-        model,
-        pretrained,
+        optimizer: dict,
+        lr_scheduler: dict,
+        loss: dict,
+        core: BaseCore,
+        model_zoo: str,
+        backbone: str,
+        model: str,
+        stages: int = 3,
+        pretrained: bool = False,
         use_lr_scheduler=False,
         estimate_depth=False,
         test_metrics=None,
@@ -47,12 +47,15 @@ class MargiposeEstimator(BaseModule):
         self.pretrained = pretrained
         self.model_zoo = model_zoo
         self.backbone = backbone
-        self.backbone_model = model
+        self.model = model
 
         #  Dataset parameters are used for 3d prediction
 
         self.estimate_depth = estimate_depth
         self.torso_length = core.avg_torso_length
+
+        self.width = core.in_shape[1]
+        self.height = core.in_shape[0]
         self.stages = stages
 
         metrics = {}
@@ -70,10 +73,23 @@ class MargiposeEstimator(BaseModule):
 
         self.metrics = metrics
         self._build_model()
+        self.save_hyperparameters(
+            'optimizer',
+            'lr_scheduler',
+            'loss',
+            'model_zoo',
+            'backbone',
+            'model',
+            'stages',
+            'pretrained',
+            'use_lr_scheduler',
+            'estimate_depth',
+            'test_metrics',
+        )
 
     def _build_model(self):
         in_cnn = MargiposeEstimator._get_feature_extractor(
-            self.backbone_model,
+            self.model,
             self.core.n_channels,
             join(self.model_zoo, self.backbone),
             self.pretrained,
@@ -85,13 +101,13 @@ class MargiposeEstimator(BaseModule):
             "n_joints": self.core.n_joints,
             "n_stages": self.stages,
         }
-        self.model = get_margipose_model(params)
+        self._model = get_margipose_model(params)
 
     def forward(self, x):
         """
         For inference. Return normalized skeletons
         """
-        outs = self.model(x)
+        outs = self._model(x)
 
         xy_hm = outs[0][-1]
         zy_hm = outs[1][-1]
@@ -192,7 +208,7 @@ class MargiposeEstimator(BaseModule):
     def training_step(self, batch, batch_idx):
         b_x, b_y = batch
 
-        outs = self.model(b_x)  # cnn output
+        outs = self._model(b_x)  # cnn output
 
         loss = self._calculate_loss3d(outs, b_y)
 

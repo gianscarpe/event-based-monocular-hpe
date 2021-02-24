@@ -1,7 +1,7 @@
 defaults:
   - optimizer: adam
   - lr_scheduler: step_lr
-  - dataset: timecount
+  - dataset: time count
   - loss: pixelwiseloss
   - augmentation: no_aug
   - training: margipose
