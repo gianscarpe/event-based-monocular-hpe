@@ -93,12 +93,23 @@ def get_training_params(cfg: DictConfig):
     return trainer_configuration
 
 
-def load_model(load_path, module, **kwargs):
+def load_model(load_path: str, module: str, **kwargs) -> pl.LightningModule:
+    """
+    Main function to load a checkpoint.
+    Args:
+        load_path: path to the checkpoint directory
+        module: python module (e.g., experimenting.agents.Base)
+        kwargs: arguments to override while loading checkpoint
+
+    Returns
+        Lightning module loaded from checkpoint, if exists
+    """
     print("Loading training")
     load_path = get_checkpoint_path(load_path)
     print("Loading from ... ", load_path)
 
     if os.path.exists(load_path):
+
         model = getattr(experimenting.agents, module).load_from_checkpoint(
             load_path, **kwargs
         )
@@ -142,6 +153,23 @@ def _get_wandb_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
     return logger
 
 
+def _instantiate_new_model(
+    cfg: DictConfig, core: experimenting.dataset.BaseCore
+) -> pl.LightningModule:
+    """
+    Instantiate new module from scratch using provided `hydra` configuration
+    """
+    model = getattr(experimenting.agents, cfg.training.module)(
+        loss=cfg.loss,
+        optimizer=cfg.optimizer,
+        lr_scheduler=cfg.lr_scheduler,
+        model_zoo=cfg.model_zoo,
+        core=core,
+        **cfg.training
+    )
+    return model
+
+
 def fit(cfg) -> pl.Trainer:
     """
     Launch training for a given config. Confs file can be found at /src/confs
@@ -156,16 +184,20 @@ def fit(cfg) -> pl.Trainer:
 
     if cfg.load_path:
         print("Loading training")
-        model = load_model(cfg.load_path, cfg.training.module)
-    else:
-        model = getattr(experimenting.agents, cfg.training.module)(
+        model = load_model(
+            cfg.load_path,
+            cfg.training.module,
+            model_zoo=cfg.model_zoo,
+            core=core,
             loss=cfg.loss,
             optimizer=cfg.optimizer,
             lr_scheduler=cfg.lr_scheduler,
-            model_zoo=cfg.model_zoo,
-            core=core,
-            **cfg.training
+            # TODO should remove the following, as they're loaded from the checkpoint
+            backbone=cfg.training.backbone,
+            model=cfg.training.model,
         )
+    else:
+        model = _instantiate_new_model(cfg, core)
 
     data_module = experimenting.dataset.DataModule(
         core=core,
