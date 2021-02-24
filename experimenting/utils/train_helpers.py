@@ -93,7 +93,7 @@ def get_training_params(cfg: DictConfig):
     return trainer_configuration
 
 
-def load_model(load_path: str, module: str, **kwargs) -> pl.LightningModule:
+def load_model(load_path: str, module: str, **kwargs):
     """
     Main function to load a checkpoint.
     Args:
