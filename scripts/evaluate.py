@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig
 
 from experimenting import agents
-from experimenting.utils import get_checkpoint_path
+from experimenting.utils.evaluation_helpers import evaluate
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,22 +17,7 @@ def main(cfg: DictConfig) -> None:
 
     print(cfg.pretty())
 
-    load_path = cfg.load_path
-    result_path = os.path.join(cfg.load_path, 'classification.json')
-    print("Loading from ... ", load_path)
-    if (os.path.exists(load_path)):
-        checkpoint_path = get_checkpoint_path(load_path)
-        model = getattr(agents, cfg.training.module).load_from_checkpoint(
-            checkpoint_path)
-        trainer = pl.Trainer(gpus=cfg.gpus)
-        results = trainer.test(model)
-        with open(result_path, 'w') as json_file:
-            json.dump(results, json_file)
-
-        print("Model loaded")
-
-    else:
-        print(f"Error loading, {load_path} does not exist!")
+    evaluate(cfg, save_results=True)
 
 
 if __name__ == '__main__':

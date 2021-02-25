@@ -2,12 +2,18 @@
 Toolbox for DHP19 evaluation procedure
 """
 import collections
+import json
+import os
 
+import hydra
 import pytorch_lightning as pl
+from omegaconf import DictConfig
+
+import experimenting
 
 from ..dataset import Joints3DConstructor
 from ..dataset.datamodule import get_dataloader
-from .train_helpers import get_checkpoint_path, load_model
+from .utilities import get_checkpoint_path, load_model
 
 
 def _get_test_loaders_iterator(cfg):
@@ -54,3 +60,45 @@ def evaluate_per_movement(cfg):
             final_results[metric][f'movement_{loader_id}'] = tensor_result
 
     return final_results
+
+
+def evaluate(cfg: DictConfig):
+    """
+    Launch training for a given config. Confs file can be found at /src/confs
+
+    Args:
+       cfg (DictConfig): Config dictionary
+
+    """
+
+    core = hydra.utils.instantiate(cfg.dataset)
+
+    if os.path.exists(cfg.load_path):
+        print("Loading training")
+        model = load_model(
+            cfg.load_path,
+            cfg.training.module,
+            model_zoo=cfg.model_zoo,
+            core=core,
+            loss=cfg.loss,
+            optimizer=cfg.optimizer,
+            lr_scheduler=cfg.lr_scheduler,
+            # TODO should remove the following, as they're loaded from the checkpoint
+            backbone=cfg.training.backbone,
+            model=cfg.training.model,
+        )
+    else:
+        raise Exception("Checkpoint dir not provided")
+
+    data_module = experimenting.dataset.DataModule(
+        core=core,
+        num_workers=cfg.num_workers,
+        batch_size=cfg.batch_size,
+        dataset_factory=model.get_data_factory(),
+        aug_train_config=cfg.augmentation_train,
+        aug_test_config=cfg.augmentation_test,
+    )
+
+    trainer = pl.Trainer()
+    trainer.test(model, datamodule=data_module)
+    return trainer

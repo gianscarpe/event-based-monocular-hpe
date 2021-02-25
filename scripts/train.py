@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: DictConfig) -> None:
     trainer = fit(cfg)
     results = trainer.test()
-    logging.info("RESULTS: ", results)
+    logging.info("RESULTS: ", results['test_meanAUC'])
 
 
 if __name__ == '__main__':

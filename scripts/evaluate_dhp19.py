@@ -1,15 +1,16 @@
-eimport json
+import json
 import logging
 import os
 
 import hydra
-from experimenting.utils.evaluation_helpers import evaluate_per_movement
 from omegaconf import DictConfig
+
+from experimenting.utils.evaluation_helpers import evaluate_per_movement
 
 logging.basicConfig(level=logging.INFO)
 
 
-@hydra.main(config_path='../confs/train/config.yaml')
+@hydra.main(config_path='../confs/train/eval.yaml')
 def main(cfg: DictConfig) -> None:
     print(cfg.pretty())
 

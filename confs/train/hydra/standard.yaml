@@ -12,7 +12,7 @@ hydra:
         exclude_keys: []
   sweep:
     dir: ${root_dir}/exps/${dataset.params.name}/${exp_dir}
-    subdir: ${exp_name}_${now:%m-%d-%H-%M}
+    subdir: ${exp_name}
     
   run:
     dir: ${hydra.sweep.dir}/${hydra.sweep.subdir}
