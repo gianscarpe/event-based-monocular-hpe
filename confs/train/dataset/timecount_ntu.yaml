@@ -1,6 +1,6 @@
-dataset:
-  name: timecount_ntu
-  core_class: NTUCore
+cls: experimenting.dataset.core.NTUCore
+params:
+  name: constantcount_ntu_
   base_path: /data/gscarpellini/ntu/events
   data_dir: ${dataset.base_path}/out
   labels_dir: 
@@ -8,6 +8,5 @@ dataset:
   test_subjects: [18, 19, 20]
   in_shape: [260, 346]
   load_split: false
-  split_at: 0.8
   save_split: false
   partition: cross-subject

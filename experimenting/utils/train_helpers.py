@@ -23,6 +23,8 @@ from pytorch_lightning.loggers import (
 
 import experimenting
 
+from .utilities import instantiate_new_model, load_model
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -93,43 +95,6 @@ def get_training_params(cfg: DictConfig):
     return trainer_configuration
 
 
-def load_model(load_path: str, module: str, **kwargs):
-    """
-    Main function to load a checkpoint.
-    Args:
-        load_path: path to the checkpoint directory
-        module: python module (e.g., experimenting.agents.Base)
-        kwargs: arguments to override while loading checkpoint
-
-    Returns
-        Lightning module loaded from checkpoint, if exists
-    """
-    print("Loading training")
-    load_path = get_checkpoint_path(load_path)
-    print("Loading from ... ", load_path)
-
-    if os.path.exists(load_path):
-
-        model = getattr(experimenting.agents, module).load_from_checkpoint(
-            load_path, **kwargs
-        )
-    else:
-        raise FileNotFoundError()
-
-    return model
-
-
-def get_checkpoint_path(checkpoint_dir):
-    # CHECKPOINT file are
-    checkpoints = sorted(glob.glob(os.path.join(checkpoint_dir, "*.ckpt")))
-    load_path = os.path.join(checkpoint_dir, checkpoints[0])
-    return load_path
-
-
-def get_result_path(load_path):
-    return os.path.join(load_path, "result.json")
-
-
 def _safe_train_end(trainer_configuration):
     exp_path = Path(os.getcwd())
     exp_name = exp_path.name
@@ -153,29 +118,12 @@ def _get_wandb_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
     return logger
 
 
-def _instantiate_new_model(
-    cfg: DictConfig, core: experimenting.dataset.BaseCore
-) -> pl.LightningModule:
-    """
-    Instantiate new module from scratch using provided `hydra` configuration
-    """
-    model = getattr(experimenting.agents, cfg.training.module)(
-        loss=cfg.loss,
-        optimizer=cfg.optimizer,
-        lr_scheduler=cfg.lr_scheduler,
-        model_zoo=cfg.model_zoo,
-        core=core,
-        **cfg.training
-    )
-    return model
-
-
-def fit(cfg) -> pl.Trainer:
+def fit(cfg: DictConfig) -> pl.Trainer:
     """
     Launch training for a given config. Confs file can be found at /src/confs
 
     Args:
-       cfg (omegaconf.DictConfig): Config dictionary
+       cfg (DictConfig): Config dictionary
 
     """
     trainer_configuration = get_training_params(cfg)
@@ -197,7 +145,7 @@ def fit(cfg) -> pl.Trainer:
             model=cfg.training.model,
         )
     else:
-        model = _instantiate_new_model(cfg, core)
+        model = instantiate_new_model(cfg, core)
 
     data_module = experimenting.dataset.DataModule(
         core=core,
