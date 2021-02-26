@@ -22,7 +22,7 @@ class TestMargiposeAgent(unittest.TestCase):
     @mock.patch('hydra.utils')
     def setUp(self, mocked_hydra):
         self.n_channels = 1
-        mocked_core = mock.MagicMock(
+        self.mocked_core = mock.MagicMock(
             n_channels=self.n_channels,
             in_shape=(224, 224),
             n_joints=13,
@@ -39,9 +39,10 @@ class TestMargiposeAgent(unittest.TestCase):
             'model': 'test',
             'model_zoo': '/path/to/zoo',
             'backbone': 'backbone',
-            'core': mocked_core,
+            'core': self.mocked_core,
+            'stages': 3,
         }
-        self.agent = MargiposeEstimator(**self.parameters)
+        self.agent = MargiposeEstimator(**self.parameters).cpu()
 
     def test_init(self):
         self.assertIsInstance(self.agent, pl.LightningModule)
@@ -50,10 +51,13 @@ class TestMargiposeAgent(unittest.TestCase):
     #     batch = 32
     #     mocked_loss = mock.MagicMock()
     #     mocked_loss.return_value = torch.rand(batch)
-    #     mocked_batch = [
-    #         torch.rand((batch, self.n_channels, 224, 224)),
-    #         mock.MagicMock(),
-    #     ]
+    #     b_y = mock.MagicMock(
+    #         normalized_skeleton=torch.rand((batch, self.mocked_core.n_joints, 3))
+    #     )
 
-    #     elf.agent.loss_func = mocked_loss
+    #     b_x = torch.rand((batch, self.n_channels, 224, 224))
+    #     mocked_batch = [b_x, b_y]
+    #     self.agent.loss_func = mocked_loss
     #     results = self.agent._eval(mocked_batch)
+    #     self.assertEqual(len(results), batch)
+    #     self.assertEqual(self.parameters['stages'], mocked_loss.call_count)
