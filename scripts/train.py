@@ -12,8 +12,7 @@ logging.basicConfig(level=logging.INFO)
 @hydra.main(config_path='../confs/train', config_name='config.yaml')
 def main(cfg: DictConfig) -> None:
     trainer = fit(cfg)
-    results = trainer.test()
-    logging.info("RESULTS: ", results['test_meanAUC'])
+    trainer.test()
 
 
 if __name__ == '__main__':

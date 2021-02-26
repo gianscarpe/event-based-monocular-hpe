@@ -23,7 +23,7 @@ from pytorch_lightning.loggers import (
 
 import experimenting
 
-from .utilities import instantiate_new_model, load_model
+from .utilities import get_checkpoint_path, instantiate_new_model, load_model
 
 logging.basicConfig(level=logging.INFO)
 
@@ -90,7 +90,8 @@ def get_training_params(cfg: DictConfig):
         trainer_configuration["callbacks"].append(early_stop_callback)
 
     if cfg.resume:
-        trainer_configuration["resume_from_checkpoint"] = cfg["load_path"]
+        checkpoint_path = get_checkpoint_path(cfg['load_path'])
+        trainer_configuration["resume_from_checkpoint"] = checkpoint_path
 
     return trainer_configuration
 
@@ -140,9 +141,9 @@ def fit(cfg: DictConfig) -> pl.Trainer:
             loss=cfg.loss,
             optimizer=cfg.optimizer,
             lr_scheduler=cfg.lr_scheduler,
-            # TODO should remove the following, as they're loaded from the checkpoint
-            backbone=cfg.training.backbone,
-            model=cfg.training.model,
+            # # TODO should remove the following, as they're loaded from the checkpoint
+            # backbone=cfg.training.backbone,
+            # model=cfg.training.model,
         )
     else:
         model = instantiate_new_model(cfg, core)
