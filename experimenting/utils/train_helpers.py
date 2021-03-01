@@ -141,7 +141,7 @@ def fit(cfg: DictConfig) -> pl.Trainer:
             loss=cfg.loss,
             optimizer=cfg.optimizer,
             lr_scheduler=cfg.lr_scheduler,
-            # # TODO should remove the following, as they're loaded from the checkpoint
+            # # TODO sghould remove the following, as they're loaded from the checkpoint
             # backbone=cfg.training.backbone,
             # model=cfg.training.model,
         )

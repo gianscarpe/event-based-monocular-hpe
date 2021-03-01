@@ -62,7 +62,7 @@ def evaluate_per_movement(cfg):
     return final_results
 
 
-def evaluate(cfg: DictConfig):
+def evaluate(cfg: DictConfig, save_results: bool = True):
     """
     Launch training for a given config. Confs file can be found at /src/confs
 
@@ -80,12 +80,10 @@ def evaluate(cfg: DictConfig):
             cfg.training.module,
             model_zoo=cfg.model_zoo,
             core=core,
-            loss=cfg.loss,
-            optimizer=cfg.optimizer,
-            lr_scheduler=cfg.lr_scheduler,
+            test_metrics=['AUC', 'MPJPE', "PCK"]
             # TODO should remove the following, as they're loaded from the checkpoint
-            backbone=cfg.training.backbone,
-            model=cfg.training.model,
+            # backbone=cfg.training.backbone,
+            # model=cfg.training.model,
         )
     else:
         raise Exception("Checkpoint dir not provided")
@@ -100,5 +98,10 @@ def evaluate(cfg: DictConfig):
     )
 
     trainer = pl.Trainer()
-    trainer.test(model, datamodule=data_module)
+    results = trainer.test(model, datamodule=data_module)
+    if save_results:
+        result_path = os.path.join(cfg.load_path, cfg.result_file)
+        with open(result_path, 'w') as json_file:
+            json.dump(results, json_file)
+
     return trainer

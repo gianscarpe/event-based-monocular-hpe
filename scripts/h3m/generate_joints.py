@@ -136,6 +136,6 @@ if __name__ == '__main__':
                 events, joints
             )
 
-    process_map(_fun, list(range(0, len(event_files), n_cameras)))
+    process_map(_fun, list(range(0, len(event_files), n_cameras)), max_workers=16)
     if args.joint_generation:
         np.savez_compressed(output_joint_path, positions_3d=joint_gt)
