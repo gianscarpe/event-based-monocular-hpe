@@ -189,7 +189,9 @@ class MargiposeEstimator(BaseModule):
             de-normalized skeletons
         """
         b_x, b_y = batch
+
         pred_joints, outs = self(b_x)
+
         loss = self._calculate_loss3d(outs, b_y)
 
         if denormalize:  # denormalize skeletons batch

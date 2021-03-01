@@ -12,7 +12,7 @@ from experimenting.utils.evaluation_helpers import evaluate
 logging.basicConfig(level=logging.INFO)
 
 
-@hydra.main(config_path='./confs/train/config.yaml')
+@hydra.main(config_path='../confs/train/eval.yaml')
 def main(cfg: DictConfig) -> None:
 
     print(cfg.pretty())
