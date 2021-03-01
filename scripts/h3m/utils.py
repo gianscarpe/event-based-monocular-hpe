@@ -69,7 +69,7 @@ def voxel_grid_joint_generator(
             voxel_frame = np.zeros_like(voxel_frame)
 
             init_slice = ind
-            final_slice = min(init_slice + num_events, len(events))
+            final_slice = min(init_slice + num_events - 1, len(events) - 1)
             t0 = events[init_slice, 2]
             dt = events[final_slice, 2] - t0
 

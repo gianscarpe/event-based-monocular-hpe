@@ -131,7 +131,7 @@ if __name__ == '__main__':
                     event_frame_per_cams[id_camera],
                 )
 
-        if args.joint_generation:
+        if args.generate_joints:
             joint_gt[f"S{info['subject']:01d}"][action] = _generate_joints(
                 events, joints
             )
