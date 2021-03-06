@@ -7,7 +7,7 @@ import os
 
 import hydra
 import pytorch_lightning as pl
-from omegaconf import DictConfig
+from omegaconf import DictConfig, ListConfig
 
 import experimenting
 
@@ -96,8 +96,11 @@ def evaluate(cfg: DictConfig, save_results: bool = True):
         aug_train_config=cfg.augmentation_train,
         aug_test_config=cfg.augmentation_test,
     )
+    gpus = cfg.gpus
+    if type(gpus) == list or type(gpus) == ListConfig:
+        gpus = [int(x) for x in gpus]
 
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(gpus=gpus)
     results = trainer.test(model, datamodule=data_module)
     if save_results:
         result_path = os.path.join(cfg.load_path, cfg.result_file)
