@@ -38,13 +38,13 @@ class DataModule(pl.LightningDataModule):
         ) = self.dataset_factory.get_train_test_split(self.train_val_split)
 
         self.train_dataset = self.dataset_factory.get_dataset(
-            self.core, self.train_indexes, self.aug_train_config
+            self.train_indexes, self.aug_train_config
         )
         self.val_dataset = self.dataset_factory.get_dataset(
-            self.core, self.val_indexes, self.aug_test_config
+            self.val_indexes, self.aug_test_config
         )
         self.test_dataset = self.dataset_factory.get_dataset(
-            self.core, self.test_indexes, self.aug_test_config
+            self.test_indexes, self.aug_test_config
         )
 
     def train_dataloader(self):
