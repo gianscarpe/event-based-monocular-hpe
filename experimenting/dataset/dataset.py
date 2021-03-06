@@ -24,6 +24,7 @@ __all__ = [
     "HeatmapDataset",
     "JointsDataset",
     "Joints3DDataset",
+    "Joints3DStereoDataset",
     "AutoEncoderDataset",
 ]
 
@@ -157,6 +158,53 @@ class Joints3DDataset(BaseDataset):
         self.n_joints = dataset.N_JOINTS
         self.height = dataset.in_shape[0]
         self.width = dataset.in_shape[1]
+
+    def _get_y(self, idx):
+
+        sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)
+
+        sk_onto_cam = sk.project_onto_camera(extrinsic_matrix)
+
+        mask = sk_onto_cam.get_mask()
+        sk_onto_cam = sk_onto_cam.get_masked_skeleton(mask)
+
+        sk_normalized = sk_onto_cam.normalize(self.height, self.width, intrinsic_matrix)
+        sk_normalized = sk_normalized.get_masked_skeleton(mask)
+
+        joints_2d = sk.get_2d_points(
+            self.height,
+            self.width,
+            extrinsic_matrix=extrinsic_matrix,
+            intrinsic_matrix=intrinsic_matrix,
+        )
+
+        label = {
+            "xyz": sk._get_tensor(),
+            "skeleton": sk_onto_cam._get_tensor(),
+            "normalized_skeleton": sk_normalized._get_tensor(),
+            "z_ref": sk_onto_cam.get_z_ref(),
+            "2d_joints": joints_2d,
+            "M": extrinsic_matrix,
+            "camera": intrinsic_matrix,
+            "mask": mask,
+        }
+        return label
+
+
+class Joints3DStereoDataset(BaseDataset):
+    def __init__(self, dataset, indexes=None, transform=None):
+
+        super(Joints3DStereoDataset, self).__init__(dataset, indexes, transform, False)
+
+        self.n_joints = dataset.N_JOINTS
+        self.height = dataset.in_shape[0]
+        self.width = dataset.in_shape[1]
+
+    def _get_x(self, idx):
+
+        xl = self.dataset.get_frame_from_id(idx[0])
+        xr = self.dataset.get_frame_from_id(idx[1])
+        return (xl, xr)
 
     def _get_y(self, idx):
         sk, intrinsic_matrix, extrinsic_matrix = self.dataset.get_joint_from_id(idx)

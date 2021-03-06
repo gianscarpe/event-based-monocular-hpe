@@ -115,42 +115,41 @@ class Joints3DConstructor(BaseDataFactory):
 class Joints3DStereoConstructor(BaseDataFactory):
     def __init__(self):
         super(Joints3DStereoConstructor, self).__init__(dataset_task=Joints3DDataset)
-        self.cams = [1, 2]
+        self.cams = [0, 1]
 
     def get_train_test_split(self, split_at=0.8):
-        data_indexes = self.get_stereo_indexes(
-            np.arange(len(self.core_dataset.file_paths))
-        )
-
+        data_indexes = self.get_stereo_indexes()
         test_subject_indexes_mask = [
             self.core_dataset.partition_function(x)
-            for x in self.core_dataset.file_paths
+            for x in self.core_dataset.file_paths[data_indexes[:, 0]]
         ]
 
-        test_indexes = data_indexes[test_subject_indexes_mask]
-        data_index = data_indexes[~np.in1d(data_indexes, test_indexes)]
+        test_indexes = data_indexes[test_subject_indexes_mask, :]
+        data_index = data_indexes[~np.in1d(data_indexes[:, 0], test_indexes[:, 0])]
         train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
 
         return train_indexes, val_indexes, test_indexes
 
-    def get_stereo_indexes(self, data_indexes):
-        breakpoint()
-        cam1_id = np.stack(
+    def get_stereo_indexes(self):
+        data_indexes = np.arange(len(self.core_dataset.file_paths))
+
+        cam1_id = np.array(
             [
-                x
-                for x in data_indexes
-                if self.core_dataset.get_frame_from_id(x)['cam'] == self.cams[0]
+                idx
+                for idx, file_path in zip(data_indexes, self.core_dataset.file_paths)
+                if self.core_dataset.get_frame_info(file_path)['cam'] == self.cams[0]
             ]
         )
 
-        cam2_id = np.stack(
+        cam2_id = np.array(
             [
-                x
-                for x in data_indexes
-                if self.core_dataset.get_frame_from_id(x)['cam'] == self.cams[1]
+                idx
+                for idx, file_path in zip(data_indexes, self.core_dataset.file_paths)
+                if self.core_dataset.get_frame_info(file_path)['cam'] == self.cams[1]
             ]
         )
-        return np.stack(cam1_id, cam2_id)
+
+        return np.stack([cam1_id, cam2_id], 1)
 
 
 class HeatmapConstructor(BaseDataFactory):

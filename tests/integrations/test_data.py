@@ -86,7 +86,7 @@ class TestH3MForStereo3DHPE(unittest.TestCase):
                 'joints_path': joints_path,
                 'n_channels': 1,
                 'partition': 'cross-subject',
-                'test_subjects': [5],
+                'test_subjects': [1],
             }
         )
 

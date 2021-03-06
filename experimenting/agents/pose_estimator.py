@@ -16,7 +16,7 @@ class PoseEstimator(BaseModule):
         params = {
             'n_channels': self._hparams.dataset['n_channels'],
             'n_classes': self._hparams.dataset['N_JOINTS'],
-            'encoder_depth': self._hparams.training.encoder_depth
+            'encoder_depth': self._hparams.training.encoder_depth,
         }
 
         self.model = get_cnn(self._hparams.training.model, params)
