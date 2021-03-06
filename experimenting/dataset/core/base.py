@@ -83,32 +83,3 @@ class BaseCore(ABC):
 
     def get_heatmap_from_id(self, idx):
         raise NotImplementedError()
-
-    def get_train_test_split(self, split_at=0.8):
-        """
-        Get train, val, and test indexes accordingly to partition function
-
-        Args:
-            split_at: Split train/val according to a given percentage
-        Returns:
-            Train, val, and test indexes as numpy vectors
-        """
-        data_indexes = np.arange(len(self.file_paths))
-        test_subject_indexes_mask = [
-            self.partition_function(x) for x in self.file_paths
-        ]
-
-        test_indexes = data_indexes[test_subject_indexes_mask]
-        data_index = data_indexes[~np.in1d(data_indexes, test_indexes)]
-        train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
-        return train_indexes, val_indexes, test_indexes
-
-
-def _split_set(data_indexes, split_at=0.8):
-    np.random.shuffle(data_indexes)
-    n_data_for_training = len(data_indexes)
-    train_split = int(split_at * n_data_for_training)
-    train_indexes = data_indexes[:train_split]
-    val_indexes = data_indexes[train_split:]
-
-    return train_indexes, val_indexes

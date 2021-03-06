@@ -78,7 +78,6 @@ class HumanCore(BaseCore):
         self.n_joints = HumanCore.N_JOINTS
         self.joints = HumanCore.get_pose_data(joints_path)
         self.frames_info = [HumanCore.get_frame_info(x) for x in self.file_paths]
-        # self.heatmaps = self._retrieve_2hm_files(hm_dir, "npy")
 
         if test_subjects is None:
             self.subjects = HumanCore.DEFAULT_TEST_SUBJECTS

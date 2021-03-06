@@ -21,6 +21,7 @@ class DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.dataset_factory = dataset_factory
+
         self.aug_train_config = aug_train_config
         self.aug_test_config = aug_test_config
         self.train_val_split = train_val_split
@@ -29,11 +30,12 @@ class DataModule(pl.LightningDataModule):
         pass
 
     def setup(self, stage=None):
+        self.dataset_factory.set_dataset_core(self.core)
         (
             self.train_indexes,
             self.val_indexes,
             self.test_indexes,
-        ) = self.core.get_train_test_split(self.train_val_split)
+        ) = self.dataset_factory.get_train_test_split(self.train_val_split)
 
         self.train_dataset = self.dataset_factory.get_dataset(
             self.core, self.train_indexes, self.aug_train_config
