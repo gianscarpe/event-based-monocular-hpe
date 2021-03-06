@@ -14,9 +14,6 @@ logging.basicConfig(level=logging.INFO)
 
 @hydra.main(config_path='../confs/train/eval.yaml')
 def main(cfg: DictConfig) -> None:
-
-    print(cfg.pretty())
-
     evaluate(cfg, save_results=True)
 
 
