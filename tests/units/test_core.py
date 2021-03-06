@@ -22,13 +22,6 @@ class TestCore(unittest.TestCase):
         self.assertIsNotNone(self.core.file_paths)
         self.assertGreater(len(self.core.file_paths), 0)
 
-    def test_train_test_split(self):
-        train, val, test = self.core.get_train_test_split()
-        self.assertIsNotNone(train)
-
-        self.assertGreater(len(test), 0)
-        self.assertGreater(len(val) + len(train), 0)
-
 
 class TestDHP19ParamsDefaultPartition(TestCore):
     def setUp(self):

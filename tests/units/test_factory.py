@@ -19,7 +19,6 @@ class TestFactoryDHP19(unittest.TestCase):
 
         self.indexes = [1, 2, 3]
         self.params = {
-            'core_dataset': self.core,
             'indexes': self.indexes,
             'augmentation_config': {'apply': {}},
         }
@@ -40,9 +39,10 @@ class TestFactoryDHP19(unittest.TestCase):
 
     def test_3d_joints(self):
         data_constructor = Joints3DConstructor()
+        data_constructor.set_dataset_core(self.core)
+
         self.assertIsNotNone(data_constructor)
         train = data_constructor.get_dataset(**self.params)
-
         self.assertGreater(len(train), 0)
 
     def test_hm(self):
