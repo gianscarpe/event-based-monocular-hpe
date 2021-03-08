@@ -57,8 +57,8 @@ class HydraTrainer(pl.Trainer):
     def get_raw_test_outputs(self):
         outputs = []
         for x in self.data_module.test_frame_only_dataloader():
-            out = self.model(x)
-            outputs.append(out)
+            predictions, _ = self.model(x)
+            outputs.append(predictions)
 
         return outputs
 

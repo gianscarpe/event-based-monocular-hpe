@@ -147,17 +147,15 @@ class HumanCore(BaseCore):
 
     @staticmethod
     def get_pose_data(path):
-
         # Load serialized dataset
         data = np.load(path, allow_pickle=True)['positions_3d'].item()
 
         result = {}
         for subject, actions in data.items():
-
             subject_n = int(re.search(r"\d+", subject).group(0))
             result[subject_n] = {}
-            for action_name, positions in actions.items():
 
+            for action_name, positions in actions.items():
                 result[subject_n][action_name] = {
                     'positions': positions,
                     'extrinsics': h36m_cameras_extrinsic_params[subject],
