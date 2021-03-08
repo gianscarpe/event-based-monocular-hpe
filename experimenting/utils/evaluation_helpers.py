@@ -57,54 +57,6 @@ def evaluate_per_movement(cfg):
         print(results)
         for metric in metrics:
             tensor_result = results[metric]
-            final_results[metric][f'movement_{loader_id}'] = tensor_result
+            final_results[metric][f"movement_{loader_id}"] = tensor_result
 
     return final_results
-
-
-def evaluate(cfg: DictConfig, save_results: bool = True):
-    """
-    Launch training for a given config. Confs file can be found at /src/confs
-
-    Args:
-       cfg (DictConfig): Config dictionary
-
-    """
-
-    core = hydra.utils.instantiate(cfg.dataset)
-
-    if os.path.exists(cfg.load_path):
-        print("Loading training")
-        model = load_model(
-            cfg.load_path,
-            cfg.training.module,
-            model_zoo=cfg.model_zoo,
-            core=core,
-            test_metrics=['AUC', 'MPJPE', "PCK"]
-            # TODO should remove the following, as they're loaded from the checkpoint
-            # backbone=cfg.training.backbone,
-            # model=cfg.training.model,
-        )
-    else:
-        raise Exception("Checkpoint dir not provided")
-
-    data_module = experimenting.dataset.DataModule(
-        core=core,
-        num_workers=cfg.num_workers,
-        batch_size=cfg.batch_size,
-        dataset_factory=model.get_data_factory(),
-        aug_train_config=cfg.augmentation_train,
-        aug_test_config=cfg.augmentation_test,
-    )
-    gpus = cfg.gpus
-    if type(gpus) == list or type(gpus) == ListConfig:
-        gpus = [int(x) for x in gpus]
-
-    trainer = pl.Trainer(gpus=gpus)
-    results = trainer.test(model, datamodule=data_module)
-    if save_results:
-        result_path = os.path.join(cfg.load_path, cfg.result_file)
-        with open(result_path, 'w') as json_file:
-            json.dump(results, json_file)
-
-    return trainer

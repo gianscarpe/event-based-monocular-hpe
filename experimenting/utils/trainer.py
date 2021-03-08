@@ -1,7 +1,3 @@
-"""
-Toolbox for helping training and evaluation of agents
-"""
-
 import glob
 import logging
 import os
@@ -26,6 +22,74 @@ import experimenting
 from .utilities import get_checkpoint_path, instantiate_new_model, load_model
 
 logging.basicConfig(level=logging.INFO)
+
+
+class HydraTrainer(pl.Trainer):
+    def __init__(self, cfg: DictConfig):
+        super().__init__(**get_training_params(cfg))
+        self.cfg = cfg
+        self.core = hydra.utils.instantiate(cfg.dataset)
+
+        if os.path.exists(cfg.load_path):
+            print("Loading training")
+            self.model = load_model(
+                cfg.load_path,
+                cfg.training.module,
+                model_zoo=cfg.model_zoo,
+                core=self.core,
+                test_metrics=['AUC', 'MPJPE', "PCK"]
+                # TODO should remove the following, as they're loaded from the checkpoint
+                # backbone=cfg.training.backbone,
+                # model=cfg.training.model,
+            )
+        else:
+            self.model = instantiate_new_model(cfg, self.core)
+
+        self.data_module = experimenting.dataset.DataModule(
+            core=self.core,
+            num_workers=cfg.num_workers,
+            batch_size=cfg.batch_size,
+            dataset_factory=self.model.get_data_factory(),
+            aug_train_config=cfg.augmentation_train,
+            aug_test_config=cfg.augmentation_test,
+        )
+
+    def get_raw_test_outputs(self):
+        outputs = []
+        for x in self.data_module.test_frame_only_dataloader():
+            out = self.model(x)
+            outputs.append(out)
+
+        return outputs
+
+    def fit(self) -> pl.Trainer:
+        """
+        Launch training for a given config. Confs file can be found at /src/confs
+        """
+        try:
+            super().fit(self.model, datamodule=self.data_module)
+            return trainer
+        except Exception as ex:
+            _safe_train_end()
+            print(ex)
+            raise ex
+
+    def test(self, save_results: bool = True):
+        """
+        Launch training for a given config. Confs file can be found at /src/confs
+
+        Args:
+           cfg (DictConfig): Config dictionary
+
+        """
+
+        results = super().test(self.model, datamodule=self.data_module)
+        if save_results:
+            result_path = os.path.join(self.cfg.load_path, self.cfg.result_file)
+            with open(result_path, 'w') as json_file:
+                json.dump(results, json_file)
+
+        return results
 
 
 def get_training_params(cfg: DictConfig):
@@ -96,7 +160,7 @@ def get_training_params(cfg: DictConfig):
     return trainer_configuration
 
 
-def _safe_train_end(trainer_configuration):
+def _safe_train_end():
     exp_path = Path(os.getcwd())
     exp_name = exp_path.name
     error_path = os.path.join(exp_path.parent, "with_errors", exp_name)
@@ -117,51 +181,3 @@ def _get_comet_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
 def _get_wandb_logger(exp_name: str, project_name: str) -> LightningLoggerBase:
     logger = WandbLogger(name=exp_name, project=project_name,)
     return logger
-
-
-def fit(cfg: DictConfig) -> pl.Trainer:
-    """
-    Launch training for a given config. Confs file can be found at /src/confs
-
-    Args:
-       cfg (DictConfig): Config dictionary
-
-    """
-    trainer_configuration = get_training_params(cfg)
-
-    core = hydra.utils.instantiate(cfg.dataset)
-
-    if cfg.load_path:
-        print("Loading training")
-        model = load_model(
-            cfg.load_path,
-            cfg.training.module,
-            model_zoo=cfg.model_zoo,
-            core=core,
-            loss=cfg.loss,
-            optimizer=cfg.optimizer,
-            lr_scheduler=cfg.lr_scheduler,
-            # # TODO sghould remove the following, as they're loaded from the checkpoint
-            # backbone=cfg.training.backbone,
-            # model=cfg.training.model,
-        )
-    else:
-        model = instantiate_new_model(cfg, core)
-
-    data_module = experimenting.dataset.DataModule(
-        core=core,
-        num_workers=cfg.num_workers,
-        batch_size=cfg.batch_size,
-        dataset_factory=model.get_data_factory(),
-        aug_train_config=cfg.augmentation_train,
-        aug_test_config=cfg.augmentation_test,
-    )
-
-    try:
-        trainer = pl.Trainer(**trainer_configuration)
-        trainer.fit(model, datamodule=data_module)
-        return trainer
-    except Exception as ex:
-        _safe_train_end(trainer_configuration)
-        print(ex)
-        raise ex

@@ -45,6 +45,12 @@ class BaseDataFactory(ABC):
             dataset=self.core_dataset, indexes=indexes, transform=preprocess, **kwargs
         )
 
+    def get_frame_only_dataset(self, indexes, augmentation_config, **kwargs) -> Dataset:
+        preprocess = get_augmentation(augmentation_config)
+        return AutoEncoderDataset(
+            dataset=self.core_dataset, indexes=indexes, transform=preprocess, **kwargs
+        )
+
     def get_datasets(
         self, augmentation_train, augmentation_test, **kwargs
     ) -> Tuple[Dataset, Dataset, Dataset]:
