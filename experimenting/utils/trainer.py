@@ -24,9 +24,10 @@ from .utilities import get_checkpoint_path, instantiate_new_model, load_model
 logging.basicConfig(level=logging.INFO)
 
 
-class HydraTrainer(pl.Trainer):
+class HydraTrainer:
     def __init__(self, cfg: DictConfig):
-        super().__init__(**get_training_params(cfg))
+        self._trainer = pl.Trainer(**get_training_params(cfg))
+
         self.cfg = cfg
         self.core = hydra.utils.instantiate(cfg.dataset)
 
@@ -62,13 +63,13 @@ class HydraTrainer(pl.Trainer):
 
         return outputs
 
-    def fit(self) -> pl.Trainer:
+    def fit(self):
         """
         Launch training for a given config. Confs file can be found at /src/confs
         """
         try:
-            super().fit(self.model, datamodule=self.data_module)
-            return trainer
+            self._trainer.fit(self.model, datamodule=self.data_module)
+            return True
         except Exception as ex:
             _safe_train_end()
             print(ex)
@@ -83,7 +84,7 @@ class HydraTrainer(pl.Trainer):
 
         """
 
-        results = super().test(self.model, datamodule=self.data_module)
+        results = self._trainer.test(self.model, datamodule=self.data_module)
         if save_results:
             result_path = os.path.join(self.cfg.load_path, self.cfg.result_file)
             with open(result_path, 'w') as json_file:
@@ -107,7 +108,7 @@ def get_training_params(cfg: DictConfig):
     exp_path = os.getcwd()
     logger = [TensorBoardLogger(os.path.join(exp_path, "tb_logs"))]
 
-    debug = cfg["debug"]
+    debug = cfg["debug"] if "debug" in cfg else False
 
     checkpoint_dir = os.path.join(exp_path, "checkpoints")
     log_profiler = os.path.join(exp_path, "profile.txt")
@@ -124,7 +125,7 @@ def get_training_params(cfg: DictConfig):
     trainer_configuration = {
         "gpus": gpus,
         "benchmark": True,
-        "max_epochs": cfg["epochs"],
+        "max_epochs": cfg["epochs"] if "epochs" in cfg else 100,
         "callbacks": [ckpt_cb],
         "track_grad_norm": 2,
         "weights_summary": "top",
@@ -143,7 +144,7 @@ def get_training_params(cfg: DictConfig):
         trainer_configuration["overfit_batches"] = 0.0005
         trainer_configuration["log_gpu_memory"] = True
 
-    if cfg['early_stopping'] > 0:
+    if "early_stopping" in cfg and cfg['early_stopping'] > 0:
         early_stop_callback = EarlyStopping(
             monitor="val_loss",
             min_delta=0.01,
@@ -153,7 +154,7 @@ def get_training_params(cfg: DictConfig):
         )
         trainer_configuration["callbacks"].append(early_stop_callback)
 
-    if cfg.resume:
+    if "resume" in cfg and cfg["resume"]:
         checkpoint_path = get_checkpoint_path(cfg['load_path'])
         trainer_configuration["resume_from_checkpoint"] = checkpoint_path
 

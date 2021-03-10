@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 from typing import List
@@ -45,7 +46,7 @@ class HumanCore(BaseCore):
     MAX_HEIGHT = 346  # DVS resolution
     N_JOINTS = 13
     N_CLASSES = 2
-    TORSO_LENGTH = 453.5242317  # TODO
+    TORSO_LENGTH = 430
     DEFAULT_TEST_SUBJECTS: List[int] = [6, 7]
     DEFAULT_TEST_VIEW = [1, 3]
 
@@ -146,20 +147,54 @@ class HumanCore(BaseCore):
         return file_paths
 
     @staticmethod
-    def get_pose_data(path):
-        # Load serialized dataset
+    def get_pose_data(path: str) -> dict:
+        """
+        Parse npz file and extract gt information (3d joints, timestamps, ...)
+        """
         data = np.load(path, allow_pickle=True)['positions_3d'].item()
-
         result = {}
+        result = HumanCore._get_joints_data(data, result)
+        result = HumanCore._get_timestamps_data(data, result)
+        return result
+
+    @staticmethod
+    def _get_timestamps_data(data, result: dict):
+        result = copy.deepcopy(result)
+        if 'timestamps' not in data:
+            return result
+
+        data = data['timestamps'].item()
+
         for subject, actions in data.items():
             subject_n = int(re.search(r"\d+", subject).group(0))
-            result[subject_n] = {}
+            if subject_n not in result:
+                result[subject_n] = {}
+
+            for action_name, timestamps in actions.items():
+                if action_name not in result[subject_n]:
+                    result[subject_n][action_name] = {}
+                    result[subject_n][action_name]['timestamps'] = timestamps
+
+        return result
+
+    @staticmethod
+    def _get_joints_data(data, result):
+        result = copy.deepcopy(result)
+
+        data = data['positions_3d'].item()
+
+        for subject, actions in data.items():
+            subject_n = int(re.search(r"\d+", subject).group(0))
+            if subject_n not in result:
+                result[subject_n] = {}
 
             for action_name, positions in actions.items():
-                result[subject_n][action_name] = {
-                    'positions': positions,
-                    'extrinsics': h36m_cameras_extrinsic_params[subject],
-                }
+                if action_name not in result[subject_n]:
+                    result[subject_n][action_name] = {}
+                    result[subject_n][action_name]['positions'] = positions
+                    result[subject_n][action_name][
+                        'extrinsics'
+                    ] = h36m_cameras_extrinsic_params[subject]
 
         return result
 
@@ -201,14 +236,13 @@ class HumanCore(BaseCore):
         return torch.cat([torch.cat([R, tr.unsqueeze(1)], dim=1)], dim=0,)
 
     def get_joint_from_id(self, idx):
+        joints_data = self._get_joint_from_id(idx)
+
+        intr_matrix, extr_matrix = self.get_matrices_from_id(idx)
+        return Skeleton(joints_data), intr_matrix, extr_matrix
+
+    def get_matrices_from_id(self, idx):
         frame_info = self.frames_info[idx]
-        frame_n = int(frame_info['frame'])
-        joints_data = self.joints[frame_info['subject']][frame_info['action']][
-            'positions'
-        ][frame_n]
-
-        joints_data = joints_data[HumanCore.JOINTS] * 1000  # Scale to cm
-
         intr_matrix = HumanCore._build_intrinsic(
             h36m_cameras_intrinsic_params[frame_info['cam']]
         )
@@ -216,9 +250,26 @@ class HumanCore(BaseCore):
         extr = self.joints[frame_info['subject']][frame_info['action']]['extrinsics'][
             frame_info['cam']
         ]
-
         extr_matrix = HumanCore._build_extrinsic(extr)
-        return Skeleton(joints_data), intr_matrix, extr_matrix
+        return intr_matrix, extr_matrix
+
+    def _get_joint_from_id(self, idx):
+        frame_info = self.frames_info[idx]
+        frame_n = int(frame_info['frame'])
+        joints_data = self.joints[frame_info['subject']][frame_info['action']][
+            'positions'
+        ][frame_n]
+        joints_data = joints_data[HumanCore.JOINTS] * 1000  # Scale to cm
+        return joints_data
+
+    def get_timestamp_from_id(self, idx):
+        frame_info = self.frames_info[idx]
+        frame_n = int(frame_info['frame'])
+        timestamp = self.joints[frame_info['subject']][frame_info['action']][
+            'timestamps'
+        ][frame_n]
+
+        return timestamp
 
     def get_frame_from_id(self, idx):
         path = self.file_paths[idx]

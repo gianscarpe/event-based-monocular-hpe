@@ -65,7 +65,7 @@ def voxel_grid_joint_generator(
             for idx in range(n_cameras):
                 voxel_frame[idx] = normalized_3sigma(voxel_frame[idx])
 
-            yield voxel_frame
+            yield voxel_frame, ti
             voxel_frame = np.zeros_like(voxel_frame)
 
             init_slice = ind
@@ -133,5 +133,5 @@ def constant_count_joint_generator(
             for idx in range(n_cameras):
                 event_count_frame[idx] = normalized_3sigma(event_count_frame[idx])
 
-            yield event_count_frame
+            yield event_count_frame, ti
             event_count_frame = np.zeros_like(event_count_frame)

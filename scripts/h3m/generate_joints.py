@@ -93,6 +93,7 @@ if __name__ == '__main__':
     output_joint_path = os.path.join(output_base_dir, "3d_joints")
 
     joint_gt = {f"S{s:01d}": {} for s in range(1, 12)}
+    timestamps = {f"S{s:01d}": {} for s in range(1, 12)}
 
     cam_index_to_id_map = dict(
         zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
@@ -116,13 +117,15 @@ if __name__ == '__main__':
             output_base_dir, f"S{info['subject']:01d}", f"{action}" + ".{}"
         )
 
+        timestamps[f"S{info['subject']:01d}"][action] = []
         joints = data[info['subject']][action]['positions']
 
         events = _get_multicam_events(event_files, idx, n_cameras)
         frame_generator = representation_generator(
             events, joints, num_events, hw_info.size
         )
-        for ind_frame, event_frame_per_cams in enumerate(frame_generator):
+        for ind_frame, events_per_cam in enumerate(frame_generator):
+            event_frame_per_cams, timestamp = events_per_cam
             for id_camera in range(n_cameras):
                 cam = cam_index_to_id_map[id_camera]
                 os.makedirs(output_dir.format(cam), exist_ok=True)
@@ -130,6 +133,7 @@ if __name__ == '__main__':
                     os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
                     event_frame_per_cams[id_camera],
                 )
+                timestamps[f"S{info['subject']:01d}"][action].append(timestamp)
 
         if args.generate_joints:
             joint_gt[f"S{info['subject']:01d}"][action] = _generate_joints(
@@ -138,4 +142,6 @@ if __name__ == '__main__':
 
     process_map(_fun, list(range(0, len(event_files), n_cameras)), max_workers=16)
     if args.generate_joints:
-        np.savez_compressed(output_joint_path, positions_3d=joint_gt)
+        np.savez_compressed(
+            output_joint_path, timestamps=timestamps, positions_3d=joint_gt
+        )
