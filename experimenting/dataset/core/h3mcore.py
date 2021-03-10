@@ -21,6 +21,7 @@ class HumanCore(BaseCore):
 
     """
 
+    RECORDING_HZ = 50
     CAMS_ID_MAP = {'54138969': 0, '55011271': 1, '58860488': 2, '60457274': 3}
     JOINTS = [15, 25, 17, 26, 18, 1, 6, 27, 19, 2, 7, 3, 8]
     LABELS_MAP = {
@@ -47,7 +48,7 @@ class HumanCore(BaseCore):
     N_JOINTS = 13
     N_CLASSES = 2
     TORSO_LENGTH = 430
-    DEFAULT_TEST_SUBJECTS: List[int] = [6, 7]
+    DEFAULT_TEST_SUBJECTS: List[int] = [9, 11]
     DEFAULT_TEST_VIEW = [1, 3]
 
     def __init__(
@@ -80,6 +81,7 @@ class HumanCore(BaseCore):
         self.joints = HumanCore.get_pose_data(joints_path)
         self.frames_info = [HumanCore.get_frame_info(x) for x in self.file_paths]
 
+        self.timestamps_mask = self.get_timestamps_mask()
         if test_subjects is None:
             self.subjects = HumanCore.DEFAULT_TEST_SUBJECTS
         else:
@@ -116,6 +118,10 @@ class HumanCore(BaseCore):
         return HumanCore.LABELS_MAP[info['action'].split(" ")[0]]
 
     @staticmethod
+    def get_frame_info_from_id(x):
+        return self.frames_info[x]
+
+    @staticmethod
     def get_frame_info(filepath):
         """
         >>> HumanCore.get_label_frame_info("tests/data/h3m/S1/Directions 1.54138969S1/frame0000001.npy")
@@ -146,13 +152,35 @@ class HumanCore(BaseCore):
             file_paths = file_paths[mov_mask]
         return file_paths
 
+    def get_timestamps_mask(self) -> np.ndarray:
+        """
+        Return indexes corresponding to multiple of 64th frame of each recording
+        """
+        data_indexes = np.arange(len(self.file_paths))
+        mask_every_n_frame = 64
+
+        freq = mask_every_n_frame / self.RECORDING_HZ
+        last = 0
+        mask = np.full(len(self.file_paths), False)
+
+        for i in data_indexes:
+            t = self.get_timestamp_from_id(i)
+            if t < last:
+                last = 0
+            if t - last > freq:
+                mask[i] = True
+                last = t
+
+        return mask
+
     @staticmethod
     def get_pose_data(path: str) -> dict:
         """
         Parse npz file and extract gt information (3d joints, timestamps, ...)
         """
-        data = np.load(path, allow_pickle=True)['positions_3d'].item()
+        data = np.load(path, allow_pickle=True)
         result = {}
+
         result = HumanCore._get_joints_data(data, result)
         result = HumanCore._get_timestamps_data(data, result)
         return result
@@ -160,6 +188,7 @@ class HumanCore(BaseCore):
     @staticmethod
     def _get_timestamps_data(data, result: dict):
         result = copy.deepcopy(result)
+
         if 'timestamps' not in data:
             return result
 
@@ -173,7 +202,7 @@ class HumanCore(BaseCore):
             for action_name, timestamps in actions.items():
                 if action_name not in result[subject_n]:
                     result[subject_n][action_name] = {}
-                    result[subject_n][action_name]['timestamps'] = timestamps
+                result[subject_n][action_name]['timestamps'] = timestamps
 
         return result
 
@@ -253,6 +282,9 @@ class HumanCore(BaseCore):
         extr_matrix = HumanCore._build_extrinsic(extr)
         return intr_matrix, extr_matrix
 
+    def _get_id_from_path(self, path):
+        return np.where(self.file_paths == path)
+
     def _get_joint_from_id(self, idx):
         frame_info = self.frames_info[idx]
         frame_n = int(frame_info['frame'])
@@ -277,3 +309,17 @@ class HumanCore(BaseCore):
         if len(x.shape) == 2:
             x = np.expand_dims(x, -1)
         return x
+
+    def get_cross_subject_partition_function(self):
+        """
+        Get partition function for cross-subject evaluation method. Keep 64th frame
+
+        Note:
+          Core class must implement get_test_subjects
+          get_frame_info must provide frame's subject
+        """
+
+        return lambda x: (
+            self.frames_info[x]['subject'] in self.get_test_subjects()
+            and self.timestamps_mask[x]
+        )

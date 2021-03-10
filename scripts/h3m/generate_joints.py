@@ -4,10 +4,11 @@ import os
 import event_library as el
 import numpy as np
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import thread_map
 from utils import (
     constant_count_joint_generator,
     joint_generator,
+    timestamps_generator,
     voxel_grid_joint_generator,
 )
 
@@ -90,6 +91,7 @@ if __name__ == '__main__':
         'constant-count': constant_count_joint_generator,
         'voxel-grid': voxel_grid_joint_generator,
     }
+    os.makedirs(output_base_dir)
     output_joint_path = os.path.join(output_base_dir, "3d_joints")
 
     joint_gt = {f"S{s:01d}": {} for s in range(1, 12)}
@@ -98,7 +100,8 @@ if __name__ == '__main__':
     cam_index_to_id_map = dict(
         zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
     )
-    representation_generator = switch[args.representation]
+    # representation_generator = switch[args.representation]
+    representation_generator = timestamps_generator
 
     def _fun(idx):
         info = HumanCore.get_frame_info(event_files[idx])
@@ -126,22 +129,25 @@ if __name__ == '__main__':
         )
         for ind_frame, events_per_cam in enumerate(frame_generator):
             event_frame_per_cams, timestamp = events_per_cam
-            for id_camera in range(n_cameras):
-                cam = cam_index_to_id_map[id_camera]
-                os.makedirs(output_dir.format(cam), exist_ok=True)
-                np.save(
-                    os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
-                    event_frame_per_cams[id_camera],
-                )
-                timestamps[f"S{info['subject']:01d}"][action].append(timestamp)
+            # for id_camera in range(n_cameras):
+            #     cam = cam_index_to_id_map[id_camera]
+            #     os.makedirs(output_dir.format(cam), exist_ok=True)
+            #     np.save(
+            #         os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
+            #         event_frame_per_cams[id_camera],
+            #     )
+
+            timestamps[f"S{info['subject']:01d}"][action].append(timestamp)
 
         if args.generate_joints:
             joint_gt[f"S{info['subject']:01d}"][action] = _generate_joints(
                 events, joints
             )
 
-    process_map(_fun, list(range(0, len(event_files), n_cameras)), max_workers=16)
+    thread_map(_fun, list(range(0, len(event_files), n_cameras)), max_workers=16)
+
+    save_params = {"timestamps": timestamps}
     if args.generate_joints:
-        np.savez_compressed(
-            output_joint_path, timestamps=timestamps, positions_3d=joint_gt
-        )
+        save_params["positions_3d"] = joint_gt
+
+    np.savez_compressed(output_joint_path, **save_params)

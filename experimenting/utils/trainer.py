@@ -1,4 +1,5 @@
 import glob
+import json
 import logging
 import os
 import shutil
@@ -31,7 +32,11 @@ class HydraTrainer:
         self.cfg = cfg
         self.core = hydra.utils.instantiate(cfg.dataset)
 
-        if os.path.exists(cfg.load_path):
+        if (
+            "load_path" in cfg
+            and cfg['load_path'] is not None
+            and os.path.exists(cfg['load_path'])
+        ):
             print("Loading training")
             self.model = load_model(
                 cfg.load_path,
@@ -108,8 +113,6 @@ def get_training_params(cfg: DictConfig):
     exp_path = os.getcwd()
     logger = [TensorBoardLogger(os.path.join(exp_path, "tb_logs"))]
 
-    debug = cfg["debug"] if "debug" in cfg else False
-
     checkpoint_dir = os.path.join(exp_path, "checkpoints")
     log_profiler = os.path.join(exp_path, "profile.txt")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -139,7 +142,7 @@ def get_training_params(cfg: DictConfig):
         if "accelerator" in cfg:
             trainer_configuration['accelerator'] = cfg["accelerator"]
 
-    if debug:
+    if "debug" in cfg and cfg['debug']:
         torch.autograd.set_detect_anomaly(debug)
         trainer_configuration["overfit_batches"] = 0.0005
         trainer_configuration["log_gpu_memory"] = True

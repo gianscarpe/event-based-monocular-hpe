@@ -66,6 +66,7 @@ class DHP19Core(BaseCore):
             DHP19Core.get_label_from_filename(x_path) for x_path in self.file_paths
         ]
 
+        self.frames_info = [DHP19Core.get_frame_info(x) for x in self.file_paths]
         self.joints = self._retrieve_2hm_files(joints_dir, "npz")
         self.heatmaps = self._retrieve_2hm_files(hm_dir, "npy")
 

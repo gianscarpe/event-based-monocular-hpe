@@ -91,8 +91,7 @@ class BaseDataFactory(ABC):
         """
         data_indexes = np.arange(len(self.core_dataset.file_paths))
         test_subject_indexes_mask = [
-            self.core_dataset.partition_function(x)
-            for x in self.core_dataset.file_paths
+            self.core_dataset.partition_function(x) for x in data_indexes
         ]
 
         test_indexes = data_indexes[test_subject_indexes_mask]

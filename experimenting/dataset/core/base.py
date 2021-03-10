@@ -50,10 +50,7 @@ class BaseCore(ABC):
           Core class must implement get_test_subjects
           get_frame_info must provide frame's subject
         """
-        return (
-            lambda x: type(self).get_frame_info(x)["subject"]
-            in self.get_test_subjects()
-        )
+        return lambda x: self.frames_info(x)["subject"] in self.get_test_subjects()
 
     def get_cross_view_partition_function(self):
         """
@@ -64,7 +61,7 @@ class BaseCore(ABC):
           get_frame_info must provide frame's cam
         """
 
-        return lambda x: type(self).get_frame_info(x)["cam"] in self.get_test_view()
+        return lambda x: self.frames_info(x)["cam"] in self.get_test_view()
 
     def get_test_subjects(self):
         raise NotImplementedError()

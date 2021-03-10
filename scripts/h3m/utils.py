@@ -135,3 +135,26 @@ def constant_count_joint_generator(
 
             yield event_count_frame, ti
             event_count_frame = np.zeros_like(event_count_frame)
+
+
+def timestamps_generator(
+    events: np.ndarray,
+    joints: np.ndarray,
+    num_events: int,
+    frame_size: Tuple[int, int],
+    n_cameras: int = 4,
+) -> np.ndarray:
+    """
+    Generate constant_count frames and corresponding gt 3D joints labels. 3D joints labels were acquired at 200fps
+    """
+    upper_bound = len(joints) * 1 / 200
+
+    for ind, event in enumerate(events):
+        t = event[2]
+        if t > upper_bound:
+            # Recording ends here
+            return
+
+        if (ind + 1) % num_events == 0:
+
+            yield None, t

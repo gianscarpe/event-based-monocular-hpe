@@ -3,7 +3,7 @@ cls: experimenting.dataset.core.HumanCore
 params:
   name: h3m_constantcount
   data_dir: /data/gscarpellini/dataset/human3.6m/constant_count/
-  joints_path: ${dataset.params.data_dir}/3d_joints.npz
+  joints_path: ${dataset.params.data_dir}/gt.npz
   n_channels: 1
   partition: cross-subject
   movs:

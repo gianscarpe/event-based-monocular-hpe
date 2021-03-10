@@ -4,14 +4,15 @@ import comet_ml
 import hydra
 from omegaconf import DictConfig
 
-from experimenting.utils.train_helpers import fit
+from experimenting.utils.trainer import HydraTrainer
 
 logging.basicConfig(level=logging.INFO)
 
 
-@hydra.main(config_path='../confs/train', config_name='config.yaml')
+@hydra.main(config_path='../confs/train/config.yaml')
 def main(cfg: DictConfig) -> None:
-    trainer = fit(cfg)
+    trainer = HydraTrainer(cfg)
+    trainer.fit()
     trainer.test()
 
 
