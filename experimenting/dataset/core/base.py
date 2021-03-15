@@ -63,6 +63,15 @@ class BaseCore(ABC):
 
         return lambda x: self.frames_info(x)["cam"] in self.get_test_view()
 
+    def train_partition_function(self, x):
+        """
+        Accept all inputs as training
+
+        
+        """
+
+        return True
+
     def get_test_subjects(self):
         raise NotImplementedError()
 

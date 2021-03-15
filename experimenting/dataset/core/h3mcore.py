@@ -49,7 +49,8 @@ class HumanCore(BaseCore):
     N_CLASSES = 2
     TORSO_LENGTH = 430
     DEFAULT_TEST_SUBJECTS: List[int] = [9, 11]
-    DEFAULT_TEST_VIEW = [1, 3]
+    DEFAULT_TEST_VIEW = [4]
+    DEFAULT_TRAIN_VIEW = [1, 2, 3, 4]
 
     def __init__(
         self,
@@ -60,6 +61,7 @@ class HumanCore(BaseCore):
         n_channels,
         movs=None,
         test_subjects=None,
+        train_cams=None,
         test_cams=None,
         avg_torso_length=TORSO_LENGTH,
         *args,
@@ -86,6 +88,11 @@ class HumanCore(BaseCore):
             self.subjects = HumanCore.DEFAULT_TEST_SUBJECTS
         else:
             self.subjects = test_subjects
+
+        if train_cams is None:
+            self.train_cams = HumanCore.DEFAULT_TRAIN_VIEW
+        else:
+            self.train_cams = train_cams
 
         if test_cams is None:
             self.view = HumanCore.DEFAULT_TEST_VIEW
@@ -323,3 +330,21 @@ class HumanCore(BaseCore):
             self.frames_info[x]['subject'] in self.get_test_subjects()
             and self.timestamps_mask[x]
         )
+
+    def get_cross_view_partition_function(self):
+        """
+        Get partition function for cross-subject evaluation method. Keep 64th frame
+
+        Note:
+          Core class must implement get_test_subjects
+          get_frame_info must provide frame's subject
+        """
+
+        return lambda x: (
+            self.frames_info[x]['subject'] in self.get_test_subjects()
+            and self.timestamps_mask[x]
+            and self.frames_info[x]['cam'] in self.get_test_view()
+        )
+
+    def train_partition_function(self, x):
+        return self.frames_info[x]['cam'] in self.train_cams

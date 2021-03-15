@@ -2,7 +2,7 @@
 # @package _group_
 module: MargiposeEstimator
 model: resnet34
-backbone: cross_subject/timecount/classification/resnet34.pt
+c backbone: cross_subject/timecount/classification/resnet34.pt
 stages: 3
 predict_3d: true
 pretrained: false

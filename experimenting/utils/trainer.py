@@ -48,8 +48,10 @@ class HydraTrainer:
                 # backbone=cfg.training.backbone,
                 # model=cfg.training.model,
             )
+            self.exp_path = cfg['load_path']
         else:
             self.model = instantiate_new_model(cfg, self.core)
+            self.exp_path = os.getcwd()
 
         self.data_module = experimenting.dataset.DataModule(
             core=self.core,
@@ -58,6 +60,7 @@ class HydraTrainer:
             dataset_factory=self.model.get_data_factory(),
             aug_train_config=cfg.augmentation_train,
             aug_test_config=cfg.augmentation_test,
+            train_val_split=cfg.train_val_split if "train_val_split" in cfg else 0.8,
         )
 
     def get_raw_test_outputs(self):
@@ -91,7 +94,7 @@ class HydraTrainer:
 
         results = self._trainer.test(self.model, datamodule=self.data_module)
         if save_results:
-            result_path = os.path.join(self.cfg.load_path, self.cfg.result_file)
+            result_path = os.path.join(self.exp_path, self.cfg.result_file)
             with open(result_path, 'w') as json_file:
                 json.dump(results, json_file)
 
@@ -150,7 +153,7 @@ def get_training_params(cfg: DictConfig):
     if "early_stopping" in cfg and cfg['early_stopping'] > 0:
         early_stop_callback = EarlyStopping(
             monitor="val_loss",
-            min_delta=0.01,
+            min_delta=0.001,
             patience=cfg["early_stopping"],
             verbose=False,
             mode="min",

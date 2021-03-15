@@ -66,6 +66,16 @@ class DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
+    def test_frames_only_dataloader(self):
+        return get_dataloader(
+            self.dataset_factory.get_frame_only_dataset(
+                self.test_indexes, self.aug_test_config
+            ),
+            self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+
 
 def get_dataloader(
     dataset: Dataset, batch_size: int, num_workers: int = 12, shuffle=True

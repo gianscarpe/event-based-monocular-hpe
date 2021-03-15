@@ -90,12 +90,18 @@ class BaseDataFactory(ABC):
             Train, val, and test indexes as numpy vectors
         """
         data_indexes = np.arange(len(self.core_dataset.file_paths))
-        test_subject_indexes_mask = [
+        test_indexes_mask = [
             self.core_dataset.partition_function(x) for x in data_indexes
         ]
 
-        test_indexes = data_indexes[test_subject_indexes_mask]
-        data_index = data_indexes[~np.in1d(data_indexes, test_indexes)]
+        test_indexes = data_indexes[test_indexes_mask]
+
+        train_indexes_mask = [
+            self.core_dataset.train_partition_function(x) for x in data_indexes
+        ]
+
+        data_indexes = data_indexes[train_indexes_mask]
+
         train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
         return train_indexes, val_indexes, test_indexes
 
