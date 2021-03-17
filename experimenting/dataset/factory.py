@@ -102,7 +102,7 @@ class BaseDataFactory(ABC):
 
         data_indexes = data_indexes[train_indexes_mask]
 
-        train_indexes, val_indexes = _split_set(data_index, split_at=split_at)
+        train_indexes, val_indexes = _split_set(data_indexes, split_at=split_at)
         return train_indexes, val_indexes, test_indexes
 
 
