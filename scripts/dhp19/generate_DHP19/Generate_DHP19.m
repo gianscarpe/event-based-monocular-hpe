@@ -11,9 +11,9 @@
 
    % Set the paths of code repository folder, data folder and output folder
    % where to generate files of accumulated events.
-   rootCodeFolder = '/home/gianscarpe/dev/event-camera/src/experimenting/tools'; % root directory of the git repo.
+   rootCodeFolder = '/home/gianscarpe/dev/event-based-monocular-hpe/scripts/dhp19/generate_DHP19'; % root directory of the git repo.
    rootDataFolder = '/data/rslsync/Resilio Sync/DHP19'; % root directory of the data downloaded from resiliosync.
-   outDatasetFolder = '/data/gscarpellini/timesurface';
+   outDatasetFolder = '/data/gscarpellini/new_voxel';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -287,7 +287,7 @@ elseif (numSpecialEvents == 2) || (numSpecialEvents == 4)
                 disp(strcat('Processing file: ',outDVSfile));
                 disp(strcat('Tot num of events in all cameras: ', num2str(eventsPerFrame*nbcam)));
                 %ExtractEventsToFramesAndMeanLabels( ...
-                ExtractEventToTimeSurface( ...
+                ExtractEventsToVoxelAndMeanLabels( ...
                     fileID, ...
                     aedat, ...
                     events, ...

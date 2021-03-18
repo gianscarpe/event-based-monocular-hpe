@@ -47,6 +47,7 @@ def voxel_grid_joint_generator(
         y = int(event[0])
         x = int(event[1])
         ti = event[2]
+        pi = event[3]
 
         cam = int(event[-1])  # using camera info similar to DHP19
 
@@ -54,7 +55,7 @@ def voxel_grid_joint_generator(
 
         t_split = (n_bins - 1) / dt * (ti - t0) + 1
         for t_bin in range(0, n_bins):
-            voxel_frame[cam, x, y, t_bin] += max(0, 1 - np.abs(t_bin - t_split))
+            voxel_frame[cam, x, y, t_bin] += pi * max(0, 1 - np.abs(t_bin - t_split))
 
         if ti > upper_bound:
             # Recording ends here

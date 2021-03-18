@@ -6,7 +6,7 @@ backbone: cross_subject/timecount/classification/resnet34.pt
 stages: 3
 predict_3d: true
 pretrained: false
-metrics: ['AUC', 'PCK', 'MPJPE']
+test_metrics: ['AUC', 'PCK', 'MPJPE']
 estimate_depth: false
 use_lr_scheduler: true
 

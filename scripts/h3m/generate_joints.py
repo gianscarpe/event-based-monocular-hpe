@@ -100,8 +100,8 @@ if __name__ == '__main__':
     cam_index_to_id_map = dict(
         zip(HumanCore.CAMS_ID_MAP.values(), HumanCore.CAMS_ID_MAP.keys())
     )
-    # representation_generator = switch[args.representation]
-    representation_generator = timestamps_generator
+    representation_generator = switch[args.representation]
+    # representation_generator = timestamps_generator
 
     def _fun(idx):
         info = HumanCore.get_frame_info(event_files[idx])
@@ -129,15 +129,13 @@ if __name__ == '__main__':
         )
         for ind_frame, events_per_cam in enumerate(frame_generator):
             event_frame_per_cams, timestamp = events_per_cam
-            # for id_camera in range(n_cameras):
-            #     cam = cam_index_to_id_map[id_camera]
-            #     os.makedirs(output_dir.format(cam), exist_ok=True)
-            #     np.save(
-            #         os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
-            #         event_frame_per_cams[id_camera],
-            #     )
-
-            timestamps[f"S{info['subject']:01d}"][action].append(timestamp)
+            for id_camera in range(n_cameras):
+                cam = cam_index_to_id_map[id_camera]
+                os.makedirs(output_dir.format(cam), exist_ok=True)
+                np.save(
+                    os.path.join(output_dir.format(cam), f"frame{ind_frame:07d}.npy"),
+                    event_frame_per_cams[id_camera],
+                )
 
         if args.generate_joints:
             joint_gt[f"S{info['subject']:01d}"][action] = _generate_joints(
