@@ -3,7 +3,7 @@ Skeleton wrapper. It provides a toolbox for plotting, projection, normalization,
 and denormalization of skeletons joints
 
 """
-
+from scipy import optimize
 import numpy as np
 import torch
 from pose3d_utils.camera import CameraIntrinsics
@@ -140,6 +140,33 @@ class Skeleton:
         ).narrow(-1, 0, 3)
         return Skeleton(normalized_skeleton)
 
+    def infer_depth(
+        self, norm_skel, eval_scale, intrinsics, height, width, z_upper=1600
+    ):
+        """Infer the depth of the root joint.
+        Args:
+            norm_skel (torch.DoubleTensor): The normalised skeleton.
+            eval_scale (function): A function which evaluates the scale of a denormalised skeleton.
+            intrinsics (CameraIntrinsics): The camera which projects 3D points onto the 2D image.
+            height (float): The image height.
+            width (float): The image width.
+            z_upper (float): Upper bound for depth.
+        Returns:
+            float: `z_ref`, the depth of the root joint.
+        """
+
+        def f(z_ref):
+            z_ref = float(z_ref)
+            skel = self._normalizer.denormalise_skeleton(
+                norm_skel, z_ref, intrinsics, height, width
+            )
+            k = eval_scale(skel)
+            return (k - 1.0) ** 2
+
+        z_lower = max(intrinsics.alpha_x, intrinsics.alpha_y)
+        z_ref = float(optimize.fminbound(f, 2000, 5000, maxfun=200, disp=0))
+        return z_ref
+
     def denormalize(self, height, width, camera, torso_length=None, z_ref=None):
         """
 
@@ -159,14 +186,15 @@ class Skeleton:
         homog = ensure_homogeneous(self._get_tensor(), d=Skeleton._SKELETON_D)
         if z_ref is None:
             if torso_length is None:
-                torso_length = 450
+                torso_length = 400
 
-            z_ref = self._normalizer.infer_depth(
+            z_ref = self.infer_depth(
                 homog,
                 lambda x: Skeleton(x).proportion(torso_length),
                 camera,
                 height,
                 width,
+                z_upper=10000,
             )
 
         pred_skeleton = self._normalizer.denormalise_skeleton(

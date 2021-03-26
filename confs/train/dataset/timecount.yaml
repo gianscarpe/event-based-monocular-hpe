@@ -21,4 +21,4 @@ params:
   n_channels: 1
   n_joints: 13
   partition: cross-subject
-  torso_length: 453.5242317
+  avg_torso_length: 500

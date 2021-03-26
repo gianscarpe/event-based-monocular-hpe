@@ -124,12 +124,13 @@ def get_feature_extractor(params):
         "default": _load_as_is,
     }
 
-    if "n_classes" not in params:
-        params["n_classes"] = 1  # just placehodler
+    params["n_classes"] = 1  # just placehodler
 
     if params["model"] not in switch:
         params["model"] = "default"
-    if "custom_model_path" in params and ~os.path.exists(params["custom_model_path"]):
+    if "custom_model_path" in params and not os.path.exists(
+        params["custom_model_path"]
+    ):
         params.pop("custom_model_path")
         raise Exception("Custom model not found!")
 

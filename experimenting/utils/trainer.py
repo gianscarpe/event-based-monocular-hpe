@@ -43,7 +43,8 @@ class HydraTrainer:
                 cfg.training.module,
                 model_zoo=cfg.model_zoo,
                 core=self.core,
-                test_metrics=['AUC', 'MPJPE', "PCK"]
+                test_metrics=['AUC', 'MPJPE', "PCK"],
+                estimate_depth=cfg.training.estimate_depth
                 # TODO should remove the following, as they're loaded from the checkpoint
                 # backbone=cfg.training.backbone,
                 # model=cfg.training.model,

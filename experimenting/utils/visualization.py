@@ -84,6 +84,7 @@ def plot_skeleton_2d(dvs_frame, gt_joints, pred_joints=None):
     fig = plt.figure()
     ax = fig.add_axes([0, 0, 1, 1])
     ax.imshow(dvs_frame)
+    ax.axis('off')
     H, W = dvs_frame.shape
     ax.plot(gt_joints[:, 0], gt_joints[:, 1], '.', c='red')
     if pred_joints is not None:

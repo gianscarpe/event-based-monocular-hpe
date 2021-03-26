@@ -148,17 +148,17 @@ class MargiposeEstimator(BaseModule):
                 "camera": b_y["camera"][i].cpu(),
             }
 
+            pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
+            
             if self.estimate_depth:
                 denormalization_params["torso_length"] = self.torso_length
             else:
                 denormalization_params["z_ref"] = b_y["z_ref"][i].cpu()
 
-            pred_skeleton = Skeleton(normalized_skeletons[i].narrow(-1, 0, 3))
-
             pred_skeleton = pred_skeleton.denormalize(
                 **denormalization_params
             )._get_tensor()
-
+            
             # Apply de-normalization using intrinsics, depth plane, and image
             # plane pixel dimension
 
@@ -193,10 +193,11 @@ class MargiposeEstimator(BaseModule):
         pred_joints, outs = self(b_x)
 
         loss = self._calculate_loss3d(outs, b_y)
-
+        
         if denormalize:  # denormalize skeletons batch
             pred_joints = self.denormalize_predictions(pred_joints, b_y)
             gt_joints = b_y["skeleton"]  # xyz in original coord
+            
         else:
             gt_joints = b_y["normalized_skeleton"]  # xyz in normalized coord
 

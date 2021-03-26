@@ -47,7 +47,7 @@ class HumanCore(BaseCore):
     MAX_HEIGHT = 346  # DVS resolution
     N_JOINTS = 13
     N_CLASSES = 2
-    TORSO_LENGTH = 430
+    TORSO_LENGTH = 453
     DEFAULT_TEST_SUBJECTS: List[int] = [9, 11]
     DEFAULT_TEST_VIEW = [4]
     DEFAULT_TRAIN_VIEW = [1, 2, 3, 4]
