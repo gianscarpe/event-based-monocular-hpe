@@ -2,7 +2,7 @@ defaults:
   - optimizer: adam
   - lr_scheduler: step_lr
   - dataset: constantcount_h3m
-  - loss: pixelwiseloss
+  - loss: multipixelwise
   - augmentation: no_aug
   - training: margipose
   - hydra: standard

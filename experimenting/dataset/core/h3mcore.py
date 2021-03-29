@@ -124,8 +124,8 @@ class HumanCore(BaseCore):
 
         return HumanCore.LABELS_MAP[info['action'].split(" ")[0]]
 
-    @staticmethod
-    def get_frame_info_from_id(x):
+    
+    def get_frame_info_from_id(self, x):
         return self.frames_info[x]
 
     @staticmethod
@@ -171,13 +171,15 @@ class HumanCore(BaseCore):
         mask = np.full(len(self.file_paths), False)
 
         for i in data_indexes:
-            t = self.get_timestamp_from_id(i)
-            if t < last:
-                last = 0
-            if t - last > freq:
-                mask[i] = True
-                last = t
-
+            try:
+                t = self.try_get_timestamp_from_id(i)
+                if t < last:
+                    last = 0
+                    if t - last > freq:
+                        mask[i] = True
+                        last = t
+            except:
+                continue
         return mask
 
     @staticmethod
@@ -278,7 +280,7 @@ class HumanCore(BaseCore):
         return Skeleton(joints_data), intr_matrix, extr_matrix
 
     def get_matrices_from_id(self, idx):
-        frame_info = self.frames_info[idx]
+        frame_info = self.get_frame_info_from_id(idx)
         intr_matrix = HumanCore._build_intrinsic(
             h36m_cameras_intrinsic_params[frame_info['cam']]
         )
@@ -293,7 +295,7 @@ class HumanCore(BaseCore):
         return np.where(self.file_paths == path)
 
     def _get_joint_from_id(self, idx):
-        frame_info = self.frames_info[idx]
+        frame_info = self.get_frame_info_from_id(idx)
         frame_n = int(frame_info['frame'])
         joints_data = self.joints[frame_info['subject']][frame_info['action']][
             'positions'
@@ -301,12 +303,15 @@ class HumanCore(BaseCore):
         joints_data = joints_data[HumanCore.JOINTS] * 1000  # Scale to cm
         return joints_data
 
-    def get_timestamp_from_id(self, idx):
-        frame_info = self.frames_info[idx]
-        frame_n = int(frame_info['frame'])
-        timestamp = self.joints[frame_info['subject']][frame_info['action']][
-            'timestamps'
-        ][frame_n]
+    def try_get_timestamp_from_id(self, idx):
+        try:
+            frame_info = self.get_frame_info_from_id(idx)
+            frame_n = int(frame_info['frame'])
+            timestamp = self.joints[frame_info['subject']][frame_info['action']][
+                'timestamps'
+            ][frame_n]
+        except:
+            raise Exception("Timestamp not found")
 
         return timestamp
 

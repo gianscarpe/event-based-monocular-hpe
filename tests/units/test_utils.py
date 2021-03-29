@@ -58,7 +58,7 @@ class TestUtilites(unittest.TestCase):
     @mock.patch("pytorch_lightning.Trainer.test")
     def test_trainer_test(
         self,
-        mocked_fit,
+        mocked_test,
         mocked_datamodule,
         mocked_new_model,
         training_params,
@@ -69,6 +69,6 @@ class TestUtilites(unittest.TestCase):
         cfg = mock.MagicMock()
         trainer = utils.trainer.HydraTrainer(cfg)
 
-        trainer.test()
+        trainer.test(save_results=False)
 
         mocked_test.assert_called_once()

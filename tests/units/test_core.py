@@ -188,13 +188,16 @@ class TestHumanCore(TestCore):
 
     @mock.patch("numpy.load")
     def test_get_labels(self, numpy_load_mocked):
-        mocked_data = mock.Mock()
+        mocked_data_poses = mock.Mock()
+        mocked_data_timestamps = mock.Mock()
         n_frames = 10
         n_joints = 17
         sub_n = 1
         mocked_poses = np.random.rand(n_frames, n_joints, 3)
-        mocked_data.item.return_value = {f'S{sub_n}': {'Directions': mocked_poses}}
-        mocked_pose_loaded = {'positions_3d': mocked_data}
+        mocked_timestamps = np.random.rand(n_frames)
+        mocked_data_poses.item.return_value = {f'S{sub_n}': {'Directions': mocked_poses}}
+        mocked_data_timestamps.item.return_value = {f'S{sub_n}': {'Directions': mocked_timestamps}}
+        mocked_pose_loaded = {'positions_3d': mocked_data_poses, 'timestamps': mocked_data_timestamps}
         numpy_load_mocked.return_value = mocked_pose_loaded
         path = "path/to/data.npz"
 
